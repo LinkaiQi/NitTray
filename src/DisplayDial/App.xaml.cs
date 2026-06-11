@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using DisplayDial.Services;
 using DisplayDial.Tray;
@@ -35,6 +36,7 @@ public partial class App : Application
                 _ = _viewModel.RefreshAsync();
             }
         };
+        _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
         _tray.QuitRequested += (_, _) => RequestShutdown();
 
         ShowMainWindow();
@@ -72,6 +74,30 @@ public partial class App : Application
         }
 
         Shutdown();
+    }
+
+    private static void OpenDiagnosticsLog()
+    {
+        try
+        {
+            var path = DiagnosticLog.FilePath;
+            if (!File.Exists(path))
+            {
+                DiagnosticLog.Write("Log opened before any enumeration ran.");
+            }
+
+            // Open the parent folder with the log file pre-selected.
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{path}\"",
+                UseShellExecute = true,
+            });
+        }
+        catch
+        {
+            // Best-effort.
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)

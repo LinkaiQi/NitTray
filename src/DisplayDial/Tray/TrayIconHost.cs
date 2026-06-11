@@ -11,6 +11,7 @@ internal sealed class TrayIconHost : IDisposable
 
     public event EventHandler? ShowRequested;
     public event EventHandler? RefreshRequested;
+    public event EventHandler? OpenLogRequested;
     public event EventHandler? QuitRequested;
 
     public TrayIconHost()
@@ -22,18 +23,22 @@ internal sealed class TrayIconHost : IDisposable
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
         var refreshItem = new WinForms.ToolStripMenuItem("Refresh displays");
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
+        var logItem = new WinForms.ToolStripMenuItem("Open diagnostics log…");
+        logItem.Click += (_, _) => OpenLogRequested?.Invoke(this, EventArgs.Empty);
         var quitItem = new WinForms.ToolStripMenuItem("Quit");
         quitItem.Click += (_, _) => QuitRequested?.Invoke(this, EventArgs.Empty);
 
         menu.Items.Add(showItem);
         menu.Items.Add(refreshItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
+        menu.Items.Add(logItem);
+        menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 
         _notifyIcon = new WinForms.NotifyIcon
         {
             Icon = _icon,
-            Text = "DisplayDial — Apple Studio Display brightness",
+            Text = "DisplayDial — Apple display brightness",
             Visible = true,
             ContextMenuStrip = menu,
         };

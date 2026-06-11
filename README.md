@@ -55,14 +55,27 @@ the HID parser to ask each Apple HID interface what it exposes:
 1. Enumerate every HID device whose path contains `vid_05ac`.
 2. Open it (`CreateFile` with read/write + shared access — no admin needed).
 3. `HidD_GetPreparsedData` → `HidP_GetCaps` → `HidP_GetValueCaps`.
-4. Pick the feature value cap whose **UsagePage = `0x0082`** (Monitor) and
-   **Usage = `0x0010`** (Brightness). The cap supplies the report ID, the
-   feature report length, and the per-device `LogicalMin` / `LogicalMax`.
-5. Read/write that interface's feature report.
+4. Pick the feature value cap that matches one of:
+   - **UsagePage `0x0082` (Monitor) + Usage `0x0010` (Brightness)** — Studio Display family
+   - **UsagePage `0x8005` + Usage `0x1009`** — Apple vendor page used by the **Pro Display XDR**
+   - Fallback: any 32-bit single-value feature cap with `LogicalMax >= 400`
+5. The chosen cap supplies the report ID, raw min/max, and the descriptor
+   supplies the feature report length.
+6. Read/write that interface's feature report.
 
 That's why the Pro Display XDR works even though its USB layout (4 HID
-interfaces, max brightness `0xC350` = 50 000) is different from the Studio
-Display family — the descriptor tells us everything we need.
+interfaces, Apple-vendor usage `0x8005/0x1009`, max brightness `0xC350` =
+50 000) is different from the Studio Display family — the descriptor tells us
+everything we need.
+
+### Diagnostics
+
+If no display is detected, right-click the tray icon and choose
+**"Open diagnostics log…"**. The log (at
+`%LOCALAPPDATA%\DisplayDial\diagnostic.log`) records every HID device that was
+enumerated, every probe attempt, and the full HID capability map for each
+Apple-vendor interface. Share it on a GitHub issue and we can usually identify
+a new display variant in minutes.
 
 ### Cross-references
 
@@ -139,6 +152,10 @@ src/DisplayDial/
 
 - **No displays found:** Some USB-C docks and adapters strip the HID interface
   while passing video through. Try a direct USB-C connection from PC to display.
+  Then right-click the tray icon → **Open diagnostics log…** and inspect
+  (or share) the log at `%LOCALAPPDATA%\DisplayDial\diagnostic.log`. It lists
+  every Apple-vendor HID interface seen and why each one was or wasn't picked
+  as the brightness control.
 - **Permission denied:** None expected on Windows — `CreateFile` with
   `GENERIC_READ | GENERIC_WRITE` and shared access works for normal users.
 - **Pro Display XDR shows up multiple times:** shouldn't happen — DisplayDial

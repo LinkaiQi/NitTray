@@ -5,11 +5,24 @@ namespace DisplayDial.Services.Native;
 internal static class HidNative
 {
     // HID Usage Page / Usage for the brightness control on Apple displays.
-    // See:
-    //   - https://learn.microsoft.com/windows-hardware/drivers/hid/hidp-status-usage-not-found
-    //   - apdbctl source (Pro Display XDR), Studio-Brightness-PlusPlus hid-map.md
+    //
+    // Apple uses two different usage page / usage tuples for brightness depending
+    // on the model:
+    //
+    //   - Studio Display family (PID 0x1114, 0x1116, 0x1118): the standardized
+    //     Monitor / Brightness usage from HID Usage Tables 1.5
+    //     ("Monitor Page" 0x82, Usage 0x10).
+    //
+    //   - Pro Display XDR (PID 0x9243): an Apple vendor-defined usage page
+    //     (0x8005, Usage 0x1009) instead of the standardized one. Confirmed by
+    //     0xcharly/apdbctl, which inspects the raw HID report descriptor and
+    //     keys off these exact magic numbers.
+    //
+    // We accept either tuple as "this is a brightness value cap".
     public const ushort MonitorBrightnessUsagePage = 0x0082;
     public const ushort MonitorBrightnessUsage = 0x0010;
+    public const ushort AppleVendorBrightnessUsagePage = 0x8005;
+    public const ushort AppleVendorBrightnessUsage = 0x1009;
 
     public const int HIDP_STATUS_SUCCESS = unchecked((int)0x00110000);
 

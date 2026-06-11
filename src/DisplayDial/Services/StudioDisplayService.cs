@@ -42,10 +42,15 @@ public sealed class StudioDisplayService : IDisplayService
 
     private static IReadOnlyList<StudioDisplayInfo> Enumerate()
     {
+        DiagnosticLog.Reset("Enumerate()");
         var found = new List<StudioDisplayInfo>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int totalSeen = 0;
+        int appleSeen = 0;
 
         HidNative.HidD_GetHidGuid(out var hidGuid);
+        DiagnosticLog.Write($"HID class GUID: {hidGuid:B}");
+
         var devInfoSet = SetupApiNative.SetupDiGetClassDevs(
             ref hidGuid,
             IntPtr.Zero,
@@ -54,7 +59,9 @@ public sealed class StudioDisplayService : IDisplayService
 
         if (devInfoSet == SetupApiNative.INVALID_HANDLE_VALUE)
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to enumerate HID devices.");
+            var ex = new Win32Exception(Marshal.GetLastWin32Error(), "Failed to enumerate HID devices.");
+            DiagnosticLog.Write($"ERROR SetupDiGetClassDevs failed: {ex.Message}");
+            throw ex;
         }
 
         try
@@ -74,18 +81,38 @@ public sealed class StudioDisplayService : IDisplayService
                     {
                         break;
                     }
-                    throw new Win32Exception(err, "SetupDiEnumDeviceInterfaces failed.");
+                    var ex = new Win32Exception(err, "SetupDiEnumDeviceInterfaces failed.");
+                    DiagnosticLog.Write($"ERROR SetupDiEnumDeviceInterfaces at index {index}: {ex.Message}");
+                    throw ex;
                 }
 
+                totalSeen++;
                 var path = GetDevicePath(devInfoSet, ref ifaceData);
-                if (path is null || !IsAppleVendor(path) || !seenPaths.Add(path))
+                if (path is null)
+                {
+                    DiagnosticLog.Write($"[{index}] (null path)");
+                    continue;
+                }
+                if (!IsAppleVendor(path))
                 {
                     continue;
                 }
+                appleSeen++;
+                if (!seenPaths.Add(path))
+                {
+                    DiagnosticLog.Write($"[Apple] DUPLICATE path skipped: {path}");
+                    continue;
+                }
 
+                DiagnosticLog.Write($"[Apple #{appleSeen}] probing path: {path}");
                 var info = TryProbeDisplay(path);
                 if (info is not null)
                 {
+                    DiagnosticLog.Write(
+                        $"  -> MATCH product='{info.ProductName}' serial='{info.SerialNumber ?? "-"}' " +
+                        $"pid=0x{info.ProductId:X4} reportId=0x{info.BrightnessReportId:X2} " +
+                        $"range={info.MinRawBrightness}..{info.MaxRawBrightness} " +
+                        $"featLen={info.FeatureReportByteLength}");
                     found.Add(info);
                 }
             }
@@ -95,11 +122,17 @@ public sealed class StudioDisplayService : IDisplayService
             SetupApiNative.SetupDiDestroyDeviceInfoList(devInfoSet);
         }
 
-        // The Pro Display XDR exposes 4 HID interfaces under the same PID; the Studio
-        // Display XDR exposes the brightness cap under a collection plus extra siblings.
-        // Collapse anything that resolves to the same physical display (by serial number
-        // when available, else by PID alone) down to a single entry.
-        return DeduplicateBySerial(found);
+        DiagnosticLog.Write(
+            $"Enumeration done. Total HID devices: {totalSeen}, Apple-vendor: {appleSeen}, " +
+            $"raw matches: {found.Count}");
+
+        var result = DeduplicateBySerial(found);
+        DiagnosticLog.Write($"After dedup: {result.Count} display(s).");
+        foreach (var d in result)
+        {
+            DiagnosticLog.Write($"  - {d.ProductName} (serial={d.SerialNumber ?? "-"}, pid=0x{d.ProductId:X4})");
+        }
+        return result;
     }
 
     private static StudioDisplayInfo? TryProbeDisplay(string path)
@@ -111,48 +144,74 @@ public sealed class StudioDisplayService : IDisplayService
             handle = TryOpenDevice(path);
             if (handle is null)
             {
+                DiagnosticLog.Write($"  CreateFile failed (err={Marshal.GetLastWin32Error()})");
                 return null;
             }
 
             if (!HidNative.HidD_GetPreparsedData(handle, out preparsed) || preparsed == IntPtr.Zero)
             {
+                DiagnosticLog.Write($"  HidD_GetPreparsedData failed (err={Marshal.GetLastWin32Error()})");
                 return null;
             }
 
-            if (HidNative.HidP_GetCaps(preparsed, out var caps) != HidNative.HIDP_STATUS_SUCCESS)
+            var capsStatus = HidNative.HidP_GetCaps(preparsed, out var caps);
+            if (capsStatus != HidNative.HIDP_STATUS_SUCCESS)
             {
+                DiagnosticLog.Write($"  HidP_GetCaps failed (status=0x{capsStatus:X8})");
                 return null;
             }
+
+            DiagnosticLog.Write(
+                $"  HIDP_CAPS topUsagePage=0x{caps.UsagePage:X4} topUsage=0x{caps.Usage:X4} " +
+                $"featLen={caps.FeatureReportByteLength} featValueCaps={caps.NumberFeatureValueCaps}");
 
             if (caps.NumberFeatureValueCaps == 0 || caps.FeatureReportByteLength == 0)
             {
+                DiagnosticLog.Write("  -> no feature value caps");
                 return null;
             }
 
             var valueCaps = new HidNative.HIDP_VALUE_CAPS[caps.NumberFeatureValueCaps];
             var capsLen = caps.NumberFeatureValueCaps;
-            if (HidNative.HidP_GetValueCaps(
-                    HidNative.HIDP_REPORT_TYPE.Feature, valueCaps, ref capsLen, preparsed)
-                != HidNative.HIDP_STATUS_SUCCESS)
+            var valStatus = HidNative.HidP_GetValueCaps(
+                HidNative.HIDP_REPORT_TYPE.Feature, valueCaps, ref capsLen, preparsed);
+            if (valStatus != HidNative.HIDP_STATUS_SUCCESS)
             {
+                DiagnosticLog.Write($"  HidP_GetValueCaps failed (status=0x{valStatus:X8})");
                 return null;
             }
 
-            // Look for the canonical Monitor / Brightness feature usage. Fall back to any
-            // single-value feature cap whose LogicalMax >= 400 (matches the convention used
-            // by Apple displays so far) only if the canonical match is absent.
             int chosen = -1;
             int fallback = -1;
             for (int i = 0; i < capsLen; i++)
             {
                 var cap = valueCaps[i];
-                if (cap.UsagePage == HidNative.MonitorBrightnessUsagePage
-                    && cap.Usage == HidNative.MonitorBrightnessUsage)
+                DiagnosticLog.Write(
+                    $"    cap[{i}] usagePage=0x{cap.UsagePage:X4} usage=0x{cap.Usage:X4} " +
+                    $"reportId=0x{cap.ReportID:X2} bitSize={cap.BitSize} reportCount={cap.ReportCount} " +
+                    $"logicalMin={cap.LogicalMin} logicalMax={cap.LogicalMax}");
+
+                bool isMonitorBrightness =
+                    cap.UsagePage == HidNative.MonitorBrightnessUsagePage
+                    && cap.Usage == HidNative.MonitorBrightnessUsage;
+                bool isAppleBrightness =
+                    cap.UsagePage == HidNative.AppleVendorBrightnessUsagePage
+                    && cap.Usage == HidNative.AppleVendorBrightnessUsage;
+
+                if (chosen < 0 && (isMonitorBrightness || isAppleBrightness))
                 {
                     chosen = i;
-                    break;
+                    DiagnosticLog.Write($"      ^ canonical brightness usage match");
                 }
-                if (fallback < 0 && cap.ReportCount == 1 && cap.LogicalMax >= 400)
+
+                // Fallback: any 32-bit single-value feature cap whose range looks like an
+                // Apple brightness range (LogicalMax >= 400) — covers any future Apple
+                // display that uses yet another vendor-specific usage.
+                if (fallback < 0
+                    && cap.ReportCount == 1
+                    && cap.BitSize == 32
+                    && cap.LogicalMax >= 400
+                    && cap.LogicalMin < cap.LogicalMax)
                 {
                     fallback = i;
                 }
@@ -161,9 +220,14 @@ public sealed class StudioDisplayService : IDisplayService
             if (chosen < 0)
             {
                 chosen = fallback;
+                if (chosen >= 0)
+                {
+                    DiagnosticLog.Write($"      no canonical match, using fallback cap[{chosen}]");
+                }
             }
             if (chosen < 0)
             {
+                DiagnosticLog.Write("  -> no brightness cap found on this interface");
                 return null;
             }
 
@@ -184,8 +248,9 @@ public sealed class StudioDisplayService : IDisplayService
                 MinRawBrightness: (uint)Math.Max(0, brightness.LogicalMin),
                 MaxRawBrightness: (uint)Math.Max(brightness.LogicalMin + 1, brightness.LogicalMax));
         }
-        catch
+        catch (Exception ex)
         {
+            DiagnosticLog.Write($"  PROBE EXCEPTION: {ex.GetType().Name}: {ex.Message}");
             return null;
         }
         finally
