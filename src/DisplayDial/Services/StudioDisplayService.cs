@@ -13,10 +13,16 @@ public sealed class StudioDisplayService : IDisplayService
     private const ushort ProDisplayXdrPid = 0x9243;
     private const int ErrorNoMoreItems = 259;
 
-    // Pro Display XDR HID report layout, taken from 0xcharly/apdbctl. We hard-code
-    // these because the device doesn't expose a usable HID descriptor on Windows
-    // (hidclass.sys refuses with Code 10), so we can't probe the values dynamically
-    // the way we do for the Studio Display family.
+    // Pro Display XDR HID report layout, derived empirically from a real device:
+    // GET_REPORT(Feature, ID=0x01) returns 7 bytes: [01 BB BB SS SS FF FF]
+    //   - byte 0: Report ID (echoed)
+    //   - bytes 1-2: brightness uint16 LE (matches apdbctl's documented range
+    //     but as a uint16, not the uint32 their code claims)
+    //   - bytes 3-6: status / mode flags. The exact meaning isn't documented;
+    //     we read them on the GET and echo them back on the SET so the device
+    //     keeps the same mode/EDR scaling and only the brightness changes.
+    // Range observed on a real Pro XDR (June 2026): up to ~0xC802 (51202).
+    // We use 50000 as max to match apdbctl; the device clamps anything higher.
     private const int ProXdrFeatureReportByteLength = 7;
     private const byte ProXdrBrightnessReportId = 0x01;
     private const uint ProXdrMinBrightness = 400;
@@ -104,29 +110,13 @@ public sealed class StudioDisplayService : IDisplayService
             if (!WinUsbNative.WinUsb_Initialize(handle, out winUsb))
             {
                 var err = Marshal.GetLastWin32Error();
-                throw new Win32Exception(err,
-                    $"WinUsb_Initialize failed (err={err}).");
+                throw new Win32Exception(err, $"WinUsb_Initialize failed (err={err}).");
             }
 
-            var buffer = CreateFeatureBuffer(display, 0);
-            var setup = new WinUsbNative.WINUSB_SETUP_PACKET
-            {
-                RequestType = WinUsbNative.RequestTypeClassInterfaceIn,
-                Request = WinUsbNative.HidRequestGetReport,
-                Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | display.BrightnessReportId),
-                Index = display.UsbInterfaceNumber,
-                Length = (ushort)buffer.Length,
-            };
-
-            if (!WinUsbNative.WinUsb_ControlTransfer(
-                    winUsb, setup, buffer, (uint)buffer.Length, out _, IntPtr.Zero))
-            {
-                var err = Marshal.GetLastWin32Error();
-                throw new Win32Exception(err,
-                    $"WinUsb_ControlTransfer GET_REPORT failed (err={err}).");
-            }
-
-            return BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(1, 4));
+            var buffer = GetFeatureReport(winUsb, display);
+            // For the Pro XDR, brightness lives in bytes 1-2 as uint16 LE,
+            // bytes 3-6 are status/mode flags we ignore on read.
+            return BinaryPrimitives.ReadUInt16LittleEndian(buffer.AsSpan(1, 2));
         }
         finally
         {
@@ -146,44 +136,54 @@ public sealed class StudioDisplayService : IDisplayService
             if (!WinUsbNative.WinUsb_Initialize(handle, out winUsb))
             {
                 var err = Marshal.GetLastWin32Error();
-                throw new Win32Exception(err,
-                    $"WinUsb_Initialize failed (err={err}).");
+                throw new Win32Exception(err, $"WinUsb_Initialize failed (err={err}).");
             }
 
-            // Strategy A (HID 1.11 §7.2.1, hidapi/hidraw convention): data buffer
-            // contains the full report INCLUDING the report ID byte at offset 0.
-            // wLength == report length including ID.
-            var withId = CreateFeatureBuffer(display, raw);
-            int errA = TrySetReport(winUsb, display, withId);
-            if (errA == 0)
+            // Read the current 7-byte feature report so we know the current
+            // status/mode flag bytes. We echo those back unchanged so the device
+            // only changes brightness and doesn't pick up zero-filled mode flags.
+            byte[] template;
+            try
             {
-                DiagnosticLog.Write(
-                    $"WinUSB SET_REPORT(strategy=withReportId, len={withId.Length}) ok " +
-                    $"raw=0x{raw:X8} bytes=[{ToHex(withId)}]");
-                return;
+                template = GetFeatureReport(winUsb, display);
             }
-
-            // Strategy B (alternate HID 1.11 §7.2.2 reading, used by some Apple
-            // firmwares): data buffer EXCLUDES the report ID byte. wLength is
-            // shorter by 1. The report ID still travels in wValue.
-            var withoutId = new byte[withId.Length - 1];
-            Array.Copy(withId, 1, withoutId, 0, withoutId.Length);
-            int errB = TrySetReport(winUsb, display, withoutId);
-            if (errB == 0)
+            catch
             {
-                DiagnosticLog.Write(
-                    $"WinUSB SET_REPORT(strategy=noReportId, len={withoutId.Length}) ok " +
-                    $"raw=0x{raw:X8} bytes=[{ToHex(withoutId)}]");
-                return;
+                // Fall back to a zero-filled buffer with just the report ID.
+                template = new byte[display.FeatureReportByteLength];
+                template[0] = display.BrightnessReportId;
             }
 
-            DiagnosticLog.Write(
-                $"WinUSB SET_REPORT FAILED both strategies: " +
-                $"withReportId(err={errA}), noReportId(err={errB}), raw=0x{raw:X8}");
+            // Several Apple firmwares only accept a particular SET_REPORT shape.
+            // Build a list of candidates and try each until one succeeds. The
+            // candidate that wins on first run becomes the obvious one to keep,
+            // but we leave the others as a safety net for firmware variations.
+            var attempts = BuildSetReportCandidates(display, raw, template);
 
-            throw new Win32Exception(errA,
-                $"WinUsb_ControlTransfer SET_REPORT failed (err={errA} with report-id, " +
-                $"err={errB} without). raw=0x{raw:X8}");
+            int lastErr = 0;
+            string lastBytes = "";
+            string lastLabel = "";
+            foreach (var (label, reportType, data) in attempts)
+            {
+                int err = TrySetReport(winUsb, display, reportType, data);
+                lastErr = err;
+                lastBytes = ToHex(data);
+                lastLabel = label;
+                if (err == 0)
+                {
+                    DiagnosticLog.Write(
+                        $"WinUSB SET_REPORT ok strategy='{label}' raw=0x{raw:X8} " +
+                        $"reportType=0x{reportType:X2} len={data.Length} bytes=[{ToHex(data)}]");
+                    return;
+                }
+                DiagnosticLog.Write(
+                    $"WinUSB SET_REPORT try strategy='{label}' raw=0x{raw:X8} " +
+                    $"reportType=0x{reportType:X2} len={data.Length} bytes=[{ToHex(data)}] -> err={err}");
+            }
+
+            throw new Win32Exception(lastErr,
+                $"WinUsb_ControlTransfer SET_REPORT failed after all strategies. " +
+                $"Last: '{lastLabel}' bytes=[{lastBytes}] err={lastErr}.");
         }
         finally
         {
@@ -194,13 +194,78 @@ public sealed class StudioDisplayService : IDisplayService
         }
     }
 
-    private static int TrySetReport(IntPtr winUsb, StudioDisplayInfo display, byte[] data)
+    private static List<(string Label, byte ReportType, byte[] Data)> BuildSetReportCandidates(
+        StudioDisplayInfo display, uint raw, byte[] template)
+    {
+        var attempts = new List<(string, byte, byte[])>();
+        ushort raw16 = (ushort)Math.Min(raw, 0xFFFF);
+
+        // A — echo GET buffer back with bytes 1-2 replaced (uint16 LE brightness),
+        // mode/status flags preserved. Most likely the correct shape because it
+        // mirrors what the device returns.
+        var a = (byte[])template.Clone();
+        if (a.Length >= 3)
+        {
+            a[0] = display.BrightnessReportId;
+            BinaryPrimitives.WriteUInt16LittleEndian(a.AsSpan(1, 2), raw16);
+            attempts.Add(("echo-with-u16", WinUsbNative.HidReportTypeFeature, a));
+        }
+
+        // B — minimal Feature report: report ID + uint16 LE + zeros.
+        var b = new byte[display.FeatureReportByteLength];
+        b[0] = display.BrightnessReportId;
+        BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(1, 2), raw16);
+        attempts.Add(("zero-with-u16", WinUsbNative.HidReportTypeFeature, b));
+
+        // C — apdbctl shape: report ID + uint32 LE + zeros. Kept as a safety net.
+        var c = new byte[display.FeatureReportByteLength];
+        c[0] = display.BrightnessReportId;
+        BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(1, 4), raw);
+        attempts.Add(("apdbctl-u32", WinUsbNative.HidReportTypeFeature, c));
+
+        // D — same shape as A but sent as Output report type. Some Apple firmwares
+        // only let the host write brightness via Output, while Feature is read-only.
+        var d = (byte[])a.Clone();
+        attempts.Add(("output-echo-u16", WinUsbNative.HidReportTypeOutput, d));
+
+        // E — without the leading Report ID byte (HID 1.11 §7.2.2 strict reading,
+        // report ID communicated only via wValue). Length is one byte shorter.
+        var e = new byte[display.FeatureReportByteLength - 1];
+        BinaryPrimitives.WriteUInt16LittleEndian(e.AsSpan(0, 2), raw16);
+        attempts.Add(("no-id-u16", WinUsbNative.HidReportTypeFeature, e));
+
+        return attempts;
+    }
+
+    private static byte[] GetFeatureReport(IntPtr winUsb, StudioDisplayInfo display)
+    {
+        var buffer = new byte[display.FeatureReportByteLength];
+        buffer[0] = display.BrightnessReportId;
+        var setup = new WinUsbNative.WINUSB_SETUP_PACKET
+        {
+            RequestType = WinUsbNative.RequestTypeClassInterfaceIn,
+            Request = WinUsbNative.HidRequestGetReport,
+            Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | display.BrightnessReportId),
+            Index = display.UsbInterfaceNumber,
+            Length = (ushort)buffer.Length,
+        };
+        if (!WinUsbNative.WinUsb_ControlTransfer(
+                winUsb, setup, buffer, (uint)buffer.Length, out _, IntPtr.Zero))
+        {
+            var err = Marshal.GetLastWin32Error();
+            throw new Win32Exception(err,
+                $"WinUsb_ControlTransfer GET_REPORT failed (err={err}).");
+        }
+        return buffer;
+    }
+
+    private static int TrySetReport(IntPtr winUsb, StudioDisplayInfo display, byte reportType, byte[] data)
     {
         var setup = new WinUsbNative.WINUSB_SETUP_PACKET
         {
             RequestType = WinUsbNative.RequestTypeClassInterfaceOut,
             Request = WinUsbNative.HidRequestSetReport,
-            Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | display.BrightnessReportId),
+            Value = (ushort)((reportType << 8) | display.BrightnessReportId),
             Index = display.UsbInterfaceNumber,
             Length = (ushort)data.Length,
         };
@@ -509,6 +574,12 @@ public sealed class StudioDisplayService : IDisplayService
                 $"As uint16-LE @offset1 = 0x{BinaryPrimitives.ReadUInt16LittleEndian(probe.AsSpan(1, 2)):X4} " +
                 $"({BinaryPrimitives.ReadUInt16LittleEndian(probe.AsSpan(1, 2))}).");
 
+            // Dump the HID class descriptor and report descriptor so we can
+            // confirm the report ID, item types, and value ranges that the
+            // device actually advertises. This is the authoritative source
+            // when the report layout has to be reverse-engineered.
+            DumpHidDescriptors(winUsb);
+
             return new StudioDisplayInfo(
                 DevicePath: path,
                 ProductName: "Apple Pro Display XDR",
@@ -549,6 +620,83 @@ public sealed class StudioDisplayService : IDisplayService
         }
         var candidate = parts[2];
         return string.IsNullOrWhiteSpace(candidate) ? null : candidate;
+    }
+
+    private static void DumpHidDescriptors(IntPtr winUsb)
+    {
+        // Step 1: read the 9-byte HID class descriptor at interface 0 so we
+        // can learn the report descriptor's true length.
+        var hidDesc = new byte[9];
+        var hidSetup = new WinUsbNative.WINUSB_SETUP_PACKET
+        {
+            RequestType = WinUsbNative.RequestTypeStandardInterfaceIn,
+            Request = WinUsbNative.UsbRequestGetDescriptor,
+            Value = (ushort)(WinUsbNative.UsbDescriptorTypeHid << 8),
+            Index = 0,
+            Length = (ushort)hidDesc.Length,
+        };
+        if (!WinUsbNative.WinUsb_ControlTransfer(
+                winUsb, hidSetup, hidDesc, (uint)hidDesc.Length, out var hidLen, IntPtr.Zero))
+        {
+            var err = Marshal.GetLastWin32Error();
+            DiagnosticLog.Write(
+                $"  HID descriptor: GET_DESCRIPTOR(HID) failed (err={err}). " +
+                "Device doesn't expose a HID class descriptor over the WinUSB-bound interface.");
+            return;
+        }
+        DiagnosticLog.Write(
+            $"  HID descriptor: {hidLen} bytes = [{ToHex(hidDesc.AsSpan(0, (int)hidLen).ToArray())}]");
+
+        // The HID class descriptor's bytes 7-8 are the report descriptor length
+        // (little-endian uint16). bDescriptorType at byte 6 should be 0x22.
+        if (hidLen < 9 || hidDesc[6] != 0x22)
+        {
+            DiagnosticLog.Write(
+                $"  HID descriptor: unexpected shape (bDescriptorType[6]=0x{hidDesc[6]:X2}, " +
+                "expected 0x22). Skipping report descriptor fetch.");
+            return;
+        }
+        ushort reportLen = BinaryPrimitives.ReadUInt16LittleEndian(hidDesc.AsSpan(7, 2));
+        DiagnosticLog.Write(
+            $"  HID descriptor advertises report descriptor length = {reportLen} bytes.");
+
+        // Step 2: fetch the report descriptor in full so we can decode the
+        // actual report IDs, sizes, usages, and value ranges.
+        if (reportLen == 0 || reportLen > 4096)
+        {
+            DiagnosticLog.Write(
+                "  Report descriptor length is out of range, skipping fetch.");
+            return;
+        }
+        var reportDesc = new byte[reportLen];
+        var reportSetup = new WinUsbNative.WINUSB_SETUP_PACKET
+        {
+            RequestType = WinUsbNative.RequestTypeStandardInterfaceIn,
+            Request = WinUsbNative.UsbRequestGetDescriptor,
+            Value = (ushort)(WinUsbNative.UsbDescriptorTypeReport << 8),
+            Index = 0,
+            Length = reportLen,
+        };
+        if (!WinUsbNative.WinUsb_ControlTransfer(
+                winUsb, reportSetup, reportDesc, (uint)reportDesc.Length,
+                out var reportXferred, IntPtr.Zero))
+        {
+            var err = Marshal.GetLastWin32Error();
+            DiagnosticLog.Write(
+                $"  Report descriptor: GET_DESCRIPTOR(Report) failed (err={err}).");
+            return;
+        }
+        DiagnosticLog.Write(
+            $"  Report descriptor: {reportXferred} bytes (advertised {reportLen}):");
+        // Log in 32-byte chunks so a long descriptor remains readable in
+        // a text editor / shareable.
+        const int chunk = 32;
+        for (int off = 0; off < (int)reportXferred; off += chunk)
+        {
+            int n = Math.Min(chunk, (int)reportXferred - off);
+            DiagnosticLog.Write(
+                $"    {off:X4}: {ToHex(reportDesc.AsSpan(off, n).ToArray())}");
+        }
     }
 
     private static string? GetDeviceDescription(

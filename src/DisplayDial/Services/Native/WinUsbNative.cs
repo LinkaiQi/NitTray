@@ -10,6 +10,14 @@ internal static class WinUsbNative
     //   bits 4-0: recipient (0 = device, 1 = interface, 2 = endpoint)
     public const byte RequestTypeClassInterfaceOut = 0x21;
     public const byte RequestTypeClassInterfaceIn = 0xA1;
+    public const byte RequestTypeStandardInterfaceIn = 0x81;
+
+    // Standard USB device requests (USB 2.0 § 9.4).
+    public const byte UsbRequestGetDescriptor = 0x06;
+
+    // USB HID class descriptor types (HID 1.11 § 7.1).
+    public const byte UsbDescriptorTypeHid = 0x21;
+    public const byte UsbDescriptorTypeReport = 0x22;
 
     // HID class-specific control requests (HID 1.11 § 7.2).
     public const byte HidRequestGetReport = 0x01;
