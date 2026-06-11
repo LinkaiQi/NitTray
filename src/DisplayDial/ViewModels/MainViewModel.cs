@@ -96,7 +96,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             StatusMessage = found.Count switch
             {
-                0 => "No Apple Studio Display detected.",
+                0 => "No Apple display detected.",
                 1 => "Connected to 1 display.",
                 _ => $"Connected to {found.Count} displays.",
             };

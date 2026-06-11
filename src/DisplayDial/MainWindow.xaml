@@ -24,7 +24,7 @@
                     Padding="12,5" MinWidth="80"/>
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Connected Displays" FontSize="20" FontWeight="SemiBold" Foreground="#202024"/>
-                <TextBlock Text="Drag a slider to set brightness." FontSize="11" Foreground="#6E6E73" Margin="0,2,0,0"/>
+                <TextBlock Text="Apple Studio Display and Pro Display XDR — drag a slider to set brightness." FontSize="11" Foreground="#6E6E73" Margin="0,2,0,0"/>
             </StackPanel>
         </DockPanel>
 
@@ -75,9 +75,9 @@
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                         Visibility="{Binding EmptyVisibility}">
-                <TextBlock Text="No Apple Studio Display detected." FontSize="14" Foreground="#6E6E73"
+                <TextBlock Text="No Apple display detected." FontSize="14" Foreground="#6E6E73"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Plug one in over USB-C / Thunderbolt and click Refresh."
+                <TextBlock Text="Plug in an Apple Studio Display or Pro Display XDR over USB-C / Thunderbolt and click Refresh."
                            FontSize="11" Foreground="#A1A1A6" Margin="0,4,0,0" HorizontalAlignment="Center"/>
             </StackPanel>
         </Grid>
