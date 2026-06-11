@@ -13,36 +13,34 @@ public sealed class StudioDisplayService : IDisplayService
     private const ushort ProDisplayXdrPid = 0x9243;
     private const int ErrorNoMoreItems = 259;
 
-    // Pro Display XDR brightness HID protocol, decoded from the Linux kernel
-    // driver written by Julius Zint (apple_bl_usb.c) and the apdbctl macOS
-    // CLI of the same author — these are the canonical, on-the-wire-verified
-    // sources.
+    // Pro Display XDR brightness HID protocol.
     //
-    // Pro Display XDR exposes 5 HID interfaces. Only one of them (typically
-    // interface 2 — bInterfaceNumber == 2) carries the brightness control.
-    // We identify it by walking the HID report descriptor of each interface
-    // and looking for the well-known Apple-vendor pair:
+    // Pro Display XDR exposes 5 HID interfaces. We identify the brightness
+    // one by walking each interface's HID report descriptor — the brightness
+    // interface (typically interface 2) carries the canonical VESA Monitor
+    // Brightness item, identified by the well-known pair:
     //
-    //   Usage Page  = 0x8005
-    //   Usage       = 0x1009
+    //   Usage Page  = 0x0082   (VESA Virtual Controls; HID Usage Tables § 11)
+    //   Usage       = 0x0010   (Brightness)
     //
-    // The interface's Report 0x01 layout is exactly 7 bytes:
+    // That interface's Feature Report 0x01 layout is exactly 7 bytes:
     //
     //   byte 0     : Report ID (0x01)
     //   bytes 1..4 : BRIGHTNESS, uint32 little-endian, range 400..50000
-    //   bytes 5..6 : padding (zero)
+    //   bytes 5..6 : a second volatile uint16 (Page 0x0F / Usage 0x50,
+    //                range 0..20000) — preserved verbatim via read-modify-write
     //
     // Previously this code talked to whichever interface WinUSB returned
     // first — typically interface 0, which on Pro XDR is a *sensor* interface
-    // (Usage Page 0x0020 / Usage 0x030E). Writes there were silently
-    // accepted but never affected the panel.
+    // (Usage Page 0x0020). Writes there were silently accepted but never
+    // affected the panel.
     private const int ProXdrFeatureReportByteLength = 7;
     private const byte ProXdrBrightnessReportId = 0x01;
     private const int ProXdrBrightnessByteOffset = 1;
     private const uint ProXdrMinBrightness = 400;
     private const uint ProXdrMaxBrightness = 50000;
-    private const ushort ProXdrBrightnessUsagePage = 0x8005;
-    private const ushort ProXdrBrightnessUsage = 0x1009;
+    private const ushort ProXdrBrightnessUsagePage = 0x0082;
+    private const ushort ProXdrBrightnessUsage = 0x0010;
 
     // Models we recognise. Used for friendly product names and as a fast-path filter
     // when matching device paths. Devices not in this list can still work — we fall
@@ -135,13 +133,26 @@ public sealed class StudioDisplayService : IDisplayService
     {
         using var ctx = OpenWinUsbBrightnessInterface(display);
 
-        // Canonical Apple Pro Display XDR / Studio Display brightness SET_REPORT:
-        //   byte 0     : Report ID (0x01)
-        //   bytes 1..4 : brightness uint32 LE
-        //   bytes 5..6 : padding (zero)
-        // No multi-strategy probing needed — this layout is verified on real
-        // hardware in apdbctl and the Linux apple_bl_usb driver.
-        var buffer = new byte[display.FeatureReportByteLength];
+        // Read the current Feature report so we can preserve any other fields
+        // (e.g. on Pro XDR, bytes 5-6 carry a separate volatile uint16 that
+        // we don't want to clobber). Fall back to a zero buffer if the read
+        // fails so we can still attempt the SET.
+        byte[] buffer;
+        try
+        {
+            buffer = GetFeatureReport(ctx.BrightnessHandle, display);
+            if (buffer.Length < display.FeatureReportByteLength)
+            {
+                Array.Resize(ref buffer, display.FeatureReportByteLength);
+            }
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write(
+                $"WinUSB SET: pre-read GET_REPORT failed ({ex.Message}); " +
+                "falling back to zero-filled template.");
+            buffer = new byte[display.FeatureReportByteLength];
+        }
         buffer[0] = display.BrightnessReportId;
         BinaryPrimitives.WriteUInt32LittleEndian(
             buffer.AsSpan(display.BrightnessByteOffset, 4), raw);
@@ -154,6 +165,9 @@ public sealed class StudioDisplayService : IDisplayService
                 $"WinUsb_ControlTransfer SET_REPORT failed (err={err}) " +
                 $"on iface={display.UsbInterfaceNumber}, raw={raw}.");
         }
+        DiagnosticLog.Write(
+            $"WinUSB SET ok: iface={display.UsbInterfaceNumber}, raw={raw} (0x{raw:X8}), " +
+            $"bytes=[{ToHex(buffer)}]");
 
         // Verify by reading back. If the readback doesn't match what we wrote,
         // we're either talking to the wrong interface or the device's firmware
@@ -166,8 +180,9 @@ public sealed class StudioDisplayService : IDisplayService
             if (got != raw)
             {
                 DiagnosticLog.Write(
-                    $"WinUSB SET ok but verify mismatch: wrote raw={raw} (0x{raw:X4}), " +
-                    $"readback={got} (0x{got:X4}) on iface={display.UsbInterfaceNumber}.");
+                    $"WinUSB SET ok but verify mismatch: wrote raw={raw} (0x{raw:X8}), " +
+                    $"readback={got} (0x{got:X8}) on iface={display.UsbInterfaceNumber}. " +
+                    $"verify=[{ToHex(verify)}]");
             }
         }
         catch (Exception ex)
