@@ -27,4 +27,9 @@ public sealed record StudioDisplayInfo(
     uint MinRawBrightness,
     uint MaxRawBrightness,
     DisplayTransport Transport = DisplayTransport.Hid,
-    byte UsbInterfaceNumber = 0);
+    byte UsbInterfaceNumber = 0,
+    // Byte offset of the brightness value inside the feature report. For the
+    // Studio Display family this is 1 (right after the report ID byte). The
+    // Pro Display XDR reports brightness at byte offset 2 (its report begins
+    // with an input-select byte). Always interpreted as uint16 little-endian.
+    int BrightnessByteOffset = 1);

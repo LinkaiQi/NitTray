@@ -13,20 +13,35 @@ public sealed class StudioDisplayService : IDisplayService
     private const ushort ProDisplayXdrPid = 0x9243;
     private const int ErrorNoMoreItems = 259;
 
-    // Pro Display XDR HID report layout, derived empirically from a real device:
-    // GET_REPORT(Feature, ID=0x01) returns 7 bytes: [01 BB BB SS SS FF FF]
-    //   - byte 0: Report ID (echoed)
-    //   - bytes 1-2: brightness uint16 LE (matches apdbctl's documented range
-    //     but as a uint16, not the uint32 their code claims)
-    //   - bytes 3-6: status / mode flags. The exact meaning isn't documented;
-    //     we read them on the GET and echo them back on the SET so the device
-    //     keeps the same mode/EDR scaling and only the brightness changes.
-    // Range observed on a real Pro XDR (June 2026): up to ~0xC802 (51202).
-    // We use 50000 as max to match apdbctl; the device clamps anything higher.
-    private const int ProXdrFeatureReportByteLength = 7;
+    // Pro Display XDR HID feature report 0x01, derived from the device's real
+    // HID report descriptor (read live via WinUSB GET_DESCRIPTOR — Windows'
+    // built-in HID driver rejects it, but the descriptor itself is well-formed
+    // and authoritative):
+    //
+    //   total report = 42 bytes + 1 report-ID byte = 43 bytes on the wire
+    //   byte  0    : Report ID (0x01)
+    //   byte  1    : input-select (Usage 0x0316 on Apple page 0x20), range 1..2
+    //   bytes 2..3 : BRIGHTNESS, uint16 LE, range 0x00C8..0x2710 (200..10000)
+    //   byte  4    : control flag (Usage 0x0309), range 1..1
+    //   byte  5    : Apple vendor control (Usage 0x0100 on page 0xFF15), 1..1
+    //   byte  6    : color preset (Usage 0x0319), range 1..4
+    //   bytes 7..26: color/gamma matrix (10 × signed int16)
+    //   byte  27   : aspect control (Usage 0x0201), range 1..7
+    //   bytes 28..29: contrast (Usage 0x0304), range 0..10000
+    //   bytes 30..41: three 32-bit volatile fields (presumably measurement)
+    //
+    // Bytes 1, 4, 5, 6 and beyond are status / mode flags the device sets and
+    // should be echoed back unchanged. We pull a fresh GET right before each
+    // SET so the round-trip never accidentally switches inputs or color presets.
+    //
+    // Range note: apdbctl claims 400..50000 but the device's own descriptor
+    // says 200..10000; we trust the descriptor. Values outside this range get
+    // stalled with ERROR_GEN_FAILURE.
+    private const int ProXdrFeatureReportByteLength = 42;
     private const byte ProXdrBrightnessReportId = 0x01;
-    private const uint ProXdrMinBrightness = 400;
-    private const uint ProXdrMaxBrightness = 50000;
+    private const int ProXdrBrightnessByteOffset = 2;
+    private const uint ProXdrMinBrightness = 200;
+    private const uint ProXdrMaxBrightness = 10000;
 
     // Models we recognise. Used for friendly product names and as a fast-path filter
     // when matching device paths. Devices not in this list can still work — we fall
@@ -114,9 +129,8 @@ public sealed class StudioDisplayService : IDisplayService
             }
 
             var buffer = GetFeatureReport(winUsb, display);
-            // For the Pro XDR, brightness lives in bytes 1-2 as uint16 LE,
-            // bytes 3-6 are status/mode flags we ignore on read.
-            return BinaryPrimitives.ReadUInt16LittleEndian(buffer.AsSpan(1, 2));
+            return BinaryPrimitives.ReadUInt16LittleEndian(
+                buffer.AsSpan(display.BrightnessByteOffset, 2));
         }
         finally
         {
@@ -139,9 +153,9 @@ public sealed class StudioDisplayService : IDisplayService
                 throw new Win32Exception(err, $"WinUsb_Initialize failed (err={err}).");
             }
 
-            // Read the current 7-byte feature report so we know the current
-            // status/mode flag bytes. We echo those back unchanged so the device
-            // only changes brightness and doesn't pick up zero-filled mode flags.
+            // Read the current full feature report so we know the current
+            // status/mode flag bytes. We echo those back unchanged so the SET
+            // only changes brightness, never input source or color preset.
             byte[] template;
             try
             {
@@ -154,10 +168,6 @@ public sealed class StudioDisplayService : IDisplayService
                 template[0] = display.BrightnessReportId;
             }
 
-            // Several Apple firmwares only accept a particular SET_REPORT shape.
-            // Build a list of candidates and try each until one succeeds. The
-            // candidate that wins on first run becomes the obvious one to keep,
-            // but we leave the others as a safety net for firmware variations.
             var attempts = BuildSetReportCandidates(display, raw, template);
 
             int lastErr = 0;
@@ -199,40 +209,48 @@ public sealed class StudioDisplayService : IDisplayService
     {
         var attempts = new List<(string, byte, byte[])>();
         ushort raw16 = (ushort)Math.Min(raw, 0xFFFF);
+        int off = display.BrightnessByteOffset;
+        int fullLen = display.FeatureReportByteLength;
 
-        // A — echo GET buffer back with bytes 1-2 replaced (uint16 LE brightness),
-        // mode/status flags preserved. Most likely the correct shape because it
-        // mirrors what the device returns.
+        // A — full-length echo: take the template (the bytes we just read from
+        // the device), patch the 2 brightness bytes, send the entire report
+        // back. Matches the HID class spec exactly and preserves all flags.
         var a = (byte[])template.Clone();
-        if (a.Length >= 3)
+        if (a.Length < fullLen)
         {
-            a[0] = display.BrightnessReportId;
-            BinaryPrimitives.WriteUInt16LittleEndian(a.AsSpan(1, 2), raw16);
-            attempts.Add(("echo-with-u16", WinUsbNative.HidReportTypeFeature, a));
+            Array.Resize(ref a, fullLen);
+        }
+        a[0] = display.BrightnessReportId;
+        if (off + 2 <= a.Length)
+        {
+            BinaryPrimitives.WriteUInt16LittleEndian(a.AsSpan(off, 2), raw16);
+        }
+        attempts.Add(("full-echo-u16", WinUsbNative.HidReportTypeFeature, a));
+
+        // B — short echo: only send up to and including the brightness bytes.
+        // Some devices accept partial reports and leave later fields alone.
+        int shortLen = off + 2;
+        if (shortLen <= a.Length)
+        {
+            var b = new byte[shortLen];
+            Array.Copy(a, 0, b, 0, shortLen);
+            attempts.Add(("short-echo-u16", WinUsbNative.HidReportTypeFeature, b));
         }
 
-        // B — minimal Feature report: report ID + uint16 LE + zeros.
-        var b = new byte[display.FeatureReportByteLength];
-        b[0] = display.BrightnessReportId;
-        BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(1, 2), raw16);
-        attempts.Add(("zero-with-u16", WinUsbNative.HidReportTypeFeature, b));
-
-        // C — apdbctl shape: report ID + uint32 LE + zeros. Kept as a safety net.
-        var c = new byte[display.FeatureReportByteLength];
+        // C — full-length zero: ReportID + zeros up to brightness, brightness,
+        // then zeros. Useful if 'echo' includes a flag the firmware doesn't like
+        // when echoed back verbatim.
+        var c = new byte[fullLen];
         c[0] = display.BrightnessReportId;
-        BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(1, 4), raw);
-        attempts.Add(("apdbctl-u32", WinUsbNative.HidReportTypeFeature, c));
+        if (off + 2 <= c.Length)
+        {
+            BinaryPrimitives.WriteUInt16LittleEndian(c.AsSpan(off, 2), raw16);
+        }
+        attempts.Add(("full-zero-u16", WinUsbNative.HidReportTypeFeature, c));
 
-        // D — same shape as A but sent as Output report type. Some Apple firmwares
-        // only let the host write brightness via Output, while Feature is read-only.
-        var d = (byte[])a.Clone();
-        attempts.Add(("output-echo-u16", WinUsbNative.HidReportTypeOutput, d));
-
-        // E — without the leading Report ID byte (HID 1.11 §7.2.2 strict reading,
-        // report ID communicated only via wValue). Length is one byte shorter.
-        var e = new byte[display.FeatureReportByteLength - 1];
-        BinaryPrimitives.WriteUInt16LittleEndian(e.AsSpan(0, 2), raw16);
-        attempts.Add(("no-id-u16", WinUsbNative.HidReportTypeFeature, e));
+        // D — full-length echo sent as Output report. Last-resort fallback for
+        // firmwares that only accept brightness via Output, not Feature.
+        attempts.Add(("output-full-echo-u16", WinUsbNative.HidReportTypeOutput, (byte[])a.Clone()));
 
         return attempts;
     }
@@ -549,6 +567,7 @@ public sealed class StudioDisplayService : IDisplayService
 
             // Try reading the current brightness via GET_REPORT to confirm WinUSB really works.
             var probe = new byte[ProXdrFeatureReportByteLength];
+            probe[0] = ProXdrBrightnessReportId;
             var setup = new WinUsbNative.WINUSB_SETUP_PACKET
             {
                 RequestType = WinUsbNative.RequestTypeClassInterfaceIn,
@@ -567,12 +586,18 @@ public sealed class StudioDisplayService : IDisplayService
                 return null;
             }
             DiagnosticLog.Write(
-                $"  WinUSB probe: GET_REPORT ok, transferred {transferred} bytes. " +
-                $"Raw 7-byte report = [{ToHex(probe)}]. " +
-                $"As uint32-LE @offset1 = 0x{BinaryPrimitives.ReadUInt32LittleEndian(probe.AsSpan(1, 4)):X8} " +
-                $"({BinaryPrimitives.ReadUInt32LittleEndian(probe.AsSpan(1, 4))}). " +
-                $"As uint16-LE @offset1 = 0x{BinaryPrimitives.ReadUInt16LittleEndian(probe.AsSpan(1, 2)):X4} " +
-                $"({BinaryPrimitives.ReadUInt16LittleEndian(probe.AsSpan(1, 2))}).");
+                $"  WinUSB probe: GET_REPORT ok, asked for {probe.Length} bytes, " +
+                $"transferred {transferred} bytes. " +
+                $"Raw report = [{ToHex(probe.AsSpan(0, (int)transferred).ToArray())}]");
+            if ((int)transferred >= ProXdrBrightnessByteOffset + 2)
+            {
+                var brightness = BinaryPrimitives.ReadUInt16LittleEndian(
+                    probe.AsSpan(ProXdrBrightnessByteOffset, 2));
+                DiagnosticLog.Write(
+                    $"  Decoded brightness (uint16-LE @offset {ProXdrBrightnessByteOffset}) = " +
+                    $"0x{brightness:X4} ({brightness}). " +
+                    $"Range = {ProXdrMinBrightness}..{ProXdrMaxBrightness}.");
+            }
 
             // Dump the HID class descriptor and report descriptor so we can
             // confirm the report ID, item types, and value ranges that the
@@ -590,7 +615,8 @@ public sealed class StudioDisplayService : IDisplayService
                 MinRawBrightness: ProXdrMinBrightness,
                 MaxRawBrightness: ProXdrMaxBrightness,
                 Transport: DisplayTransport.WinUsb,
-                UsbInterfaceNumber: 0);
+                UsbInterfaceNumber: 0,
+                BrightnessByteOffset: ProXdrBrightnessByteOffset);
         }
         catch (Exception ex)
         {
