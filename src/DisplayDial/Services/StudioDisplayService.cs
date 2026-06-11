@@ -66,6 +66,7 @@ public sealed class StudioDisplayService : IDisplayService
 
         try
         {
+            DiagnosticLog.Write("--- All HID class devices ---");
             var ifaceData = new SetupApiNative.SP_DEVICE_INTERFACE_DATA
             {
                 cbSize = Marshal.SizeOf<SetupApiNative.SP_DEVICE_INTERFACE_DATA>(),
@@ -90,21 +91,24 @@ public sealed class StudioDisplayService : IDisplayService
                 var path = GetDevicePath(devInfoSet, ref ifaceData);
                 if (path is null)
                 {
-                    DiagnosticLog.Write($"[{index}] (null path)");
+                    DiagnosticLog.Write($"[hid {index}] (null path)");
                     continue;
                 }
-                if (!IsAppleVendor(path))
+                bool isApple = IsAppleVendor(path);
+                DiagnosticLog.Write($"[hid {index}]{(isApple ? " APPLE" : "")} {path}");
+
+                if (!isApple)
                 {
                     continue;
                 }
                 appleSeen++;
                 if (!seenPaths.Add(path))
                 {
-                    DiagnosticLog.Write($"[Apple] DUPLICATE path skipped: {path}");
+                    DiagnosticLog.Write("  (duplicate path, skipped)");
                     continue;
                 }
 
-                DiagnosticLog.Write($"[Apple #{appleSeen}] probing path: {path}");
+                DiagnosticLog.Write($"  -> probing as candidate brightness interface");
                 var info = TryProbeDisplay(path);
                 if (info is not null)
                 {
@@ -123,8 +127,14 @@ public sealed class StudioDisplayService : IDisplayService
         }
 
         DiagnosticLog.Write(
-            $"Enumeration done. Total HID devices: {totalSeen}, Apple-vendor: {appleSeen}, " +
+            $"HID enumeration done. Total HID devices: {totalSeen}, Apple-vendor: {appleSeen}, " +
             $"raw matches: {found.Count}");
+
+        // Also enumerate raw USB devices so we can tell the difference between
+        // "Pro XDR isn't on the bus" and "Pro XDR is on the bus but hidclass.sys
+        // didn't claim its HID interfaces". This is a diagnostic-only scan; we
+        // don't try to control brightness through these handles.
+        EnumerateUsbDevicesForDiagnostics();
 
         var result = DeduplicateBySerial(found);
         DiagnosticLog.Write($"After dedup: {result.Count} display(s).");
@@ -132,7 +142,146 @@ public sealed class StudioDisplayService : IDisplayService
         {
             DiagnosticLog.Write($"  - {d.ProductName} (serial={d.SerialNumber ?? "-"}, pid=0x{d.ProductId:X4})");
         }
+        if (result.Count == 0)
+        {
+            DiagnosticLog.Write("");
+            DiagnosticLog.Write("Hint: open Device Manager, choose View -> Devices by container.");
+            DiagnosticLog.Write("If your Apple display does not appear there at all, the USB / HID");
+            DiagnosticLog.Write("control channel is not reaching this PC. Try a different cable, plug");
+            DiagnosticLog.Write("directly into the PC (not through a hub), and confirm the cable is");
+            DiagnosticLog.Write("USB-C / Thunderbolt (not DisplayPort-only).");
+        }
         return result;
+    }
+
+    private static void EnumerateUsbDevicesForDiagnostics()
+    {
+        DiagnosticLog.Write("--- USB devices (GUID_DEVINTERFACE_USB_DEVICE) ---");
+        var usbGuid = SetupApiNative.GUID_DEVINTERFACE_USB_DEVICE;
+        var devInfoSet = SetupApiNative.SetupDiGetClassDevs(
+            ref usbGuid,
+            IntPtr.Zero,
+            IntPtr.Zero,
+            SetupApiNative.DIGCF_PRESENT | SetupApiNative.DIGCF_DEVICEINTERFACE);
+
+        if (devInfoSet == SetupApiNative.INVALID_HANDLE_VALUE)
+        {
+            DiagnosticLog.Write(
+                $"  SetupDiGetClassDevs(USB) failed: err={Marshal.GetLastWin32Error()}");
+            return;
+        }
+
+        int total = 0;
+        int apple = 0;
+        try
+        {
+            var ifaceData = new SetupApiNative.SP_DEVICE_INTERFACE_DATA
+            {
+                cbSize = Marshal.SizeOf<SetupApiNative.SP_DEVICE_INTERFACE_DATA>(),
+            };
+            var devInfoData = new SetupApiNative.SP_DEVINFO_DATA
+            {
+                cbSize = Marshal.SizeOf<SetupApiNative.SP_DEVINFO_DATA>(),
+            };
+
+            for (uint index = 0; ; index++)
+            {
+                if (!SetupApiNative.SetupDiEnumDeviceInterfaces(
+                        devInfoSet, IntPtr.Zero, ref usbGuid, index, ref ifaceData))
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    if (err is 0 or ErrorNoMoreItems)
+                    {
+                        break;
+                    }
+                    DiagnosticLog.Write($"  USB enum stopped: err={err}");
+                    break;
+                }
+
+                total++;
+                var path = GetDevicePathWithInfo(devInfoSet, ref ifaceData, ref devInfoData);
+                if (path is null)
+                {
+                    continue;
+                }
+                bool isApple = IsAppleVendor(path);
+                if (isApple)
+                {
+                    apple++;
+                }
+                var desc = GetDeviceDescription(devInfoSet, ref devInfoData);
+                DiagnosticLog.Write(
+                    $"[usb {index}]{(isApple ? " APPLE" : "")} {path} ({desc ?? "(no description)"})");
+            }
+        }
+        finally
+        {
+            SetupApiNative.SetupDiDestroyDeviceInfoList(devInfoSet);
+        }
+
+        DiagnosticLog.Write($"USB enumeration done. Total: {total}, Apple-vendor: {apple}.");
+    }
+
+    private static string? GetDeviceDescription(
+        IntPtr devInfoSet,
+        ref SetupApiNative.SP_DEVINFO_DATA devInfoData)
+    {
+        var buffer = new byte[512];
+        if (SetupApiNative.SetupDiGetDeviceRegistryProperty(
+                devInfoSet, ref devInfoData,
+                SetupApiNative.SPDRP_FRIENDLYNAME,
+                out _, buffer, buffer.Length, out _))
+        {
+            var s = System.Text.Encoding.Unicode.GetString(buffer).TrimEnd('\0');
+            if (!string.IsNullOrWhiteSpace(s))
+            {
+                return s;
+            }
+        }
+
+        if (SetupApiNative.SetupDiGetDeviceRegistryProperty(
+                devInfoSet, ref devInfoData,
+                SetupApiNative.SPDRP_DEVICEDESC,
+                out _, buffer, buffer.Length, out _))
+        {
+            var s = System.Text.Encoding.Unicode.GetString(buffer).TrimEnd('\0');
+            if (!string.IsNullOrWhiteSpace(s))
+            {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    private static string? GetDevicePathWithInfo(
+        IntPtr devInfoSet,
+        ref SetupApiNative.SP_DEVICE_INTERFACE_DATA ifaceData,
+        ref SetupApiNative.SP_DEVINFO_DATA devInfoData)
+    {
+        uint requiredBytes = 0;
+        SetupApiNative.SetupDiGetDeviceInterfaceDetail(
+            devInfoSet, ref ifaceData, IntPtr.Zero, 0, ref requiredBytes, IntPtr.Zero);
+
+        if (requiredBytes == 0)
+        {
+            return null;
+        }
+
+        var buffer = Marshal.AllocHGlobal((int)requiredBytes);
+        try
+        {
+            Marshal.WriteInt32(buffer, IntPtr.Size == 8 ? 8 : 6);
+            if (!SetupApiNative.SetupDiGetDeviceInterfaceDetail(
+                    devInfoSet, ref ifaceData, buffer, requiredBytes, ref requiredBytes, ref devInfoData))
+            {
+                return null;
+            }
+            return Marshal.PtrToStringUni(buffer + 4);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
     }
 
     private static StudioDisplayInfo? TryProbeDisplay(string path)
