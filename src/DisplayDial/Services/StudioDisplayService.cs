@@ -103,9 +103,9 @@ public sealed class StudioDisplayService : IDisplayService
         {
             if (!WinUsbNative.WinUsb_Initialize(handle, out winUsb))
             {
-                throw new Win32Exception(
-                    Marshal.GetLastWin32Error(),
-                    "WinUsb_Initialize failed.");
+                var err = Marshal.GetLastWin32Error();
+                throw new Win32Exception(err,
+                    $"WinUsb_Initialize failed (err={err}).");
             }
 
             var buffer = CreateFeatureBuffer(display, 0);
@@ -121,9 +121,9 @@ public sealed class StudioDisplayService : IDisplayService
             if (!WinUsbNative.WinUsb_ControlTransfer(
                     winUsb, setup, buffer, (uint)buffer.Length, out _, IntPtr.Zero))
             {
-                throw new Win32Exception(
-                    Marshal.GetLastWin32Error(),
-                    "WinUsb_ControlTransfer (GET_REPORT) failed.");
+                var err = Marshal.GetLastWin32Error();
+                throw new Win32Exception(err,
+                    $"WinUsb_ControlTransfer GET_REPORT failed (err={err}).");
             }
 
             return BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(1, 4));
@@ -145,28 +145,45 @@ public sealed class StudioDisplayService : IDisplayService
         {
             if (!WinUsbNative.WinUsb_Initialize(handle, out winUsb))
             {
-                throw new Win32Exception(
-                    Marshal.GetLastWin32Error(),
-                    "WinUsb_Initialize failed.");
+                var err = Marshal.GetLastWin32Error();
+                throw new Win32Exception(err,
+                    $"WinUsb_Initialize failed (err={err}).");
             }
 
-            var buffer = CreateFeatureBuffer(display, raw);
-            var setup = new WinUsbNative.WINUSB_SETUP_PACKET
+            // Strategy A (HID 1.11 §7.2.1, hidapi/hidraw convention): data buffer
+            // contains the full report INCLUDING the report ID byte at offset 0.
+            // wLength == report length including ID.
+            var withId = CreateFeatureBuffer(display, raw);
+            int errA = TrySetReport(winUsb, display, withId);
+            if (errA == 0)
             {
-                RequestType = WinUsbNative.RequestTypeClassInterfaceOut,
-                Request = WinUsbNative.HidRequestSetReport,
-                Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | display.BrightnessReportId),
-                Index = display.UsbInterfaceNumber,
-                Length = (ushort)buffer.Length,
-            };
-
-            if (!WinUsbNative.WinUsb_ControlTransfer(
-                    winUsb, setup, buffer, (uint)buffer.Length, out _, IntPtr.Zero))
-            {
-                throw new Win32Exception(
-                    Marshal.GetLastWin32Error(),
-                    "WinUsb_ControlTransfer (SET_REPORT) failed.");
+                DiagnosticLog.Write(
+                    $"WinUSB SET_REPORT(strategy=withReportId, len={withId.Length}) ok " +
+                    $"raw=0x{raw:X8} bytes=[{ToHex(withId)}]");
+                return;
             }
+
+            // Strategy B (alternate HID 1.11 §7.2.2 reading, used by some Apple
+            // firmwares): data buffer EXCLUDES the report ID byte. wLength is
+            // shorter by 1. The report ID still travels in wValue.
+            var withoutId = new byte[withId.Length - 1];
+            Array.Copy(withId, 1, withoutId, 0, withoutId.Length);
+            int errB = TrySetReport(winUsb, display, withoutId);
+            if (errB == 0)
+            {
+                DiagnosticLog.Write(
+                    $"WinUSB SET_REPORT(strategy=noReportId, len={withoutId.Length}) ok " +
+                    $"raw=0x{raw:X8} bytes=[{ToHex(withoutId)}]");
+                return;
+            }
+
+            DiagnosticLog.Write(
+                $"WinUSB SET_REPORT FAILED both strategies: " +
+                $"withReportId(err={errA}), noReportId(err={errB}), raw=0x{raw:X8}");
+
+            throw new Win32Exception(errA,
+                $"WinUsb_ControlTransfer SET_REPORT failed (err={errA} with report-id, " +
+                $"err={errB} without). raw=0x{raw:X8}");
         }
         finally
         {
@@ -175,6 +192,35 @@ public sealed class StudioDisplayService : IDisplayService
                 WinUsbNative.WinUsb_Free(winUsb);
             }
         }
+    }
+
+    private static int TrySetReport(IntPtr winUsb, StudioDisplayInfo display, byte[] data)
+    {
+        var setup = new WinUsbNative.WINUSB_SETUP_PACKET
+        {
+            RequestType = WinUsbNative.RequestTypeClassInterfaceOut,
+            Request = WinUsbNative.HidRequestSetReport,
+            Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | display.BrightnessReportId),
+            Index = display.UsbInterfaceNumber,
+            Length = (ushort)data.Length,
+        };
+        if (!WinUsbNative.WinUsb_ControlTransfer(
+                winUsb, setup, data, (uint)data.Length, out _, IntPtr.Zero))
+        {
+            return Marshal.GetLastWin32Error();
+        }
+        return 0;
+    }
+
+    private static string ToHex(byte[] data)
+    {
+        var sb = new StringBuilder(data.Length * 3);
+        for (int i = 0; i < data.Length; i++)
+        {
+            if (i > 0) sb.Append(' ');
+            sb.Append(data[i].ToString("X2"));
+        }
+        return sb.ToString();
     }
 
     private static IReadOnlyList<StudioDisplayInfo> Enumerate()
@@ -456,8 +502,12 @@ public sealed class StudioDisplayService : IDisplayService
                 return null;
             }
             DiagnosticLog.Write(
-                $"  WinUSB probe: GET_REPORT ok, transferred {transferred} bytes, " +
-                $"raw brightness=0x{BinaryPrimitives.ReadUInt32LittleEndian(probe.AsSpan(1, 4)):X8}");
+                $"  WinUSB probe: GET_REPORT ok, transferred {transferred} bytes. " +
+                $"Raw 7-byte report = [{ToHex(probe)}]. " +
+                $"As uint32-LE @offset1 = 0x{BinaryPrimitives.ReadUInt32LittleEndian(probe.AsSpan(1, 4)):X8} " +
+                $"({BinaryPrimitives.ReadUInt32LittleEndian(probe.AsSpan(1, 4))}). " +
+                $"As uint16-LE @offset1 = 0x{BinaryPrimitives.ReadUInt16LittleEndian(probe.AsSpan(1, 2)):X4} " +
+                $"({BinaryPrimitives.ReadUInt16LittleEndian(probe.AsSpan(1, 2))}).");
 
             return new StudioDisplayInfo(
                 DevicePath: path,
