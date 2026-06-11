@@ -156,6 +156,10 @@ src/DisplayDial/
   (or share) the log at `%LOCALAPPDATA%\DisplayDial\diagnostic.log`. It lists
   every Apple-vendor HID interface seen and why each one was or wasn't picked
   as the brightness control.
+- **Pro Display XDR with a yellow warning (Code 10) in Device Manager:**
+  see **Pro Display XDR setup** below — Windows' built-in HID driver doesn't
+  understand Apple's HID descriptor for this display, so brightness has to go
+  through a WinUSB driver instead.
 - **Permission denied:** None expected on Windows — `CreateFile` with
   `GENERIC_READ | GENERIC_WRITE` and shared access works for normal users.
 - **Pro Display XDR shows up multiple times:** shouldn't happen — DisplayDial
@@ -163,6 +167,42 @@ src/DisplayDial/
   reported. File an issue with the HID device paths if you see duplicates.
 - **Slider snaps to an integer percent:** intentional. The raw range is
   per-device (`400..60000` or `400..50000`) and we round to integer percent.
+
+## Pro Display XDR setup (Windows)
+
+The Apple Pro Display XDR ships an HID descriptor that Windows' built-in HID
+driver (`hidclass.sys`) cannot parse — when you connect the display directly,
+Device Manager shows its **USB Input Device** (`VID_05AC` `PID_9243`) with a
+yellow warning and **Code 10 ("This device cannot start")**. Until that driver
+is replaced, no application on Windows — not just DisplayDial — can talk to
+the brightness interface.
+
+The standard workaround in the open-source community (`apdbctl`, `MonitorCtl`,
+etc.) is to bind the Microsoft-provided WinUSB driver to that one interface
+instead. DisplayDial then sends the same `SET_REPORT` / `GET_REPORT` control
+transfers directly over the USB bus.
+
+**One-time setup:**
+
+1. Download Zadig from https://zadig.akeo.ie/ (it's a tiny, signed, widely
+   used utility for swapping USB drivers).
+2. Run Zadig. In the menu, choose **Options → List All Devices**.
+3. In the device drop-down at the top, find the entry whose USB ID is
+   `05AC:9243` (it usually shows up as **USB Input Device**).
+4. With that entry selected, the right-hand "Target Driver" arrow should
+   show **WinUSB** — leave it as WinUSB and click **Install Driver**
+   (or **Replace Driver** if a driver is already bound).
+5. Wait for Zadig to finish (it can take 30–60 seconds), then back in
+   DisplayDial click **Refresh**. The Pro Display XDR should now appear
+   in the list.
+
+You only need to do this once per machine. The Apple Studio Display family
+does **not** need Zadig — its HID descriptor is well-formed and Windows binds
+it correctly out of the box.
+
+If after running Zadig the display still doesn't appear, open
+`%LOCALAPPDATA%\DisplayDial\diagnostic.log` and look for lines starting with
+`WinUSB probe:` — they describe exactly which step failed.
 
 ## License
 

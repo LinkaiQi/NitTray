@@ -10,6 +10,7 @@ internal static class Kernel32Native
     public const uint FILE_SHARE_WRITE = 0x00000002;
     public const uint OPEN_EXISTING = 3;
     public const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
+    public const uint FILE_FLAG_OVERLAPPED = 0x40000000;
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern HidDeviceSafeHandle CreateFile(

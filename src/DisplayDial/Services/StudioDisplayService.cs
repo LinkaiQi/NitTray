@@ -10,7 +10,17 @@ namespace DisplayDial.Services;
 public sealed class StudioDisplayService : IDisplayService
 {
     private const ushort AppleVendorId = 0x05AC;
+    private const ushort ProDisplayXdrPid = 0x9243;
     private const int ErrorNoMoreItems = 259;
+
+    // Pro Display XDR HID report layout, taken from 0xcharly/apdbctl. We hard-code
+    // these because the device doesn't expose a usable HID descriptor on Windows
+    // (hidclass.sys refuses with Code 10), so we can't probe the values dynamically
+    // the way we do for the Studio Display family.
+    private const int ProXdrFeatureReportByteLength = 7;
+    private const byte ProXdrBrightnessReportId = 0x01;
+    private const uint ProXdrMinBrightness = 400;
+    private const uint ProXdrMaxBrightness = 50000;
 
     // Models we recognise. Used for friendly product names and as a fast-path filter
     // when matching device paths. Devices not in this list can still work — we fall
@@ -20,7 +30,7 @@ public sealed class StudioDisplayService : IDisplayService
         (0x1114, "Apple Studio Display"),
         (0x1116, "Apple Studio Display XDR"),
         (0x1118, "Apple Studio Display"),
-        (0x9243, "Apple Pro Display XDR"),
+        (ProDisplayXdrPid, "Apple Pro Display XDR"),
     };
 
     public Task<IReadOnlyList<StudioDisplayInfo>> EnumerateAsync(CancellationToken cancellationToken = default)
@@ -29,16 +39,143 @@ public sealed class StudioDisplayService : IDisplayService
     public Task<int> ReadBrightnessPercentAsync(StudioDisplayInfo display, CancellationToken cancellationToken = default)
         => Task.Run(() =>
         {
-            using var handle = OpenDevice(display.DevicePath);
-            return RawToPercent(display, ReadRawBrightness(handle, display));
+            return RawToPercent(display, ReadRawBrightness(display));
         }, cancellationToken);
 
     public Task SetBrightnessPercentAsync(StudioDisplayInfo display, int percent, CancellationToken cancellationToken = default)
         => Task.Run(() =>
         {
-            using var handle = OpenDevice(display.DevicePath);
-            WriteRawBrightness(handle, display, PercentToRaw(display, percent));
+            WriteRawBrightness(display, PercentToRaw(display, percent));
         }, cancellationToken);
+
+    private static uint ReadRawBrightness(StudioDisplayInfo display)
+    {
+        return display.Transport switch
+        {
+            DisplayTransport.WinUsb => ReadRawBrightnessViaWinUsb(display),
+            _ => ReadRawBrightnessViaHid(display),
+        };
+    }
+
+    private static void WriteRawBrightness(StudioDisplayInfo display, uint raw)
+    {
+        switch (display.Transport)
+        {
+            case DisplayTransport.WinUsb:
+                WriteRawBrightnessViaWinUsb(display, raw);
+                break;
+            default:
+                WriteRawBrightnessViaHid(display, raw);
+                break;
+        }
+    }
+
+    private static uint ReadRawBrightnessViaHid(StudioDisplayInfo display)
+    {
+        using var handle = OpenDevice(display.DevicePath);
+        var buffer = CreateFeatureBuffer(display, 0);
+        if (!HidNative.HidD_GetFeature(handle, buffer, buffer.Length))
+        {
+            throw new Win32Exception(
+                Marshal.GetLastWin32Error(),
+                "HidD_GetFeature failed while reading brightness.");
+        }
+        return BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(1, 4));
+    }
+
+    private static void WriteRawBrightnessViaHid(StudioDisplayInfo display, uint raw)
+    {
+        using var handle = OpenDevice(display.DevicePath);
+        var buffer = CreateFeatureBuffer(display, raw);
+        if (!HidNative.HidD_SetFeature(handle, buffer, buffer.Length))
+        {
+            throw new Win32Exception(
+                Marshal.GetLastWin32Error(),
+                "HidD_SetFeature failed while writing brightness.");
+        }
+    }
+
+    private static uint ReadRawBrightnessViaWinUsb(StudioDisplayInfo display)
+    {
+        using var handle = OpenDeviceOverlapped(display.DevicePath);
+        IntPtr winUsb = IntPtr.Zero;
+        try
+        {
+            if (!WinUsbNative.WinUsb_Initialize(handle, out winUsb))
+            {
+                throw new Win32Exception(
+                    Marshal.GetLastWin32Error(),
+                    "WinUsb_Initialize failed.");
+            }
+
+            var buffer = CreateFeatureBuffer(display, 0);
+            var setup = new WinUsbNative.WINUSB_SETUP_PACKET
+            {
+                RequestType = WinUsbNative.RequestTypeClassInterfaceIn,
+                Request = WinUsbNative.HidRequestGetReport,
+                Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | display.BrightnessReportId),
+                Index = display.UsbInterfaceNumber,
+                Length = (ushort)buffer.Length,
+            };
+
+            if (!WinUsbNative.WinUsb_ControlTransfer(
+                    winUsb, setup, buffer, (uint)buffer.Length, out _, IntPtr.Zero))
+            {
+                throw new Win32Exception(
+                    Marshal.GetLastWin32Error(),
+                    "WinUsb_ControlTransfer (GET_REPORT) failed.");
+            }
+
+            return BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(1, 4));
+        }
+        finally
+        {
+            if (winUsb != IntPtr.Zero)
+            {
+                WinUsbNative.WinUsb_Free(winUsb);
+            }
+        }
+    }
+
+    private static void WriteRawBrightnessViaWinUsb(StudioDisplayInfo display, uint raw)
+    {
+        using var handle = OpenDeviceOverlapped(display.DevicePath);
+        IntPtr winUsb = IntPtr.Zero;
+        try
+        {
+            if (!WinUsbNative.WinUsb_Initialize(handle, out winUsb))
+            {
+                throw new Win32Exception(
+                    Marshal.GetLastWin32Error(),
+                    "WinUsb_Initialize failed.");
+            }
+
+            var buffer = CreateFeatureBuffer(display, raw);
+            var setup = new WinUsbNative.WINUSB_SETUP_PACKET
+            {
+                RequestType = WinUsbNative.RequestTypeClassInterfaceOut,
+                Request = WinUsbNative.HidRequestSetReport,
+                Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | display.BrightnessReportId),
+                Index = display.UsbInterfaceNumber,
+                Length = (ushort)buffer.Length,
+            };
+
+            if (!WinUsbNative.WinUsb_ControlTransfer(
+                    winUsb, setup, buffer, (uint)buffer.Length, out _, IntPtr.Zero))
+            {
+                throw new Win32Exception(
+                    Marshal.GetLastWin32Error(),
+                    "WinUsb_ControlTransfer (SET_REPORT) failed.");
+            }
+        }
+        finally
+        {
+            if (winUsb != IntPtr.Zero)
+            {
+                WinUsbNative.WinUsb_Free(winUsb);
+            }
+        }
+    }
 
     private static IReadOnlyList<StudioDisplayInfo> Enumerate()
     {
@@ -130,11 +267,25 @@ public sealed class StudioDisplayService : IDisplayService
             $"HID enumeration done. Total HID devices: {totalSeen}, Apple-vendor: {appleSeen}, " +
             $"raw matches: {found.Count}");
 
-        // Also enumerate raw USB devices so we can tell the difference between
-        // "Pro XDR isn't on the bus" and "Pro XDR is on the bus but hidclass.sys
-        // didn't claim its HID interfaces". This is a diagnostic-only scan; we
-        // don't try to control brightness through these handles.
-        EnumerateUsbDevicesForDiagnostics();
+        // Also enumerate raw USB devices so we can pick up Apple displays whose HID
+        // interface failed to bind to hidclass.sys (Code 10 / descriptor mismatch).
+        // The Pro Display XDR is the well-known case — its brightness HID interface is
+        // rejected by Windows' generic HID driver, but with WinUSB bound (via Zadig)
+        // we can still send the same SET_REPORT / GET_REPORT control transfers.
+        var winUsbDisplays = EnumerateUsbAndProbeWinUsb();
+        foreach (var d in winUsbDisplays)
+        {
+            // Skip if we already found this physical display via HID (avoid double entries
+            // when both transports happen to work — unlikely, but be safe).
+            if (found.Any(f =>
+                    (f.SerialNumber is not null && f.SerialNumber == d.SerialNumber)
+                    || (f.ProductId != 0 && f.ProductId == d.ProductId
+                        && string.Equals(f.DevicePath, d.DevicePath, StringComparison.OrdinalIgnoreCase))))
+            {
+                continue;
+            }
+            found.Add(d);
+        }
 
         var result = DeduplicateBySerial(found);
         DiagnosticLog.Write($"After dedup: {result.Count} display(s).");
@@ -150,12 +301,20 @@ public sealed class StudioDisplayService : IDisplayService
             DiagnosticLog.Write("control channel is not reaching this PC. Try a different cable, plug");
             DiagnosticLog.Write("directly into the PC (not through a hub), and confirm the cable is");
             DiagnosticLog.Write("USB-C / Thunderbolt (not DisplayPort-only).");
+            DiagnosticLog.Write("");
+            DiagnosticLog.Write("If your Apple Pro Display XDR appears in Device Manager with a yellow");
+            DiagnosticLog.Write("warning (Code 10), Windows' built-in HID driver doesn't understand");
+            DiagnosticLog.Write("its descriptor. Install Zadig (https://zadig.akeo.ie/), choose");
+            DiagnosticLog.Write("Options -> List All Devices, pick the entry with VID_05AC and");
+            DiagnosticLog.Write("PID_9243, then install the WinUSB driver. After that, click Refresh");
+            DiagnosticLog.Write("here — the Pro XDR should appear via the WinUSB transport.");
         }
         return result;
     }
 
-    private static void EnumerateUsbDevicesForDiagnostics()
+    private static List<StudioDisplayInfo> EnumerateUsbAndProbeWinUsb()
     {
+        var results = new List<StudioDisplayInfo>();
         DiagnosticLog.Write("--- USB devices (GUID_DEVINTERFACE_USB_DEVICE) ---");
         var usbGuid = SetupApiNative.GUID_DEVINTERFACE_USB_DEVICE;
         var devInfoSet = SetupApiNative.SetupDiGetClassDevs(
@@ -168,11 +327,12 @@ public sealed class StudioDisplayService : IDisplayService
         {
             DiagnosticLog.Write(
                 $"  SetupDiGetClassDevs(USB) failed: err={Marshal.GetLastWin32Error()}");
-            return;
+            return results;
         }
 
         int total = 0;
         int apple = 0;
+        int winUsbBound = 0;
         try
         {
             var ifaceData = new SetupApiNative.SP_DEVICE_INTERFACE_DATA
@@ -212,6 +372,34 @@ public sealed class StudioDisplayService : IDisplayService
                 var desc = GetDeviceDescription(devInfoSet, ref devInfoData);
                 DiagnosticLog.Write(
                     $"[usb {index}]{(isApple ? " APPLE" : "")} {path} ({desc ?? "(no description)"})");
+
+                if (!isApple)
+                {
+                    continue;
+                }
+
+                var (pid, _) = ParseIdsFromPath(path);
+                if (pid != ProDisplayXdrPid)
+                {
+                    DiagnosticLog.Write($"  -> not the Pro Display XDR (pid=0x{pid:X4}), skipping WinUSB probe.");
+                    continue;
+                }
+
+                var winUsbInfo = TryProbeProXdrViaWinUsb(path);
+                if (winUsbInfo is not null)
+                {
+                    winUsbBound++;
+                    DiagnosticLog.Write(
+                        $"  -> WinUSB MATCH product='{winUsbInfo.ProductName}' " +
+                        $"serial='{winUsbInfo.SerialNumber ?? "-"}'");
+                    results.Add(winUsbInfo);
+                }
+                else
+                {
+                    DiagnosticLog.Write(
+                        "  -> Pro Display XDR detected on the USB bus but WinUSB is not bound. " +
+                        "Install WinUSB via Zadig to enable brightness control.");
+                }
             }
         }
         finally
@@ -219,7 +407,98 @@ public sealed class StudioDisplayService : IDisplayService
             SetupApiNative.SetupDiDestroyDeviceInfoList(devInfoSet);
         }
 
-        DiagnosticLog.Write($"USB enumeration done. Total: {total}, Apple-vendor: {apple}.");
+        DiagnosticLog.Write(
+            $"USB enumeration done. Total: {total}, Apple-vendor: {apple}, WinUSB-bound: {winUsbBound}.");
+        return results;
+    }
+
+    private static StudioDisplayInfo? TryProbeProXdrViaWinUsb(string path)
+    {
+        HidDeviceSafeHandle? handle = null;
+        IntPtr winUsb = IntPtr.Zero;
+        try
+        {
+            handle = TryOpenDeviceOverlapped(path);
+            if (handle is null)
+            {
+                DiagnosticLog.Write(
+                    $"  WinUSB probe: CreateFile failed (err={Marshal.GetLastWin32Error()}). " +
+                    "This usually means no function driver is bound to the device.");
+                return null;
+            }
+
+            if (!WinUsbNative.WinUsb_Initialize(handle, out winUsb))
+            {
+                var err = Marshal.GetLastWin32Error();
+                DiagnosticLog.Write(
+                    $"  WinUSB probe: WinUsb_Initialize failed (err={err}). " +
+                    "WinUSB is not the bound driver for this device.");
+                return null;
+            }
+
+            // Try reading the current brightness via GET_REPORT to confirm WinUSB really works.
+            var probe = new byte[ProXdrFeatureReportByteLength];
+            var setup = new WinUsbNative.WINUSB_SETUP_PACKET
+            {
+                RequestType = WinUsbNative.RequestTypeClassInterfaceIn,
+                Request = WinUsbNative.HidRequestGetReport,
+                Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | ProXdrBrightnessReportId),
+                Index = 0,
+                Length = (ushort)probe.Length,
+            };
+            if (!WinUsbNative.WinUsb_ControlTransfer(
+                    winUsb, setup, probe, (uint)probe.Length, out var transferred, IntPtr.Zero))
+            {
+                var err = Marshal.GetLastWin32Error();
+                DiagnosticLog.Write(
+                    $"  WinUSB probe: GET_REPORT control transfer failed (err={err}). " +
+                    "Device responds to WinUSB but rejected the HID feature read.");
+                return null;
+            }
+            DiagnosticLog.Write(
+                $"  WinUSB probe: GET_REPORT ok, transferred {transferred} bytes, " +
+                $"raw brightness=0x{BinaryPrimitives.ReadUInt32LittleEndian(probe.AsSpan(1, 4)):X8}");
+
+            return new StudioDisplayInfo(
+                DevicePath: path,
+                ProductName: "Apple Pro Display XDR",
+                SerialNumber: TryParseSerialFromPath(path),
+                ProductId: ProDisplayXdrPid,
+                FeatureReportByteLength: ProXdrFeatureReportByteLength,
+                BrightnessReportId: ProXdrBrightnessReportId,
+                MinRawBrightness: ProXdrMinBrightness,
+                MaxRawBrightness: ProXdrMaxBrightness,
+                Transport: DisplayTransport.WinUsb,
+                UsbInterfaceNumber: 0);
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write($"  WinUSB probe EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            if (winUsb != IntPtr.Zero)
+            {
+                WinUsbNative.WinUsb_Free(winUsb);
+            }
+            handle?.Dispose();
+        }
+    }
+
+    private static string? TryParseSerialFromPath(string path)
+    {
+        // USB device interface paths look like:
+        //   \\?\usb#vid_05ac&pid_9243#C02XXXXXXXXX#{a5dcbf10-...}
+        // The instance-id segment between the third '#' and the GUID is the serial number
+        // (or a synthetic id if the device didn't report one).
+        var parts = path.Split('#');
+        if (parts.Length < 4)
+        {
+            return null;
+        }
+        var candidate = parts[2];
+        return string.IsNullOrWhiteSpace(candidate) ? null : candidate;
     }
 
     private static string? GetDeviceDescription(
@@ -562,28 +841,48 @@ public sealed class StudioDisplayService : IDisplayService
         return handle;
     }
 
-    private static uint ReadRawBrightness(HidDeviceSafeHandle handle, StudioDisplayInfo display)
+    private static HidDeviceSafeHandle OpenDeviceOverlapped(string path)
     {
-        var buffer = CreateFeatureBuffer(display, 0);
-        if (!HidNative.HidD_GetFeature(handle, buffer, buffer.Length))
+        // WinUSB requires the underlying file handle to be opened with FILE_FLAG_OVERLAPPED.
+        var handle = Kernel32Native.CreateFile(
+            path,
+            Kernel32Native.GENERIC_READ | Kernel32Native.GENERIC_WRITE,
+            Kernel32Native.FILE_SHARE_READ | Kernel32Native.FILE_SHARE_WRITE,
+            IntPtr.Zero,
+            Kernel32Native.OPEN_EXISTING,
+            Kernel32Native.FILE_ATTRIBUTE_NORMAL | Kernel32Native.FILE_FLAG_OVERLAPPED,
+            IntPtr.Zero);
+
+        if (handle.IsInvalid)
         {
-            throw new Win32Exception(
-                Marshal.GetLastWin32Error(),
-                "HidD_GetFeature failed while reading brightness.");
+            var err = Marshal.GetLastWin32Error();
+            handle.Dispose();
+            throw new Win32Exception(err,
+                $"Could not open USB device for WinUSB (path: {path}). " +
+                "Did you install the WinUSB driver via Zadig?");
         }
 
-        return BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(1, 4));
+        return handle;
     }
 
-    private static void WriteRawBrightness(HidDeviceSafeHandle handle, StudioDisplayInfo display, uint raw)
+    private static HidDeviceSafeHandle? TryOpenDeviceOverlapped(string path)
     {
-        var buffer = CreateFeatureBuffer(display, raw);
-        if (!HidNative.HidD_SetFeature(handle, buffer, buffer.Length))
+        var handle = Kernel32Native.CreateFile(
+            path,
+            Kernel32Native.GENERIC_READ | Kernel32Native.GENERIC_WRITE,
+            Kernel32Native.FILE_SHARE_READ | Kernel32Native.FILE_SHARE_WRITE,
+            IntPtr.Zero,
+            Kernel32Native.OPEN_EXISTING,
+            Kernel32Native.FILE_ATTRIBUTE_NORMAL | Kernel32Native.FILE_FLAG_OVERLAPPED,
+            IntPtr.Zero);
+
+        if (handle.IsInvalid)
         {
-            throw new Win32Exception(
-                Marshal.GetLastWin32Error(),
-                "HidD_SetFeature failed while writing brightness.");
+            handle.Dispose();
+            return null;
         }
+
+        return handle;
     }
 
     private static byte[] CreateFeatureBuffer(StudioDisplayInfo display, uint raw)
