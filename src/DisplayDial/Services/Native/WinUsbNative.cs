@@ -38,6 +38,22 @@ internal static class WinUsbNative
         public ushort Length;
     }
 
+    // USB interface descriptor (USB 2.0 § 9.6.5). Returned by WinUsb_QueryInterfaceSettings
+    // so we can read bInterfaceNumber (HID class requests need it as wIndex).
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct USB_INTERFACE_DESCRIPTOR
+    {
+        public byte bLength;
+        public byte bDescriptorType;
+        public byte bInterfaceNumber;
+        public byte bAlternateSetting;
+        public byte bNumEndpoints;
+        public byte bInterfaceClass;
+        public byte bInterfaceSubClass;
+        public byte bInterfaceProtocol;
+        public byte iInterface;
+    }
+
     [DllImport("winusb.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool WinUsb_Initialize(
@@ -57,4 +73,29 @@ internal static class WinUsbNative
         uint bufferLength,
         out uint lengthTransferred,
         IntPtr overlapped);
+
+    // Composite-device navigation. WinUsb_Initialize returns the handle for the
+    // *first* interface (typically interface 0). To talk to any other interface
+    // of a composite USB device, ask for its handle by the *associated index*:
+    //   associatedIndex = 0 -> handle for the 2nd interface (interface 1)
+    //   associatedIndex = 1 -> handle for the 3rd interface (interface 2)
+    //   ...
+    // Returns ERROR_NO_MORE_ITEMS when there are no more associated interfaces.
+    [DllImport("winusb.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinUsb_GetAssociatedInterface(
+        IntPtr interfaceHandle,
+        byte associatedInterfaceIndex,
+        out IntPtr associatedInterfaceHandle);
+
+    // Reads the USB interface descriptor for a given alternate setting on the
+    // interface this handle owns. We use alternate setting 0 (the default) and
+    // only care about bInterfaceNumber so we can stamp the right wIndex into
+    // HID class control transfers.
+    [DllImport("winusb.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinUsb_QueryInterfaceSettings(
+        IntPtr interfaceHandle,
+        byte alternateInterfaceNumber,
+        out USB_INTERFACE_DESCRIPTOR usbAltInterfaceDescriptor);
 }
