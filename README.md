@@ -93,7 +93,7 @@ DisplayDial's behaviour matches them byte-for-byte:
 
 - Windows 10 21H2 / Windows 11 (x64 or arm64)
 - An Apple display connected over USB-C or Thunderbolt
-- .NET 8 SDK to build, or the .NET 8 Desktop Runtime to run the framework-dependent build
+- .NET 10 SDK to build, or the .NET 10 Desktop Runtime to run the framework-dependent build
 
 No admin privileges, no kernel driver, no signed driver shenanigans — the HID
 control interface is accessible to a normal user-mode process.
