@@ -81,8 +81,14 @@
       * libwdi/.msvc/libwdi_static.vcxproj
                                       -> drop the installer_arm64 + installer_x86
                                          project references.
-    The static-lib .vcxproj is then built directly (never touching the arm64/x86
-    installer projects).
+    The static lib is then built WITHOUT the solution. Because libwdi's "embedder"
+    and "detect_64build" are Win32-only *host* build tools, building the static
+    .vcxproj directly with /p:Platform=x64 would wrongly force x64 onto them
+    (MSB8013). The solution normally pins those host tools to Win32; we reproduce
+    that by building, in order: embedder (Win32), installer_x64 (x64), then the
+    static lib (x64) with /p:BuildProjectReferences=false so it consumes the
+    prebuilt tools instead of re-platforming them. Its PreBuildEvent still runs the
+    prebuilt embedder to generate embedded.h.
 
     --- ARM64 support (-Arm64) -----------------------------------------------
     libwdi has no ARM64 *solution* platform; instead the static lib is built for
@@ -255,8 +261,16 @@ if (-not (Test-Path (Join-Path $libwdiDir "libwdi.sln"))) {
 $msbuild = Find-MSBuild
 Invoke-LibwdiPatch -Root $libwdiDir -IncludeArm64:$Arm64
 
-$libwdiSln = Join-Path $libwdiDir "libwdi.sln"
-$staticVcx = Join-Path $libwdiDir "libwdi\.msvc\libwdi_static.vcxproj"
+$libwdiSln       = Join-Path $libwdiDir "libwdi.sln"
+$staticVcx       = Join-Path $libwdiDir "libwdi\.msvc\libwdi_static.vcxproj"
+$embedderVcx     = Join-Path $libwdiDir "libwdi\.msvc\embedder.vcxproj"
+$installerX64Vcx = Join-Path $libwdiDir "libwdi\.msvc\installer_x64.vcxproj"
+
+# $(SolutionDir) for direct .vcxproj builds (the libwdi clone root, where the .sln
+# lives). Forward slashes avoid a trailing-backslash quoting pitfall, and the value
+# must match across the host-tool, installer and static-lib builds so the embedder
+# finds the installer exe it bakes in (see the per-step notes below).
+$solnDir = ($libwdiDir -replace '\\', '/') + '/'
 
 if ($Arm64) {
     # Build the whole .sln so the per-project arch pinning applies
@@ -267,14 +281,33 @@ if ($Arm64) {
     Write-Host "    Requires the 'MSVC v143 - ARM64 build tools' component." -ForegroundColor DarkGray
     & $msbuild $libwdiSln /p:Configuration=$Config /p:Platform=x64 /m /v:minimal
 } else {
-    # Build the static-lib project directly so the dropped arm64/x86 installer
-    # projects are never touched (no ARM64 tools needed). Pass $(SolutionDir)
-    # explicitly; forward slashes avoid a trailing-backslash quoting pitfall.
-    $solnDir = ($libwdiDir -replace '\\', '/') + '/'
+    # x64-only, no solution. libwdi's "embedder" + "detect_64build" are Win32-only
+    # HOST build tools; building libwdi_static.vcxproj directly with /p:Platform=x64
+    # would wrongly force x64 onto them (MSB8013 "doesn't contain Release|x64"). The
+    # libwdi solution normally pins those host tools to Win32 via its config map, so
+    # we reproduce that by hand:
+    #   1. build embedder (the host tool) as Win32,
+    #   2. build installer_x64 (the payload the static lib embeds) as x64,
+    #   3. build the static lib as x64 with /p:BuildProjectReferences=false so it
+    #      does NOT rebuild (and mis-platform) those projects; its PreBuildEvent
+    #      still runs the prebuilt embedder to generate embedded.h.
+    # The embedder locates the installer via SOLUTIONDIR (default "..") relative to
+    # its working dir (the libwdi source dir), so the matching /p:SolutionDir on the
+    # installer + static-lib builds makes the paths line up.
+    Write-Host "==> Building libwdi host tool (embedder, Win32)..." -ForegroundColor Cyan
+    & $msbuild $embedderVcx `
+        /p:Configuration=$Config /p:Platform=Win32 "/p:SolutionDir=$solnDir" /m /v:minimal
+    if ($LASTEXITCODE -ne 0) { throw "Failed to build libwdi's embedder host tool." }
+
+    Write-Host "==> Building libwdi installer payload (installer_x64, x64)..." -ForegroundColor Cyan
+    & $msbuild $installerX64Vcx `
+        /p:Configuration=$Config /p:Platform=x64 "/p:SolutionDir=$solnDir" /m /v:minimal
+    if ($LASTEXITCODE -ne 0) { throw "Failed to build libwdi's installer_x64 payload." }
+
     Write-Host "==> Building libwdi static lib (x64-only, co-installer-free)..." -ForegroundColor Cyan
     & $msbuild $staticVcx `
-        /p:Configuration=$Config /p:Platform=$Platform "/p:SolutionDir=$solnDir" `
-        /m /v:minimal
+        /p:Configuration=$Config /p:Platform=$Platform /p:BuildProjectReferences=false `
+        "/p:SolutionDir=$solnDir" /m /v:minimal
 }
 # Verify the artifact we need was produced (don't hard-fail solely on exit code).
 
