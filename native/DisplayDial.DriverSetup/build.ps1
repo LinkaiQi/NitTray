@@ -93,16 +93,20 @@
                                          driver type; its path is never read once
                                          embeds are removed.
       * libwdi/.msvc/libwdi_static.vcxproj
-                                      -> drop the installer_arm64 + installer_x86
-                                         project references.
+                                      -> drop the embedder + installer_arm64 +
+                                         installer_x86 project references.
     The static lib is then built WITHOUT the solution. Because libwdi's "embedder"
     and "detect_64build" are Win32-only *host* build tools, building the static
     .vcxproj directly with /p:Platform=x64 would wrongly force x64 onto them
     (MSB8013). The solution normally pins those host tools to Win32; we reproduce
     that by building, in order: embedder (Win32), installer_x64 (x64), then the
     static lib (x64) with /p:BuildProjectReferences=false so it consumes the
-    prebuilt tools instead of re-platforming them. Its PreBuildEvent still runs the
-    prebuilt embedder to generate embedded.h.
+    prebuilt tools instead of re-platforming them. That flag stops the references
+    being *built* but not *resolved* -- MSBuild still config-checks each reference
+    against Release|x64, and Win32-only embedder.vcxproj fails that check -- so the
+    embedder reference is dropped from the .vcxproj above (installer_x64, which has
+    a real x64 config, is kept). The static lib's PreBuildEvent still runs the
+    prebuilt embedder by path to generate embedded.h.
 
     --- ARM64 support (-SupportArm64) -----------------------------------------------
     libwdi has no ARM64 *solution* platform; instead the static lib is built for
@@ -258,14 +262,22 @@ function Invoke-LibwdiPatch {
         return
     }
 
-    # (D) libwdi_static.vcxproj -- drop the arm64 + x86 installer project refs so
-    #     the static lib builds with x64 tools only.
+    # (D) libwdi_static.vcxproj -- drop the embedder + arm64 + x86 installer project
+    #     references. We build embedder (Win32) and installer_x64 (x64) in separate
+    #     MSBuild calls before this, and the static lib's PreBuildEvent invokes
+    #     embedder.exe by path -- so these references are only build-order hints.
+    #     Critically, /p:BuildProjectReferences=false stops them being *built* but NOT
+    #     *resolved*: MSBuild still config-checks each reference against the parent's
+    #     Release|x64, and Win32-only embedder.vcxproj then fails with MSB8013. Dropping
+    #     the reference avoids that. installer_x64.vcxproj is kept (it has a real x64
+    #     config, so it resolves cleanly and is skipped by BuildProjectReferences=false).
     $t = [System.IO.File]::ReadAllText($staticVcx)
-    foreach ($name in @('installer_arm64.vcxproj', 'installer_x86.vcxproj')) {
+    foreach ($name in @('embedder.vcxproj', 'installer_arm64.vcxproj', 'installer_x86.vcxproj')) {
         $pat = '(?s)[ \t]*<ProjectReference Include="' + [regex]::Escape($name) + '">.*?</ProjectReference>\r?\n'
         Assert-PatchCount ([regex]::Matches($t, $pat).Count) 1 "vcxproj $name reference"
         $t = [regex]::Replace($t, $pat, '')
     }
+    Assert-PatchCount ([regex]::Matches($t, 'embedder\.vcxproj').Count)        0 "vcxproj embedder ref removed"
     Assert-PatchCount ([regex]::Matches($t, 'installer_arm64\.vcxproj').Count) 0 "vcxproj arm64 ref removed"
     Assert-PatchCount ([regex]::Matches($t, 'installer_x86\.vcxproj').Count)   0 "vcxproj x86 ref removed"
     Assert-PatchCount ([regex]::Matches($t, 'installer_x64\.vcxproj').Count)   1 "vcxproj x64 ref kept"
