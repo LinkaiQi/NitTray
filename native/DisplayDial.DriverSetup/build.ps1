@@ -48,19 +48,32 @@
 .NOTES
     *** By default, no WDK and no ARM64 build tools are required. ***
 
-    Stock libwdi targets x86 + x64 + ARM64 and embeds the legacy WinUSB/WDF
+    Stock libwdi targets x86 + x64 + ARM64, supports three driver backends
+    (WinUSB + libusb-win32 + libusbK), and embeds the legacy WinUSB/WDF
     co-installer DLLs from the Windows Driver Kit. That breaks on a modern
-    toolchain for two reasons:
+    toolchain for three reasons:
 
       1. Its static-library project references an ARM64 installer project, so the
          build fails (MSB8020) unless the ARM64 v143 tools are installed.
       2. The modern WDK (Windows 10 1809+) no longer ships the co-installer DLLs
          libwdi tries to embed, so the "embedder" step fails opening them.
+      3. config.h enables the libusb-win32 + libusbK backends and points them at
+         the libwdi author's local D:\libusb-win32 / D:\libusbK folders, so the
+         embedder also fails opening driver files you don't have (e.g.
+         "Could not open file 'D:\libusb-win32\bin\x86\install-filter.exe'").
 
-    Co-installers have been unnecessary since Windows 10 (WinUSB is in-box), and
-    libwdi's own ARM64 path already installs WinUSB inbox with no co-installer.
-    Invoke-LibwdiPatch makes every install path behave that way:
+    We only ever install WinUSB. Co-installers have been unnecessary since Windows
+    10 (WinUSB is in-box), and libwdi's own ARM64 path already installs WinUSB
+    inbox with no co-installer. Invoke-LibwdiPatch makes every install path behave
+    that way:
 
+      * msvc/config.h            -> disable the non-WinUSB backends (comment out
+                                    LIBUSB0_DIR + LIBUSBK_DIR). WDK_DIR stays
+                                    defined so WinUSB remains a supported driver
+                                    type and embedder.h still sees >=1 backend;
+                                    libwdi.c guards its libusb code behind
+                                    #if defined(LIBUSB0_DIR|LIBUSBK_DIR), so it
+                                    compiles out.
       * libwdi/embedder_files.h  -> drop the 4 WinUSB/WDF co-installer embeds.
       * libwdi/winusb.inf.in     -> blank the x86 + amd64 CoInstallers +
                                     SourceDisksFiles sections (mirrors the
@@ -72,12 +85,13 @@
 
     --- Default (x64-only) build ---------------------------------------------
     Additionally trims libwdi so no WDK / ARM64 tools are needed:
-      * msvc/config.h                 -> x64-only (comment out OPT_M32 + OPT_ARM;
-                                         keep OPT_M64). WDK_DIR stays *defined*: it
-                                         is only a compile-time gate in libwdi.c
-                                         that keeps WinUSB a supported driver type;
-                                         its path is never read once embeds are
-                                         removed.
+      * msvc/config.h                 -> also comment out OPT_M32 + OPT_ARM
+                                         (keep OPT_M64) on top of the backend
+                                         disable above. WDK_DIR stays *defined*:
+                                         it is only a compile-time gate in
+                                         libwdi.c that keeps WinUSB a supported
+                                         driver type; its path is never read once
+                                         embeds are removed.
       * libwdi/.msvc/libwdi_static.vcxproj
                                       -> drop the installer_arm64 + installer_x86
                                          project references.
@@ -100,8 +114,9 @@
     Zadig ships one binary for every architecture). No separate ARM64 helper and
     no per-RID bundling are required.
 
-    With -SupportArm64 we therefore leave config.h and the .vcxproj stock (so the static
-    lib embeds the x86/x64/arm64 installers) and build the whole .sln as
+    With -SupportArm64 we therefore leave config.h's arch options and the .vcxproj
+    stock (so the static lib embeds the x86/x64/arm64 installers; the libusb0/
+    libusbK backends are still disabled as above) and build the whole .sln as
     Release|x64. The .sln pins each installer project to its own architecture
     (installer_arm64 -> ARM64, embedder host-tool -> Win32) regardless of the
     solution platform, which is why a .sln build -- not a direct .vcxproj build --
@@ -183,9 +198,33 @@ function Invoke-LibwdiPatch {
     $utf8Bom   = New-Object System.Text.UTF8Encoding($true)
 
     $mode = if ($IncludeArm64) { "x64 + ARM64 universal" } else { "x64-only" }
-    Write-Host "==> Patching libwdi ($mode, co-installer-free)..." -ForegroundColor Cyan
+    Write-Host "==> Patching libwdi ($mode, WinUSB-only, co-installer-free)..." -ForegroundColor Cyan
 
-    # (A) embedder_files.h -- drop the 4 WinUSB/WDF co-installer embeds (always;
+    # (A) config.h --
+    #   * ALWAYS disable the non-WinUSB backends. Stock config.h points LIBUSB0_DIR at
+    #     "D:/libusb-win32" and LIBUSBK_DIR at "D:/libusbK/bin" -- paths only the libwdi
+    #     author has -- so the embedder tries to bundle those driver files and hard-fails
+    #     ("Could not open file 'D:\libusb-win32\bin\x86\install-filter.exe'"). We only
+    #     ever install WinUSB. WDK_DIR stays defined so WinUSB remains a supported driver
+    #     type (and embedder.h still sees >=1 backend dir; libwdi.c guards the libusb0/
+    #     libusbK code behind #if defined(LIBUSB0_DIR|LIBUSBK_DIR), so it compiles out).
+    #   * x64-only mode additionally comments OPT_M32 + OPT_ARM (keeps OPT_M64);
+    #     -SupportArm64 leaves the arch options stock so the .sln embeds x86/x64/arm64.
+    $t = [System.IO.File]::ReadAllText($configH)
+    foreach ($dir in @('LIBUSB0_DIR', 'LIBUSBK_DIR')) {
+        $t = [regex]::Replace($t, "(?m)^#define $dir\b", "//#define $dir")
+        Assert-PatchCount ([regex]::Matches($t, "(?m)^//#define $dir\b").Count) 1 "config.h $dir disabled"
+    }
+    if (-not $IncludeArm64) {
+        foreach ($opt in @('OPT_M32', 'OPT_ARM')) {
+            $t = [regex]::Replace($t, "(?m)^#define $opt\b", "//#define $opt")
+            Assert-PatchCount ([regex]::Matches($t, "(?m)^//#define $opt\b").Count) 1 "config.h $opt disabled"
+        }
+        Assert-PatchCount ([regex]::Matches($t, '(?m)^#define OPT_M64\b').Count) 1 "config.h OPT_M64 kept"
+    }
+    [System.IO.File]::WriteAllText($configH, $t, $utf8NoBom)
+
+    # (B) embedder_files.h -- drop the 4 WinUSB/WDF co-installer embeds (always;
     #     the modern WDK no longer ships them and embedder hard-fails on a missing
     #     file). Inbox WinUSB needs no co-installer on Windows 10+.
     $t = [System.IO.File]::ReadAllText($embedderH)
@@ -194,7 +233,7 @@ function Invoke-LibwdiPatch {
     Assert-PatchCount ([regex]::Matches($t, 'WDK_DIR "\\\\redist').Count) 0 "embedder_files.h co-installer embeds removed"
     [System.IO.File]::WriteAllText($embedderH, $t, $utf8NoBom)
 
-    # (B) winusb.inf.in -- make every per-arch install path co-installer-free
+    # (C) winusb.inf.in -- make every per-arch install path co-installer-free
     #     (mirror the arm64 sections that already ship that way).
     $t = [System.IO.File]::ReadAllText($infIn)
     $eol = if ($t.Contains("`r`n")) { "`r`n" } else { "`n" }
@@ -210,22 +249,14 @@ function Invoke-LibwdiPatch {
     [System.IO.File]::WriteAllText($infIn, $t, $utf8NoBom)
 
     if ($IncludeArm64) {
-        # Universal build: keep config.h + the .vcxproj stock so the static lib
-        # embeds installer_x86/x64/arm64. The .sln build pins each installer to its
-        # own arch, and a single x64 helper serves x64 AND ARM64 (libwdi selects
-        # installer_arm64.exe at runtime on ARM64).
-        Write-Host "    libwdi patched: co-installer-free; config.h/.vcxproj left stock for the .sln (x86+x64+arm64) build." -ForegroundColor DarkGray
+        # Universal build: keep the config.h arch options + the .vcxproj stock so the
+        # static lib embeds installer_x86/x64/arm64. The .sln build pins each installer
+        # to its own arch, and a single x64 helper serves x64 AND ARM64 (libwdi selects
+        # installer_arm64.exe at runtime on ARM64). The libusb0/libusbK backends are
+        # still disabled above (we only use WinUSB).
+        Write-Host "    libwdi patched: WinUSB-only, co-installer-free; arch options + .vcxproj left stock for the .sln (x86+x64+arm64) build." -ForegroundColor DarkGray
         return
     }
-
-    # (C) config.h -- x64-only: comment out OPT_M32 + OPT_ARM (keep OPT_M64).
-    $t = [System.IO.File]::ReadAllText($configH)
-    foreach ($opt in @('OPT_M32', 'OPT_ARM')) {
-        $t = [regex]::Replace($t, "(?m)^#define $opt\b", "//#define $opt")
-        Assert-PatchCount ([regex]::Matches($t, "(?m)^//#define $opt\b").Count) 1 "config.h $opt disabled"
-    }
-    Assert-PatchCount ([regex]::Matches($t, '(?m)^#define OPT_M64\b').Count) 1 "config.h OPT_M64 kept"
-    [System.IO.File]::WriteAllText($configH, $t, $utf8NoBom)
 
     # (D) libwdi_static.vcxproj -- drop the arm64 + x86 installer project refs so
     #     the static lib builds with x64 tools only.
@@ -240,7 +271,7 @@ function Invoke-LibwdiPatch {
     Assert-PatchCount ([regex]::Matches($t, 'installer_x64\.vcxproj').Count)   1 "vcxproj x64 ref kept"
     [System.IO.File]::WriteAllText($staticVcx, $t, $utf8Bom)  # this file ships with a UTF-8 BOM
 
-    Write-Host "    libwdi patched: x64-only, no co-installer, no WDK/ARM64 tools needed." -ForegroundColor DarkGray
+    Write-Host "    libwdi patched: x64-only, WinUSB-only, no co-installer, no WDK/ARM64 tools needed." -ForegroundColor DarkGray
 }
 
 $buildMode = if ($SupportArm64) { "x64 + ARM64 universal" } else { "x64-only" }

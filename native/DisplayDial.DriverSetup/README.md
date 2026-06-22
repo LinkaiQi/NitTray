@@ -128,21 +128,31 @@ x64 and ARM64 releases**; no per-architecture bundling is needed. The default
 
 ### Why the libwdi patch
 
-Stock libwdi targets x86 + x64 + ARM64 and embeds the legacy WinUSB/WDF
-*co-installer* DLLs from the WDK. On a modern toolchain that breaks twice:
+Stock libwdi targets x86 + x64 + ARM64, supports three driver backends
+(WinUSB + libusb-win32 + libusbK), and embeds the legacy WinUSB/WDF
+*co-installer* DLLs from the WDK. On a modern toolchain that breaks three ways:
 
 1. Its static-library project references an **ARM64 installer project**, so the
    build fails with `MSB8020` unless the ARM64 v143 tools are installed.
 2. The modern WDK (Windows 10 1809+) **no longer ships those co-installer DLLs**,
    so libwdi's "embedder" step fails trying to open them.
+3. `config.h` enables the libusb-win32 + libusbK backends and points them at the
+   libwdi author's local `D:\libusb-win32` / `D:\libusbK` folders, so the embedder
+   also fails trying to bundle driver files you don't have
+   (`Could not open file 'D:\libusb-win32\bin\x86\install-filter.exe'`).
 
-Co-installers have been unnecessary since Windows 10 (WinUSB is in-box), and
-libwdi's own ARM64 path already installs WinUSB inbox with no co-installer, so the
-patch **always** removes the co-installer embeds and blanks the co-installer
-sections of the generated INF. In the default (x64-only) build it *also* drops the
-x86/ARM64 installer project references and switches `config.h` to x64-only, so no
-ARM64 tools are needed; with `-SupportArm64` those are left stock so the solution can embed
-every architecture's installer (see [Windows on ARM](#windows-on-arm-arm64)).
+We only ever install **WinUSB**. Co-installers have been unnecessary since
+Windows 10 (WinUSB is in-box), and libwdi's own ARM64 path already installs
+WinUSB inbox with no co-installer, so the patch **always** (a) removes the
+co-installer embeds and blanks the co-installer sections of the generated INF,
+and (b) disables the libusb-win32 + libusbK backends in `config.h` (comment out
+`LIBUSB0_DIR` / `LIBUSBK_DIR`; `WDK_DIR` stays defined so WinUSB remains a
+supported driver type). libwdi guards its libusb code behind
+`#if defined(LIBUSB0_DIR|LIBUSBK_DIR)`, so it simply compiles out. In the
+default (x64-only) build the patch *also* drops the x86/ARM64 installer project
+references and switches `config.h` to x64-only, so no ARM64 tools are needed;
+with `-SupportArm64` those are left stock so the solution can embed every
+architecture's installer (see [Windows on ARM](#windows-on-arm-arm64)).
 `winusb.cat.in` is left untouched — libwdi's catalog builder hashes only the
 files actually present (and always adds the INF), so the absent co-installers are
 skipped, exactly as on ARM64. The exact edits are documented in the `.NOTES`
