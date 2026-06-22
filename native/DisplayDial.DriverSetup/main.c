@@ -1,5 +1,5 @@
 /*
- * DisplayDial.DriverSetup — elevated WinUSB installer for Apple displays.
+ * DisplayDial.DriverSetup -- elevated WinUSB installer for Apple displays.
  *
  * This tiny console helper is launched by the DisplayDial tray app (elevated,
  * via the "runas" shell verb) to bind Microsoft's in-box WinUSB driver to an
@@ -16,7 +16,7 @@
  * Example:  DisplayDial.DriverSetup.exe install 05AC 9243
  *
  * The result is communicated purely through the process exit code (see the
- * EXIT_* values below — keep these in sync with the C# DriverSetupExitCodes).
+ * EXIT_* values below -- keep these in sync with the C# DriverSetupExitCodes).
  * Human-readable detail is appended to:
  *     %LOCALAPPDATA%\DisplayDial\driver-setup.log
  */
@@ -59,7 +59,7 @@ static void log_open(void)
     g_log = fopen(path, "a");
 }
 
-static void logf(const char* fmt, ...)
+static void log_msg(const char* fmt, ...)
 {
     va_list args;
 
@@ -126,7 +126,7 @@ int __cdecl main(int argc, char** argv)
     log_open();
 
     if (argc < 4 || _stricmp(argv[1], "install") != 0) {
-        logf("Bad arguments. Usage: DisplayDial.DriverSetup.exe install <VID-hex> <PID-hex>");
+        log_msg("Bad arguments. Usage: DisplayDial.DriverSetup.exe install <VID-hex> <PID-hex>");
         log_close();
         return EXIT_BAD_ARGUMENTS;
     }
@@ -134,14 +134,14 @@ int __cdecl main(int argc, char** argv)
     vid = strtoul(argv[2], NULL, 16);
     pid = strtoul(argv[3], NULL, 16);
     if (vid == 0 || vid > 0xFFFF || pid == 0 || pid > 0xFFFF) {
-        logf("Bad VID/PID arguments: vid='%s' pid='%s'", argv[2], argv[3]);
+        log_msg("Bad VID/PID arguments: vid='%s' pid='%s'", argv[2], argv[3]);
         log_close();
         return EXIT_BAD_ARGUMENTS;
     }
 
     dev.vid = (unsigned short)vid;
     dev.pid = (unsigned short)pid;
-    logf("DisplayDial.DriverSetup starting: install VID_%04X PID_%04X.", dev.vid, dev.pid);
+    log_msg("DisplayDial.DriverSetup starting: install VID_%04X PID_%04X.", dev.vid, dev.pid);
 
     /* Extraction directory for the generated INF / catalog / signed cert. */
     {
@@ -152,7 +152,7 @@ int __cdecl main(int argc, char** argv)
         }
         _snprintf_s(ext_dir, sizeof(ext_dir), _TRUNCATE, "%sDisplayDial_driver", temp);
     }
-    logf("Driver staging directory: %s", ext_dir);
+    log_msg("Driver staging directory: %s", ext_dir);
 
     wdi_set_log_level(WDI_LOG_LEVEL_WARNING);
 
@@ -165,7 +165,7 @@ int __cdecl main(int argc, char** argv)
     /*
      * Walk the device list so we can (a) confirm the display is actually present
      * and (b) prefer the composite-parent node (hardware id WITHOUT "MI_") as the
-     * install target — that yields a single WinUSB device spanning all interfaces.
+     * install target -- that yields a single WinUSB device spanning all interfaces.
      */
     r = wdi_create_list(&list, &ocl);
     if (r == WDI_SUCCESS) {
@@ -174,7 +174,7 @@ int __cdecl main(int argc, char** argv)
                 continue;
             }
             device_present = 1;
-            logf("  candidate: hardware_id='%s' mi=%u is_composite=%d driver='%s' desc='%s'",
+            log_msg("  candidate: hardware_id='%s' mi=%u is_composite=%d driver='%s' desc='%s'",
                  node->hardware_id ? node->hardware_id : "(null)",
                  (unsigned)node->mi, node->is_composite,
                  node->driver ? node->driver : "(none)",
@@ -187,11 +187,11 @@ int __cdecl main(int argc, char** argv)
             }
         }
     } else {
-        logf("wdi_create_list failed: %s", wdi_strerror(r));
+        log_msg("wdi_create_list failed: %s", wdi_strerror(r));
     }
 
     if (!device_present) {
-        logf("No USB device with VID_%04X / PID_%04X is present. Aborting.", dev.vid, dev.pid);
+        log_msg("No USB device with VID_%04X / PID_%04X is present. Aborting.", dev.vid, dev.pid);
         if (list != NULL) {
             wdi_destroy_list(list);
         }
@@ -210,15 +210,15 @@ int __cdecl main(int argc, char** argv)
     if (match != NULL) {
         dev.hardware_id = match->hardware_id;
         dev.device_id = match->device_id;
-        logf("Selected install target: hardware_id='%s'",
+        log_msg("Selected install target: hardware_id='%s'",
              match->hardware_id ? match->hardware_id : "(null)");
     } else {
-        logf("No specific node selected; installing by VID/PID directly.");
+        log_msg("No specific node selected; installing by VID/PID directly.");
     }
 
-    logf("Preparing WinUSB driver (this generates + self-signs the INF/catalog)...");
+    log_msg("Preparing WinUSB driver (this generates + self-signs the INF/catalog)...");
     r = wdi_prepare_driver(&dev, ext_dir, INF_NAME, &opd);
-    logf("  wdi_prepare_driver: %s", wdi_strerror(r));
+    log_msg("  wdi_prepare_driver: %s", wdi_strerror(r));
     if (r != WDI_SUCCESS) {
         if (list != NULL) {
             wdi_destroy_list(list);
@@ -227,9 +227,9 @@ int __cdecl main(int argc, char** argv)
         return EXIT_PREPARE_FAILED;
     }
 
-    logf("Installing driver...");
+    log_msg("Installing driver...");
     r = wdi_install_driver(&dev, ext_dir, INF_NAME, &oid);
-    logf("  wdi_install_driver: %s", wdi_strerror(r));
+    log_msg("  wdi_install_driver: %s", wdi_strerror(r));
 
     switch (r) {
     case WDI_SUCCESS:
@@ -247,7 +247,7 @@ int __cdecl main(int argc, char** argv)
         wdi_destroy_list(list);
     }
 
-    logf("Done. Exit code = %d.", exit_code);
+    log_msg("Done. Exit code = %d.", exit_code);
     log_close();
     return exit_code;
 }
