@@ -305,6 +305,7 @@ static int do_uninstall(unsigned short vid, unsigned short pid)
     HDEVINFO set;
     SP_DEVINFO_DATA did = { sizeof(SP_DEVINFO_DATA) };
     SP_DEVINFO_DATA targets[MAX_UNINSTALL_TARGETS];
+    DEVINST target_parent[MAX_UNINSTALL_TARGETS];
     char target_inf[MAX_UNINSTALL_TARGETS][MAX_PATH];
     int target_count = 0;
     char needle[32];
@@ -349,8 +350,16 @@ static int do_uninstall(unsigned short vid, unsigned short pid)
             continue;
         }
         if (target_count < MAX_UNINSTALL_TARGETS) {
+            DEVINST parent = 0;
             targets[target_count] = did;
             strcpy_s(target_inf[target_count], MAX_PATH, inf);
+            /* Capture the parent (USB hub / composite parent) now, before the
+             * uninstall removes this node -- we re-enumerate it afterwards to
+             * make the device reappear without a physical replug. */
+            if (CM_Get_Parent(&parent, did.DevInst, 0) != CR_SUCCESS) {
+                parent = 0;
+            }
+            target_parent[target_count] = parent;
             target_count++;
             log_msg("  queued removal: inf='%s'", inf);
         }
@@ -402,14 +411,40 @@ static int do_uninstall(unsigned short vid, unsigned short pid)
     }
 
     /*
-     * Re-enumerate from the root so the still-connected device rebinds to the
-     * default in-box driver without the user having to unplug it.
+     * Re-detect the still-connected device so it rebinds to the default in-box
+     * driver without the user having to unplug it. Re-enumerating the *parent*
+     * USB hub synchronously (captured before removal) is far more reliable than
+     * a root re-scan: it tells the hub to re-scan the exact port whose child we
+     * just removed, and SYNCHRONOUS makes the devnode reappear before we return.
      */
+    for (i = 0; i < target_count; i++) {
+        DEVINST parent = target_parent[i];
+        int dup = 0;
+        if (parent == 0) {
+            continue;
+        }
+        for (j = 0; j < i; j++) {
+            if (target_parent[j] == parent) {
+                dup = 1;
+                break;
+            }
+        }
+        if (dup) {
+            continue;
+        }
+        if (CM_Reenumerate_DevNode(parent, CM_REENUMERATE_SYNCHRONOUS) == CR_SUCCESS) {
+            log_msg("  Re-enumerated parent hub (synchronous); device should be back.");
+        } else {
+            log_msg("  Parent re-enumeration returned non-success (non-fatal).");
+        }
+    }
+
+    /* Fallback: a root re-scan in case a parent handle was unavailable. */
     {
         DEVINST root;
         if (CM_Locate_DevNodeA(&root, NULL, CM_LOCATE_DEVNODE_NORMAL) == CR_SUCCESS) {
             CM_Reenumerate_DevNode(root, 0);
-            log_msg("  Triggered PnP re-enumeration.");
+            log_msg("  Triggered root PnP re-enumeration (fallback).");
         }
     }
 
