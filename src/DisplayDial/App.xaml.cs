@@ -22,7 +22,9 @@ public partial class App : Application
         base.OnStartup(e);
 
         var service = new StudioDisplayService();
-        _viewModel = new MainViewModel(service);
+        var driverInstaller = new WinUsbDriverInstallService();
+        _viewModel = new MainViewModel(service, driverInstaller);
+        _viewModel.DriverSetupFailed += OnDriverSetupFailed;
 
         _mainWindow = new MainWindow { DataContext = _viewModel };
         _mainWindow.Closing += OnMainWindowClosing;
@@ -56,6 +58,21 @@ public partial class App : Application
             _mainWindow.WindowState = WindowState.Normal;
         }
         _mainWindow.Activate();
+    }
+
+    private void OnDriverSetupFailed(object? sender, string message)
+    {
+        const string caption = "DisplayDial — driver setup";
+        if (_mainWindow is not null)
+        {
+            System.Windows.MessageBox.Show(
+                _mainWindow, message, caption, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        else
+        {
+            System.Windows.MessageBox.Show(
+                message, caption, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void OnMainWindowClosing(object? sender, CancelEventArgs e)

@@ -14,6 +14,7 @@
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -28,7 +29,19 @@
             </StackPanel>
         </DockPanel>
 
-        <Grid Grid.Row="1" Margin="0,14,0,0">
+        <Border Grid.Row="1" Margin="0,12,0,0" Padding="14,10"
+                Background="#FFF4E5" BorderBrush="#F2C879" BorderThickness="1" CornerRadius="8"
+                Visibility="{Binding DriverSetupVisibility}">
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Content="Set up display"
+                        Command="{Binding SetUpDriverCommand}"
+                        Padding="14,6" MinWidth="120" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding DriverSetupMessage}" TextWrapping="Wrap"
+                           Foreground="#7A5300" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,14,0,0">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
                 <ItemsControl ItemsSource="{Binding Displays}">
                     <ItemsControl.ItemTemplate>
@@ -82,7 +95,7 @@
             </StackPanel>
         </Grid>
 
-        <DockPanel Grid.Row="2" Margin="0,12,0,0" LastChildFill="True">
+        <DockPanel Grid.Row="3" Margin="0,12,0,0" LastChildFill="True">
             <TextBlock DockPanel.Dock="Right" Text="Close to keep DisplayDial in the system tray."
                        Foreground="#A1A1A6" FontSize="11" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding StatusMessage}" Foreground="#6E6E73" FontSize="11"

@@ -15,4 +15,21 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
+  <!--
+    Bundle the elevated WinUSB installer helper when it has been built.
+
+    The native helper (native/DisplayDial.DriverSetup) is compiled separately on
+    Windows by native/DisplayDial.DriverSetup/build.ps1, which stages the result
+    into that project's dist/ folder. When present, copy it next to the app (and
+    into publish output) so WinUsbDriverInstallService can launch it. The Exists
+    condition keeps the app build green when the helper hasn't been built yet
+    (e.g. on macOS/Linux or before running build.ps1).
+  -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\..\native\DisplayDial.DriverSetup\dist\DisplayDial.DriverSetup.exe')">
+    <None Include="$(MSBuildProjectDirectory)\..\..\native\DisplayDial.DriverSetup\dist\DisplayDial.DriverSetup.exe">
+      <Link>DisplayDial.DriverSetup.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

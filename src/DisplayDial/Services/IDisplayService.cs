@@ -4,7 +4,7 @@ namespace DisplayDial.Services;
 
 public interface IDisplayService
 {
-    Task<IReadOnlyList<StudioDisplayInfo>> EnumerateAsync(CancellationToken cancellationToken = default);
+    Task<DisplayEnumerationResult> EnumerateAsync(CancellationToken cancellationToken = default);
 
     Task<int> ReadBrightnessPercentAsync(StudioDisplayInfo display, CancellationToken cancellationToken = default);
 

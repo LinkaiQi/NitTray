@@ -1,0 +1,8 @@
+# Cloned + built artifacts — never committed.
+third_party/
+build/
+dist/
+*.obj
+*.lib
+*.exe
+*.pdb

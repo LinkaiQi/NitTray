@@ -2,7 +2,9 @@
 
 A Windows tray app for controlling **Apple display brightness** without needing
 a Mac. It talks to the display over the same USB HID feature report that macOS
-uses internally — no DDC/CI, no kernel driver, no admin rights.
+uses internally — no DDC/CI, no kernel driver, no admin rights for day-to-day
+brightness control. (The Pro Display XDR needs a one-time WinUSB driver install,
+which DisplayDial does for you with a single admin prompt.)
 
 > **Supported:** Apple Studio Display (`0x1114`), Studio Display Gen 2 (`0x1118`),
 > Studio Display XDR (`0x1116`), **Apple Pro Display XDR (`0x9243`)**, plus any
@@ -18,6 +20,10 @@ uses internally — no DDC/CI, no kernel driver, no admin rights.
 - **Self-detects each display's capabilities**: the brightness HID interface,
   report ID, and raw min/max range are all read from the device's HID
   descriptor at enumeration time. No hard-coded `MI_07`, no hard-coded `60000`.
+- **One-click Pro Display XDR setup**: when a Pro Display XDR needs the WinUSB
+  driver, DisplayDial shows a **Set up display** button that installs it in-app
+  (via [libwdi](https://github.com/pbatard/libwdi), the engine behind Zadig) —
+  one UAC prompt, no separate tools to download.
 
 ## How the protocol works
 
@@ -96,7 +102,9 @@ DisplayDial's behaviour matches them byte-for-byte:
 - .NET 10 SDK to build, or the .NET 10 Desktop Runtime to run the framework-dependent build
 
 No admin privileges, no kernel driver, no signed driver shenanigans — the HID
-control interface is accessible to a normal user-mode process.
+control interface is accessible to a normal user-mode process. (The one-time
+Pro Display XDR WinUSB setup is the sole exception: that step prompts for admin
+once, then never again — see [Pro Display XDR setup](#pro-display-xdr-setup-windows).)
 
 ## Build and run
 
@@ -105,6 +113,14 @@ control interface is accessible to a normal user-mode process.
 dotnet build -c Release
 dotnet run --project src/DisplayDial
 ```
+
+> **Pro Display XDR support** also needs the native WinUSB installer helper
+> (`DisplayDial.DriverSetup.exe`). It is built separately — run
+> `native/DisplayDial.DriverSetup/build.ps1` on Windows (Visual Studio 2022 C++
+> toolset + WDK required). The build copies the helper next to the app so the
+> **Set up display** button can find it. The Studio Display family works without
+> this helper. See
+> [`native/DisplayDial.DriverSetup/README.md`](native/DisplayDial.DriverSetup/README.md).
 
 Or publish a single-folder framework-dependent build:
 
@@ -135,17 +151,27 @@ src/DisplayDial/
     MainViewModel.cs              - observable list of displays + refresh command
     DisplayViewModel.cs           - per-display brightness with debounced writes
     RelayCommand.cs               - minimal ICommand
-  Models/
-    StudioDisplayInfo.cs          - immutable device descriptor + HID caps
   Services/
     IDisplayService.cs            - abstraction
-    StudioDisplayService.cs       - HID enumeration + read/write
+    StudioDisplayService.cs       - HID + WinUSB enumeration and read/write
+    IDriverInstallService.cs      - abstraction for the WinUSB installer
+    WinUsbDriverInstallService.cs - launches the elevated helper (UAC)
+    DriverInstallResult.cs        - install status + message
+    DriverSetupExitCodes.cs       - exit-code contract shared with the helper
     IconFactory.cs                - generates the sun tray icon at runtime
     Native/
       HidNative.cs                - hid.dll + HidP_* parser P/Invoke
       SetupApiNative.cs           - setupapi.dll P/Invoke
+      WinUsbNative.cs             - winusb.dll P/Invoke (Pro Display XDR)
       Kernel32Native.cs           - kernel32.dll CreateFile / CloseHandle
       HidDeviceSafeHandle.cs      - SafeHandle wrapper
+  Models/
+    StudioDisplayInfo.cs          - immutable device descriptor + HID caps
+    DisplayEnumerationResult.cs   - displays + pending driver setups
+    PendingDriverSetup.cs         - a display present but not WinUSB-bound yet
+
+native/DisplayDial.DriverSetup/   - elevated WinUSB installer (C + libwdi),
+                                    built separately on Windows (see its README)
 ```
 
 ## Troubleshooting
@@ -157,9 +183,10 @@ src/DisplayDial/
   every Apple-vendor HID interface seen and why each one was or wasn't picked
   as the brightness control.
 - **Pro Display XDR with a yellow warning (Code 10) in Device Manager:**
-  see **Pro Display XDR setup** below — Windows' built-in HID driver doesn't
-  understand Apple's HID descriptor for this display, so brightness has to go
-  through a WinUSB driver instead.
+  Windows' built-in HID driver doesn't understand Apple's HID descriptor for
+  this display, so brightness has to go through a WinUSB driver instead.
+  DisplayDial installs it for you — click **Set up display** in the app (see
+  **Pro Display XDR setup** below).
 - **Permission denied:** None expected on Windows — `CreateFile` with
   `GENERIC_READ | GENERIC_WRITE` and shared access works for normal users.
 - **Pro Display XDR shows up multiple times:** shouldn't happen — DisplayDial
@@ -173,37 +200,42 @@ src/DisplayDial/
 The Apple Pro Display XDR ships an HID descriptor that Windows' built-in HID
 driver (`hidclass.sys`) cannot parse — when you connect the display directly,
 Device Manager shows its **USB Input Device** (`VID_05AC` `PID_9243`) with a
-yellow warning and **Code 10 ("This device cannot start")**. Until that driver
-is replaced, no application on Windows — not just DisplayDial — can talk to
-the brightness interface.
+yellow warning and **Code 10 ("This device cannot start")**. Until the driver
+is replaced, no application on Windows — not just DisplayDial — can talk to the
+brightness interface.
 
-The standard workaround in the open-source community (`apdbctl`, `MonitorCtl`,
-etc.) is to bind the Microsoft-provided WinUSB driver to that one interface
-instead. DisplayDial then sends the same `SET_REPORT` / `GET_REPORT` control
-transfers directly over the USB bus.
+The fix is to bind the Microsoft-provided **WinUSB** driver to the whole device.
+DisplayDial does this for you:
 
-**One-time setup:**
+1. Connect the Pro Display XDR. DisplayDial detects it and shows a banner with a
+   **Set up display** button.
+2. Click **Set up display** and approve the single Windows permission (UAC)
+   prompt.
+3. Wait ~10–20 seconds. DisplayDial installs WinUSB, re-scans, and the display
+   appears with a working brightness slider.
 
-1. Download Zadig from https://zadig.akeo.ie/ (it's a tiny, signed, widely
-   used utility for swapping USB drivers).
-2. Run Zadig. In the menu, choose **Options → List All Devices**.
-3. In the device drop-down at the top, find the entry whose USB ID is
-   `05AC:9243` (it usually shows up as **USB Input Device**).
-4. With that entry selected, the right-hand "Target Driver" arrow should
-   show **WinUSB** — leave it as WinUSB and click **Install Driver**
-   (or **Replace Driver** if a driver is already bound).
-5. Wait for Zadig to finish (it can take 30–60 seconds), then back in
-   DisplayDial click **Refresh**. The Pro Display XDR should now appear
-   in the list.
+Under the hood this runs a small elevated helper
+(`DisplayDial.DriverSetup.exe`) that uses
+[libwdi](https://github.com/pbatard/libwdi) — the same engine Zadig uses — to
+generate and install a self-signed WinUSB driver package. You only need to do
+this once per machine. If the install fails, DisplayDial shows the error and
+writes details to `%LOCALAPPDATA%\DisplayDial\driver-setup.log`.
 
-You only need to do this once per machine. The Apple Studio Display family
-does **not** need Zadig — its HID descriptor is well-formed and Windows binds
-it correctly out of the box.
+The Apple Studio Display family does **not** need this step — its HID descriptor
+is well-formed and Windows binds it correctly out of the box.
 
-If after running Zadig the display still doesn't appear, open
-`%LOCALAPPDATA%\DisplayDial\diagnostic.log` and look for lines starting with
-`WinUSB probe:` — they describe exactly which step failed.
+> **Note:** the helper is a native (C + libwdi) component compiled separately on
+> Windows; see
+> [`native/DisplayDial.DriverSetup/README.md`](native/DisplayDial.DriverSetup/README.md).
+> If `DisplayDial.DriverSetup.exe` isn't bundled next to the app, the **Set up
+> display** button reports that the helper is missing.
 
 ## License
 
-MIT.
+**GPLv3** — see [`LICENSE`](LICENSE).
+
+DisplayDial bundles and (statically) links
+[libwdi](https://github.com/pbatard/libwdi), which is licensed LGPLv3/GPLv3. To
+keep the combined work's licensing clean, the whole project is released under the
+GNU General Public License v3.0. You are free to use, study, modify, and
+redistribute it under those terms.

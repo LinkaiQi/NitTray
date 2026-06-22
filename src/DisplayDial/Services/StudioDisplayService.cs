@@ -53,8 +53,8 @@ public sealed class StudioDisplayService : IDisplayService
         (ProDisplayXdrPid, "Apple Pro Display XDR"),
     };
 
-    public Task<IReadOnlyList<StudioDisplayInfo>> EnumerateAsync(CancellationToken cancellationToken = default)
-        => Task.Run<IReadOnlyList<StudioDisplayInfo>>(Enumerate, cancellationToken);
+    public Task<DisplayEnumerationResult> EnumerateAsync(CancellationToken cancellationToken = default)
+        => Task.Run(Enumerate, cancellationToken);
 
     public Task<int> ReadBrightnessPercentAsync(StudioDisplayInfo display, CancellationToken cancellationToken = default)
         => Task.Run(() =>
@@ -315,10 +315,11 @@ public sealed class StudioDisplayService : IDisplayService
         return sb.ToString();
     }
 
-    private static IReadOnlyList<StudioDisplayInfo> Enumerate()
+    private static DisplayEnumerationResult Enumerate()
     {
         DiagnosticLog.Reset("Enumerate()");
         var found = new List<StudioDisplayInfo>();
+        var pendingSetups = new List<PendingDriverSetup>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int totalSeen = 0;
         int appleSeen = 0;
@@ -410,8 +411,8 @@ public sealed class StudioDisplayService : IDisplayService
         // The Pro Display XDR is the well-known case — its brightness HID interface is
         // rejected by Windows' generic HID driver, but with WinUSB bound (via Zadig)
         // we can still send the same SET_REPORT / GET_REPORT control transfers.
-        var winUsbDisplays = EnumerateUsbAndProbeWinUsb();
-        foreach (var d in winUsbDisplays)
+        var winUsbResult = EnumerateUsbAndProbeWinUsb();
+        foreach (var d in winUsbResult.Displays)
         {
             // Skip if we already found this physical display via HID (avoid double entries
             // when both transports happen to work — unlikely, but be safe).
@@ -425,13 +426,35 @@ public sealed class StudioDisplayService : IDisplayService
             found.Add(d);
         }
 
+        // A display only needs driver setup if it isn't already controllable.
+        foreach (var p in winUsbResult.PendingSetups)
+        {
+            if (found.Any(f =>
+                    (f.SerialNumber is not null && f.SerialNumber == p.SerialNumber)
+                    || (f.ProductId != 0 && f.ProductId == p.ProductId)))
+            {
+                continue;
+            }
+            pendingSetups.Add(p);
+        }
+
         var result = DeduplicateBySerial(found);
         DiagnosticLog.Write($"After dedup: {result.Count} display(s).");
         foreach (var d in result)
         {
             DiagnosticLog.Write($"  - {d.ProductName} (serial={d.SerialNumber ?? "-"}, pid=0x{d.ProductId:X4})");
         }
-        if (result.Count == 0)
+        if (pendingSetups.Count > 0)
+        {
+            DiagnosticLog.Write($"Pending driver setup: {pendingSetups.Count} display(s).");
+            foreach (var p in pendingSetups)
+            {
+                DiagnosticLog.Write(
+                    $"  - {p.ProductName} (serial={p.SerialNumber ?? "-"}, " +
+                    $"vid=0x{p.VendorId:X4}, pid=0x{p.ProductId:X4}) needs WinUSB.");
+            }
+        }
+        if (result.Count == 0 && pendingSetups.Count == 0)
         {
             DiagnosticLog.Write("");
             DiagnosticLog.Write("Hint: open Device Manager, choose View -> Devices by container.");
@@ -442,17 +465,21 @@ public sealed class StudioDisplayService : IDisplayService
             DiagnosticLog.Write("");
             DiagnosticLog.Write("If your Apple Pro Display XDR appears in Device Manager with a yellow");
             DiagnosticLog.Write("warning (Code 10), Windows' built-in HID driver doesn't understand");
-            DiagnosticLog.Write("its descriptor. Install Zadig (https://zadig.akeo.ie/), choose");
-            DiagnosticLog.Write("Options -> List All Devices, pick the entry with VID_05AC and");
-            DiagnosticLog.Write("PID_9243, then install the WinUSB driver. After that, click Refresh");
-            DiagnosticLog.Write("here — the Pro XDR should appear via the WinUSB transport.");
+            DiagnosticLog.Write("its descriptor and WinUSB is not bound yet. DisplayDial can install");
+            DiagnosticLog.Write("the WinUSB driver for you — when the display is detected it shows a");
+            DiagnosticLog.Write("\"Set up display\" button that performs a one-time, in-app install.");
         }
-        return result;
+        return new DisplayEnumerationResult(result, pendingSetups);
     }
 
-    private static List<StudioDisplayInfo> EnumerateUsbAndProbeWinUsb()
+    private readonly record struct UsbProbeResult(
+        List<StudioDisplayInfo> Displays,
+        List<PendingDriverSetup> PendingSetups);
+
+    private static UsbProbeResult EnumerateUsbAndProbeWinUsb()
     {
         var results = new List<StudioDisplayInfo>();
+        var pending = new List<PendingDriverSetup>();
         DiagnosticLog.Write("--- USB devices (GUID_DEVINTERFACE_USB_DEVICE) ---");
         var usbGuid = SetupApiNative.GUID_DEVINTERFACE_USB_DEVICE;
         var devInfoSet = SetupApiNative.SetupDiGetClassDevs(
@@ -465,7 +492,7 @@ public sealed class StudioDisplayService : IDisplayService
         {
             DiagnosticLog.Write(
                 $"  SetupDiGetClassDevs(USB) failed: err={Marshal.GetLastWin32Error()}");
-            return results;
+            return new UsbProbeResult(results, pending);
         }
 
         int total = 0;
@@ -523,7 +550,7 @@ public sealed class StudioDisplayService : IDisplayService
                     continue;
                 }
 
-                var winUsbInfo = TryProbeProXdrViaWinUsb(path);
+                var (winUsbInfo, driverNotBound) = TryProbeProXdrViaWinUsb(path);
                 if (winUsbInfo is not null)
                 {
                     winUsbBound++;
@@ -532,11 +559,23 @@ public sealed class StudioDisplayService : IDisplayService
                         $"serial='{winUsbInfo.SerialNumber ?? "-"}'");
                     results.Add(winUsbInfo);
                 }
-                else
+                else if (driverNotBound)
                 {
                     DiagnosticLog.Write(
                         "  -> Pro Display XDR detected on the USB bus but WinUSB is not bound. " +
-                        "Install WinUSB via Zadig to enable brightness control.");
+                        "DisplayDial can install it (use the \"Set up display\" button).");
+                    pending.Add(new PendingDriverSetup(
+                        VendorId: AppleVendorId,
+                        ProductId: ProDisplayXdrPid,
+                        ProductName: "Apple Pro Display XDR",
+                        SerialNumber: TryParseSerialFromPath(path),
+                        DevicePath: path));
+                }
+                else
+                {
+                    DiagnosticLog.Write(
+                        "  -> Pro Display XDR found and WinUSB is bound, but no brightness " +
+                        "interface responded. Reinstalling the driver will not help; see log above.");
                 }
             }
         }
@@ -547,10 +586,10 @@ public sealed class StudioDisplayService : IDisplayService
 
         DiagnosticLog.Write(
             $"USB enumeration done. Total: {total}, Apple-vendor: {apple}, WinUSB-bound: {winUsbBound}.");
-        return results;
+        return new UsbProbeResult(results, pending);
     }
 
-    private static StudioDisplayInfo? TryProbeProXdrViaWinUsb(string path)
+    private static (StudioDisplayInfo? Info, bool DriverNotBound) TryProbeProXdrViaWinUsb(string path)
     {
         HidDeviceSafeHandle? handle = null;
         IntPtr primaryWinUsb = IntPtr.Zero;
@@ -563,7 +602,7 @@ public sealed class StudioDisplayService : IDisplayService
                 DiagnosticLog.Write(
                     $"  WinUSB probe: CreateFile failed (err={Marshal.GetLastWin32Error()}). " +
                     "This usually means no function driver is bound to the device.");
-                return null;
+                return (null, true);
             }
 
             if (!WinUsbNative.WinUsb_Initialize(handle, out primaryWinUsb))
@@ -572,7 +611,7 @@ public sealed class StudioDisplayService : IDisplayService
                 DiagnosticLog.Write(
                     $"  WinUSB probe: WinUsb_Initialize failed (err={err}). " +
                     "WinUSB is not the bound driver for this device.");
-                return null;
+                return (null, true);
             }
 
             // Pro Display XDR exposes 5 HID interfaces. The brightness control
@@ -689,7 +728,7 @@ public sealed class StudioDisplayService : IDisplayService
                         $"(range {ProXdrMinBrightness}..{ProXdrMaxBrightness}).");
                 }
 
-                return new StudioDisplayInfo(
+                return (new StudioDisplayInfo(
                     DevicePath: path,
                     ProductName: "Apple Pro Display XDR",
                     SerialNumber: TryParseSerialFromPath(path),
@@ -701,19 +740,19 @@ public sealed class StudioDisplayService : IDisplayService
                     Transport: DisplayTransport.WinUsb,
                     UsbInterfaceNumber: ifaceNum,
                     BrightnessByteOffset: ProXdrBrightnessByteOffset,
-                    WinUsbAssociatedInterfaceIndex: assocIdx);
+                    WinUsbAssociatedInterfaceIndex: assocIdx), false);
             }
 
             DiagnosticLog.Write(
-                "  WinUSB probe: none of the interfaces had the Pro XDR brightness usage. " +
-                "Re-run Zadig and install WinUSB on the *composite* USB device (the parent " +
-                "entry without an MI_NN suffix), not on a single interface.");
-            return null;
+                "  WinUSB probe: WinUSB is bound but none of the interfaces exposed the Pro XDR " +
+                "brightness usage. WinUSB must own the *composite* device (the parent node " +
+                "without an MI_NN suffix). Reinstalling via \"Set up display\" targets that node.");
+            return (null, false);
         }
         catch (Exception ex)
         {
             DiagnosticLog.Write($"  WinUSB probe EXCEPTION: {ex.GetType().Name}: {ex.Message}");
-            return null;
+            return (null, false);
         }
         finally
         {
