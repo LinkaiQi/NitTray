@@ -166,7 +166,32 @@ function Find-MSBuild {
 function Find-CMake {
     $cmd = Get-Command cmake.exe -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
-    throw "cmake.exe not found. Install CMake or add it to PATH (the VS C++ workload can provide it)."
+
+    # Visual Studio bundles CMake with the "C++ CMake tools for Windows" component
+    # (included in the Desktop C++ workload), but only puts it on PATH inside a
+    # "Developer PowerShell for VS". Locate it via vswhere -- same as Find-MSBuild --
+    # so build.ps1 works from a plain PowerShell too.
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere) {
+        foreach ($glob in @(
+            "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+            "**\CMake\**\bin\cmake.exe")) {
+            $path = & $vswhere -latest -prerelease -find $glob | Select-Object -First 1
+            if ($path) { return $path }
+        }
+    }
+
+    # Standalone CMake (cmake.org installer) in its default locations.
+    foreach ($p in @(
+        (Join-Path $env:ProgramFiles "CMake\bin\cmake.exe"),
+        (Join-Path ${env:ProgramFiles(x86)} "CMake\bin\cmake.exe"))) {
+        if ($p -and (Test-Path $p)) { return $p }
+    }
+
+    throw "cmake.exe not found. Either (a) in the Visual Studio Installer add the " +
+          "'C++ CMake tools for Windows' component to your Desktop C++ workload, or " +
+          "(b) install standalone CMake from https://cmake.org/download/ and add it to " +
+          "PATH. Then re-run build.ps1."
 }
 
 # Throw a clear error if a patch anchor isn't found exactly as many times as
