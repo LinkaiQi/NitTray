@@ -56,7 +56,7 @@ By default, `build.ps1` patches libwdi to build **x64-only and co-installer-free
 so you do **not** need the WDK or the ARM64 build tools (see
 [Why the libwdi patch](#why-the-libwdi-patch) below). The single x64 helper this
 produces runs on x64 Windows. To also support **Windows on ARM**, build with
-`-Arm64` (see [Windows on ARM](#windows-on-arm-arm64)).
+`-SupportArm64` (see [Windows on ARM](#windows-on-arm-arm64)).
 
 ### Prerequisites
 
@@ -116,10 +116,10 @@ to Visual Studio (*Individual components → MSVC v143 - VS 2022 C++ ARM64 build
 tools*), then build with:
 
 ```powershell
-./build.ps1 -Arm64
+./build.ps1 -SupportArm64
 ```
 
-In `-Arm64` mode the libwdi patch only removes the co-installers (it leaves
+In `-SupportArm64` mode the libwdi patch only removes the co-installers (it leaves
 `config.h` and the project references stock), and the build goes through the full
 solution so each embedded installer is compiled for its own architecture. The output
 is still a single x64 `DisplayDial.DriverSetup.exe` — **ship the same file for your
@@ -141,7 +141,7 @@ libwdi's own ARM64 path already installs WinUSB inbox with no co-installer, so t
 patch **always** removes the co-installer embeds and blanks the co-installer
 sections of the generated INF. In the default (x64-only) build it *also* drops the
 x86/ARM64 installer project references and switches `config.h` to x64-only, so no
-ARM64 tools are needed; with `-Arm64` those are left stock so the solution can embed
+ARM64 tools are needed; with `-SupportArm64` those are left stock so the solution can embed
 every architecture's installer (see [Windows on ARM](#windows-on-arm-arm64)).
 `winusb.cat.in` is left untouched — libwdi's catalog builder hashes only the
 files actually present (and always adds the INF), so the absent co-installers are

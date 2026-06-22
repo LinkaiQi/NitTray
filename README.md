@@ -120,7 +120,7 @@ dotnet run --project src/DisplayDial
 > 2026 with the *Desktop development with C++* workload + the **v143 x64**
 > toolset; **no WDK or ARM64 tools needed**). The single x64 helper this produces
 > runs on x64 Windows; for a **Windows on ARM** release, add the *MSVC v143 - ARM64
-> build tools* component and run `build.ps1 -Arm64` to produce one universal helper
+> build tools* component and run `build.ps1 -SupportArm64` to produce one universal helper
 > that serves both x64 and ARM64 (no per-architecture bundling). The build copies
 > the helper next to the app so the **Set up display** button can find it. The
 > Studio Display family works without this helper. See

@@ -6,7 +6,7 @@
     1. Clones libwdi (pinned tag) into native/third_party/libwdi if absent.
     2. Patches libwdi to build co-installer-free (see NOTES). By default it also
        trims libwdi to x64-only so no WDK and no ARM64 tools are needed; pass
-       -Arm64 to additionally embed the ARM64 installer (see "ARM64 support").
+       -SupportArm64 to additionally embed the ARM64 installer (see "ARM64 support").
     3. Builds the libwdi static library (Release|x64) with MSBuild.
     4. Stages libwdi.h + libwdi.lib into a single folder.
     5. Configures and builds this helper with CMake, linking libwdi.
@@ -21,7 +21,7 @@
 
 .PARAMETER Platform
     Host architecture of the helper exe (default: x64). The helper is always a
-    single x64 binary; -Arm64 controls which target installers it can run, not
+    single x64 binary; -SupportArm64 controls which target installers it can run, not
     the helper's own architecture (see "ARM64 support" in NOTES).
 
 .PARAMETER LibwdiTag
@@ -36,7 +36,7 @@
     CMake generator override (e.g. "Visual Studio 18 2026"). Leave empty to let
     CMake auto-detect the installed Visual Studio.
 
-.PARAMETER Arm64
+.PARAMETER SupportArm64
     Also embed the ARM64 WinUSB installer so the (x64) helper works on Windows on
     ARM. Requires the "MSVC v143 - ARM64 build tools" component. See "ARM64
     support" in NOTES.
@@ -90,7 +90,7 @@
     prebuilt tools instead of re-platforming them. Its PreBuildEvent still runs the
     prebuilt embedder to generate embedded.h.
 
-    --- ARM64 support (-Arm64) -----------------------------------------------
+    --- ARM64 support (-SupportArm64) -----------------------------------------------
     libwdi has no ARM64 *solution* platform; instead the static lib is built for
     the host arch (x64) and EMBEDS an installer exe for each target arch. At
     runtime wdi_install_driver picks installer_<os-arch>.exe based on the native
@@ -100,7 +100,7 @@
     Zadig ships one binary for every architecture). No separate ARM64 helper and
     no per-RID bundling are required.
 
-    With -Arm64 we therefore leave config.h and the .vcxproj stock (so the static
+    With -SupportArm64 we therefore leave config.h and the .vcxproj stock (so the static
     lib embeds the x86/x64/arm64 installers) and build the whole .sln as
     Release|x64. The .sln pins each installer project to its own architecture
     (installer_arm64 -> ARM64, embedder host-tool -> Win32) regardless of the
@@ -111,7 +111,7 @@
     x64 and ARM64 releases.
 
     The patch is applied to a pristine checkout every run (git checkout -- .), so
-    re-running build.ps1 -- including switching -Arm64 on/off -- is idempotent.
+    re-running build.ps1 -- including switching -SupportArm64 on/off -- is idempotent.
 #>
 [CmdletBinding()]
 param(
@@ -120,7 +120,7 @@ param(
     [string]$LibwdiTag = "v1.5.1",
     [string]$Toolset = "v143",
     [string]$Generator = "",
-    [switch]$Arm64,
+    [switch]$SupportArm64,
     [string]$AppOutputDir = ""
 )
 
@@ -174,7 +174,7 @@ function Invoke-LibwdiPatch {
         if (-not (Test-Path $f)) { throw "Expected libwdi file is missing: $f" }
     }
 
-    # Reset to pristine so re-running build.ps1 (or switching -Arm64) re-patches cleanly.
+    # Reset to pristine so re-running build.ps1 (or switching -SupportArm64) re-patches cleanly.
     if (Test-Path (Join-Path $Root ".git")) {
         & git -C $Root checkout -- . 2>$null | Out-Null
     }
@@ -243,7 +243,7 @@ function Invoke-LibwdiPatch {
     Write-Host "    libwdi patched: x64-only, no co-installer, no WDK/ARM64 tools needed." -ForegroundColor DarkGray
 }
 
-$buildMode = if ($Arm64) { "x64 + ARM64 universal" } else { "x64-only" }
+$buildMode = if ($SupportArm64) { "x64 + ARM64 universal" } else { "x64-only" }
 Write-Host "==> DisplayDial.DriverSetup build" -ForegroundColor Cyan
 Write-Host "    Config=$Config Platform=$Platform libwdi=$LibwdiTag toolset=$Toolset mode=$buildMode"
 
@@ -259,7 +259,7 @@ if (-not (Test-Path (Join-Path $libwdiDir "libwdi.sln"))) {
 
 # --- 2. Patch + build the libwdi static lib --------------------------------
 $msbuild = Find-MSBuild
-Invoke-LibwdiPatch -Root $libwdiDir -IncludeArm64:$Arm64
+Invoke-LibwdiPatch -Root $libwdiDir -IncludeArm64:$SupportArm64
 
 $libwdiSln       = Join-Path $libwdiDir "libwdi.sln"
 $staticVcx       = Join-Path $libwdiDir "libwdi\.msvc\libwdi_static.vcxproj"
@@ -272,7 +272,7 @@ $installerX64Vcx = Join-Path $libwdiDir "libwdi\.msvc\installer_x64.vcxproj"
 # finds the installer exe it bakes in (see the per-step notes below).
 $solnDir = ($libwdiDir -replace '\\', '/') + '/'
 
-if ($Arm64) {
+if ($SupportArm64) {
     # Build the whole .sln so the per-project arch pinning applies
     # (installer_arm64 -> ARM64, embedder host-tool -> Win32). The static lib then
     # embeds the x86/x64/arm64 installers. Unrelated .sln projects may fail in a
@@ -322,8 +322,8 @@ if (-not $libwdiLib) {
 $libwdiHeader = Join-Path $libwdiDir "libwdi\libwdi.h"
 
 if (-not $libwdiLib -or -not (Test-Path $libwdiHeader)) {
-    $hint = if ($Arm64) {
-        "In -Arm64 mode you also need the 'MSVC v143 - ARM64 build tools' component."
+    $hint = if ($SupportArm64) {
+        "In -SupportArm64 mode you also need the 'MSVC v143 - ARM64 build tools' component."
     } else {
         "Re-run from a 'Developer PowerShell for VS' with the v143 x64 toolset installed."
     }
