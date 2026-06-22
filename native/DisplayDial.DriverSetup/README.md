@@ -49,28 +49,28 @@ Detailed progress is appended to `%LOCALAPPDATA%\DisplayDial\driver-setup.log`.
 
 ## Building (Windows only)
 
-This helper links libwdi statically and embeds the WinUSB co-installer, so it can
-**only be built on Windows with MSVC** — it cannot be cross-compiled from macOS or
-Linux.
+This helper links libwdi statically, so it can **only be built on Windows with
+MSVC** — it cannot be cross-compiled from macOS or Linux.
+
+`build.ps1` patches libwdi to build **x64-only and co-installer-free**, so you do
+**not** need the WDK or the ARM64 build tools (see
+[Why the libwdi patch](#why-the-libwdi-patch) below).
 
 ### Prerequisites
 
-- **Visual Studio 2022** with the *Desktop development with C++* workload
-  (provides MSBuild + the MSVC toolset).
-- **CMake** 3.20+ (the VS installer can add it, or install separately).
+- **Visual Studio 2022 or 2026** with the *Desktop development with C++* workload
+  (provides MSBuild + CMake + the MSVC toolset).
+- The **v143 (VS 2022) x64 build tools** component. libwdi pins the v143 toolset;
+  the helper is built with the same toolset so the static libraries link cleanly.
+  On VS 2026 add it via *Individual components → MSVC v143 - VS 2022 C++ x64/x86
+  build tools*.
 - **Git**.
-- **Windows Driver Kit (WDK).** libwdi embeds the WinUSB co-installer from the WDK
-  redistributables. Install it from
-  <https://learn.microsoft.com/windows-hardware/drivers/download-the-wdk>.
-  If libwdi can't find the kit, edit `third_party/libwdi/msvc/config.h` and set:
 
-  ```c
-  #define WDK_DIR "C:/Program Files (x86)/Windows Kits/10"
-  ```
+That's it — **no Windows Driver Kit and no ARM64 tools are required.**
 
 ### One-shot build
 
-From a **Developer PowerShell for VS 2022**:
+From a **Developer PowerShell for VS** (2022 or 2026):
 
 ```powershell
 cd native\DisplayDial.DriverSetup
@@ -80,32 +80,48 @@ cd native\DisplayDial.DriverSetup
 `build.ps1` will:
 
 1. Clone libwdi (`v1.5.1`) into `third_party/libwdi`.
-2. Build the libwdi static library (Release | x64).
-3. Stage `libwdi.h` + `libwdi.lib`.
-4. Configure + build this helper with CMake.
-5. Copy `DisplayDial.DriverSetup.exe` next to the DisplayDial app output
+2. Patch it to build x64-only and co-installer-free (idempotent; re-running
+   resets the checkout and re-applies the patch).
+3. Build the libwdi static library (Release | x64).
+4. Stage `libwdi.h` + `libwdi.lib`.
+5. Configure + build this helper with CMake (toolset `v143`).
+6. Copy `DisplayDial.DriverSetup.exe` next to the DisplayDial app output
    (`src/DisplayDial/bin/Release/net10.0-windows`) so the tray app finds it.
 
 Override defaults if needed:
 
 ```powershell
+# e.g. force the generator on an unusual CMake, or change the toolset:
+./build.ps1 -Generator "Visual Studio 18 2026" -Toolset v143
 ./build.ps1 -Config Release -Platform x64 -LibwdiTag v1.5.1 -AppOutputDir "C:\path\to\app"
 ```
 
-### Manual build (if you prefer)
+If CMake can't auto-detect your Visual Studio, pass `-Generator` explicitly
+(`"Visual Studio 17 2022"` or `"Visual Studio 18 2026"`).
 
-```powershell
-# 1. Build libwdi (Release|x64) — open libwdi.sln in VS once if MSBuild struggles.
-msbuild third_party\libwdi\libwdi.sln /p:Configuration=Release /p:Platform=x64 /m
+### Why the libwdi patch
 
-# 2. Stage the outputs into one folder:
-#      libwdi.h   <- third_party\libwdi\libwdi\libwdi.h
-#      libwdi.lib <- third_party\libwdi\x64\Release\lib\libwdi.lib
+Stock libwdi targets x86 + x64 + ARM64 and embeds the legacy WinUSB/WDF
+*co-installer* DLLs from the WDK. On a modern toolchain that breaks twice:
 
-# 3. Build this helper:
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DLIBWDI_ROOT="<stage folder>"
-cmake --build build --config Release
-```
+1. Its static-library project references an **ARM64 installer project**, so the
+   build fails with `MSB8020` unless the ARM64 v143 tools are installed.
+2. The modern WDK (Windows 10 1809+) **no longer ships those co-installer DLLs**,
+   so libwdi's "embedder" step fails trying to open them.
+
+Co-installers have been unnecessary since Windows 10 (WinUSB is in-box), and
+libwdi's own ARM64 path already installs WinUSB inbox with no co-installer.
+`build.ps1` simply makes the x64 build behave like that ARM64 path: it drops the
+x86/ARM64 project references, switches `config.h` to x64-only, removes the
+co-installer embeds, and blanks the co-installer sections of the generated INF.
+`winusb.cat.in` is left untouched — libwdi's catalog builder hashes only the
+files actually present (and always adds the INF), so the absent co-installers are
+skipped, exactly as on ARM64. The exact edits are documented in the `.NOTES`
+block at the top of `build.ps1`.
+
+> This is the planned seam for a future **INF + CAT** (production-signed) path:
+> swap the C# `IDriverInstallService` implementation and replace the libwdi
+> install with your signed package — the rest of the app is unaffected.
 
 ## How the tray app uses it
 

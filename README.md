@@ -116,10 +116,11 @@ dotnet run --project src/DisplayDial
 
 > **Pro Display XDR support** also needs the native WinUSB installer helper
 > (`DisplayDial.DriverSetup.exe`). It is built separately — run
-> `native/DisplayDial.DriverSetup/build.ps1` on Windows (Visual Studio 2022 C++
-> toolset + WDK required). The build copies the helper next to the app so the
-> **Set up display** button can find it. The Studio Display family works without
-> this helper. See
+> `native/DisplayDial.DriverSetup/build.ps1` on Windows (Visual Studio 2022 or
+> 2026 with the *Desktop development with C++* workload + the **v143 x64**
+> toolset; **no WDK or ARM64 tools needed**). The build copies the helper next to
+> the app so the **Set up display** button can find it. The Studio Display family
+> works without this helper. See
 > [`native/DisplayDial.DriverSetup/README.md`](native/DisplayDial.DriverSetup/README.md).
 
 Or publish a single-folder framework-dependent build:
