@@ -45,6 +45,33 @@ internal static class SetupApiNative
         IntPtr hwndParent,
         int flags);
 
+    // Overload for ClassGuid == NULL + a string Enumerator (e.g. "USB"). With
+    // DIGCF_ALLCLASSES this returns every present node under that enumerator,
+    // regardless of which function driver (if any) is bound -- so it sees a
+    // device even when it is stuck on a failed in-box driver (yellow-bang).
+    [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr SetupDiGetClassDevs(
+        IntPtr classGuid,
+        [MarshalAs(UnmanagedType.LPWStr)] string enumerator,
+        IntPtr hwndParent,
+        int flags);
+
+    [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetupDiEnumDeviceInfo(
+        IntPtr deviceInfoSet,
+        uint memberIndex,
+        ref SP_DEVINFO_DATA deviceInfoData);
+
+    [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetupDiGetDeviceInstanceId(
+        IntPtr deviceInfoSet,
+        ref SP_DEVINFO_DATA deviceInfoData,
+        System.Text.StringBuilder deviceInstanceId,
+        int deviceInstanceIdSize,
+        out int requiredSize);
+
     [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetupDiEnumDeviceInterfaces(

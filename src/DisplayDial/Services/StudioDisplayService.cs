@@ -438,6 +438,22 @@ public sealed class StudioDisplayService : IDisplayService
             pendingSetups.Add(p);
         }
 
+        // Last-resort presence check for the Pro Display XDR. If the device-
+        // interface enumeration never saw it (it's stuck on Windows' in-box HID
+        // driver -> yellow-bang / Code 10, which suppresses the USB device
+        // interface) yet the hardware is physically on the bus, surface it as a
+        // pending setup so the user still gets the one-click "Set up display".
+        if (!winUsbResult.SawProXdr
+            && !found.Any(f => f.ProductId == ProDisplayXdrPid)
+            && !pendingSetups.Any(p => p.ProductId == ProDisplayXdrPid))
+        {
+            var xdrPending = ProbeProXdrPresenceByHardwareId();
+            if (xdrPending is not null)
+            {
+                pendingSetups.Add(xdrPending);
+            }
+        }
+
         var result = DeduplicateBySerial(found);
         DiagnosticLog.Write($"After dedup: {result.Count} display(s).");
         foreach (var d in result)
@@ -474,12 +490,14 @@ public sealed class StudioDisplayService : IDisplayService
 
     private readonly record struct UsbProbeResult(
         List<StudioDisplayInfo> Displays,
-        List<PendingDriverSetup> PendingSetups);
+        List<PendingDriverSetup> PendingSetups,
+        bool SawProXdr);
 
     private static UsbProbeResult EnumerateUsbAndProbeWinUsb()
     {
         var results = new List<StudioDisplayInfo>();
         var pending = new List<PendingDriverSetup>();
+        bool sawProXdr = false;
         DiagnosticLog.Write("--- USB devices (GUID_DEVINTERFACE_USB_DEVICE) ---");
         var usbGuid = SetupApiNative.GUID_DEVINTERFACE_USB_DEVICE;
         var devInfoSet = SetupApiNative.SetupDiGetClassDevs(
@@ -492,7 +510,7 @@ public sealed class StudioDisplayService : IDisplayService
         {
             DiagnosticLog.Write(
                 $"  SetupDiGetClassDevs(USB) failed: err={Marshal.GetLastWin32Error()}");
-            return new UsbProbeResult(results, pending);
+            return new UsbProbeResult(results, pending, false);
         }
 
         int total = 0;
@@ -549,6 +567,7 @@ public sealed class StudioDisplayService : IDisplayService
                     DiagnosticLog.Write($"  -> not the Pro Display XDR (pid=0x{pid:X4}), skipping WinUSB probe.");
                     continue;
                 }
+                sawProXdr = true;
 
                 var (winUsbInfo, driverNotBound) = TryProbeProXdrViaWinUsb(path);
                 if (winUsbInfo is not null)
@@ -586,7 +605,119 @@ public sealed class StudioDisplayService : IDisplayService
 
         DiagnosticLog.Write(
             $"USB enumeration done. Total: {total}, Apple-vendor: {apple}, WinUSB-bound: {winUsbBound}.");
-        return new UsbProbeResult(results, pending);
+        return new UsbProbeResult(results, pending, sawProXdr);
+    }
+
+    // Fallback presence scan: enumerate EVERY present USB node by hardware-id
+    // (driver-independent) and look for the Pro Display XDR. This is the same
+    // technique the native uninstall uses, and it sees the display even when it
+    // is bound to Windows' failed in-box HID driver -- the yellow-bang / Code 10
+    // state in which the GUID_DEVINTERFACE_USB_DEVICE enumeration above does not
+    // surface it at all.
+    private static PendingDriverSetup? ProbeProXdrPresenceByHardwareId()
+    {
+        var devInfoSet = SetupApiNative.SetupDiGetClassDevs(
+            IntPtr.Zero,
+            "USB",
+            IntPtr.Zero,
+            SetupApiNative.DIGCF_ALLCLASSES | SetupApiNative.DIGCF_PRESENT);
+
+        if (devInfoSet == SetupApiNative.INVALID_HANDLE_VALUE)
+        {
+            DiagnosticLog.Write(
+                $"  Hardware-id USB scan failed: err={Marshal.GetLastWin32Error()}");
+            return null;
+        }
+
+        try
+        {
+            var devInfoData = new SetupApiNative.SP_DEVINFO_DATA
+            {
+                cbSize = Marshal.SizeOf<SetupApiNative.SP_DEVINFO_DATA>(),
+            };
+
+            var wantVid = $"VID_{AppleVendorId:X4}";
+            var wantPid = $"PID_{ProDisplayXdrPid:X4}";
+
+            for (uint index = 0;
+                 SetupApiNative.SetupDiEnumDeviceInfo(devInfoSet, index, ref devInfoData);
+                 index++)
+            {
+                var hardwareIds = GetHardwareIds(devInfoSet, ref devInfoData);
+                if (hardwareIds is null)
+                {
+                    continue;
+                }
+
+                bool isXdr = hardwareIds.Any(h =>
+                    h.IndexOf(wantVid, StringComparison.OrdinalIgnoreCase) >= 0
+                    && h.IndexOf(wantPid, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (!isXdr)
+                {
+                    continue;
+                }
+
+                var instanceId = GetDeviceInstanceId(devInfoSet, ref devInfoData);
+                var desc = GetDeviceDescription(devInfoSet, ref devInfoData);
+                DiagnosticLog.Write(
+                    "  Hardware-id USB scan: Pro Display XDR is present but not WinUSB-bound " +
+                    $"(instance='{instanceId ?? "?"}', desc='{desc ?? "?"}'). Offering setup.");
+
+                return new PendingDriverSetup(
+                    VendorId: AppleVendorId,
+                    ProductId: ProDisplayXdrPid,
+                    ProductName: "Apple Pro Display XDR",
+                    SerialNumber: instanceId is null ? null : TryParseSerialFromInstanceId(instanceId),
+                    DevicePath: instanceId ?? string.Empty);
+            }
+        }
+        finally
+        {
+            SetupApiNative.SetupDiDestroyDeviceInfoList(devInfoSet);
+        }
+
+        return null;
+    }
+
+    private static string[]? GetHardwareIds(
+        IntPtr devInfoSet,
+        ref SetupApiNative.SP_DEVINFO_DATA devInfoData)
+    {
+        var buffer = new byte[1024];
+        if (!SetupApiNative.SetupDiGetDeviceRegistryProperty(
+                devInfoSet, ref devInfoData,
+                SetupApiNative.SPDRP_HARDWAREID,
+                out _, buffer, buffer.Length, out _))
+        {
+            return null;
+        }
+        // REG_MULTI_SZ: null-separated, double-null terminated, Unicode.
+        return System.Text.Encoding.Unicode.GetString(buffer)
+            .Split('\0', StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    private static string? GetDeviceInstanceId(
+        IntPtr devInfoSet,
+        ref SetupApiNative.SP_DEVINFO_DATA devInfoData)
+    {
+        var sb = new System.Text.StringBuilder(512);
+        return SetupApiNative.SetupDiGetDeviceInstanceId(
+                   devInfoSet, ref devInfoData, sb, sb.Capacity, out _)
+            ? sb.ToString()
+            : null;
+    }
+
+    // Instance ids look like USB\VID_05AC&PID_9243\C02XXXXXXXXX; the last
+    // backslash-delimited segment is the device's serial (or a synthetic id).
+    private static string? TryParseSerialFromInstanceId(string instanceId)
+    {
+        var parts = instanceId.Split('\\');
+        if (parts.Length < 3)
+        {
+            return null;
+        }
+        var candidate = parts[^1];
+        return string.IsNullOrWhiteSpace(candidate) ? null : candidate;
     }
 
     private static (StudioDisplayInfo? Info, bool DriverNotBound) TryProbeProXdrViaWinUsb(string path)
