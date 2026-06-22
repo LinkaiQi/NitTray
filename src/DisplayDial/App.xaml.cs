@@ -25,6 +25,7 @@ public partial class App : Application
         var driverInstaller = new WinUsbDriverInstallService();
         _viewModel = new MainViewModel(service, driverInstaller);
         _viewModel.DriverSetupFailed += OnDriverSetupFailed;
+        _viewModel.DriverResetSucceeded += OnDriverResetSucceeded;
 
         _mainWindow = new MainWindow { DataContext = _viewModel };
         _mainWindow.Closing += OnMainWindowClosing;
@@ -39,6 +40,7 @@ public partial class App : Application
             }
         };
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
+        _tray.ResetDriverRequested += (_, _) => OnResetDriverRequested();
         _tray.QuitRequested += (_, _) => RequestShutdown();
 
         ShowMainWindow();
@@ -72,6 +74,50 @@ public partial class App : Application
         {
             System.Windows.MessageBox.Show(
                 message, caption, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void OnResetDriverRequested()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        const string caption = "DisplayDial — reset driver";
+        const string prompt =
+            "This removes the WinUSB driver from the Apple Pro Display XDR and reverts it " +
+            "to the default Windows driver.\n\n" +
+            "DisplayDial will not be able to control its brightness until you run setup " +
+            "again. This is mainly intended for testing the install flow.\n\n" +
+            "Reset the driver now?";
+
+        var choice = _mainWindow is not null
+            ? System.Windows.MessageBox.Show(
+                _mainWindow, prompt, caption, MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No)
+            : System.Windows.MessageBox.Show(
+                prompt, caption, MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No);
+
+        if (choice == MessageBoxResult.Yes)
+        {
+            _ = _viewModel.ResetDriverAsync();
+        }
+    }
+
+    private void OnDriverResetSucceeded(object? sender, string message)
+    {
+        const string caption = "DisplayDial — reset driver";
+        if (_mainWindow is not null)
+        {
+            System.Windows.MessageBox.Show(
+                _mainWindow, message, caption, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            System.Windows.MessageBox.Show(
+                message, caption, MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 

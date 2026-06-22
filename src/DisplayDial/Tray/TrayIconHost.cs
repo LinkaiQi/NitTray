@@ -12,6 +12,7 @@ internal sealed class TrayIconHost : IDisposable
     public event EventHandler? ShowRequested;
     public event EventHandler? RefreshRequested;
     public event EventHandler? OpenLogRequested;
+    public event EventHandler? ResetDriverRequested;
     public event EventHandler? QuitRequested;
 
     public TrayIconHost()
@@ -25,6 +26,8 @@ internal sealed class TrayIconHost : IDisposable
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
         var logItem = new WinForms.ToolStripMenuItem("Open diagnostics log…");
         logItem.Click += (_, _) => OpenLogRequested?.Invoke(this, EventArgs.Empty);
+        var resetItem = new WinForms.ToolStripMenuItem("Reset Apple display driver…");
+        resetItem.Click += (_, _) => ResetDriverRequested?.Invoke(this, EventArgs.Empty);
         var quitItem = new WinForms.ToolStripMenuItem("Quit");
         quitItem.Click += (_, _) => QuitRequested?.Invoke(this, EventArgs.Empty);
 
@@ -32,6 +35,7 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(refreshItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(logItem);
+        menu.Items.Add(resetItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 

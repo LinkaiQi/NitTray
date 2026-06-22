@@ -9,8 +9,8 @@ namespace DisplayDial.Services;
 
 public sealed class StudioDisplayService : IDisplayService
 {
-    private const ushort AppleVendorId = 0x05AC;
-    private const ushort ProDisplayXdrPid = 0x9243;
+    private const ushort AppleVendorId = Models.AppleDisplays.VendorId;
+    private const ushort ProDisplayXdrPid = Models.AppleDisplays.ProDisplayXdrProductId;
     private const int ErrorNoMoreItems = 259;
 
     // Pro Display XDR brightness HID protocol.

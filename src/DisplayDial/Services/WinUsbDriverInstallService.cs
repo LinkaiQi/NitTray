@@ -25,7 +25,26 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(target);
+        return RunHelperAsync(
+            "install", target.VendorId, target.ProductId, MapInstallExitCode, cancellationToken);
+    }
 
+    public Task<DriverInstallResult> UninstallAsync(
+        ushort vendorId,
+        ushort productId,
+        CancellationToken cancellationToken = default)
+    {
+        return RunHelperAsync(
+            "uninstall", vendorId, productId, MapUninstallExitCode, cancellationToken);
+    }
+
+    private Task<DriverInstallResult> RunHelperAsync(
+        string verb,
+        ushort vendorId,
+        ushort productId,
+        Func<int, DriverInstallResult> mapExitCode,
+        CancellationToken cancellationToken)
+    {
         var helperPath = ResolveHelperPath();
         if (helperPath is null)
         {
@@ -44,13 +63,13 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
             Verb = "runas",
             WindowStyle = ProcessWindowStyle.Hidden,
         };
-        psi.ArgumentList.Add("install");
-        psi.ArgumentList.Add(target.VendorId.ToString("X4"));
-        psi.ArgumentList.Add(target.ProductId.ToString("X4"));
+        psi.ArgumentList.Add(verb);
+        psi.ArgumentList.Add(vendorId.ToString("X4"));
+        psi.ArgumentList.Add(productId.ToString("X4"));
 
         DiagnosticLog.Write(
-            $"Driver setup: launching '{helperPath}' install " +
-            $"{target.VendorId:X4} {target.ProductId:X4} (elevated).");
+            $"Driver setup: launching '{helperPath}' {verb} " +
+            $"{vendorId:X4} {productId:X4} (elevated).");
 
         return Task.Run(() =>
         {
@@ -64,7 +83,7 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
                 DiagnosticLog.Write("Driver setup: user declined the elevation prompt.");
                 return new DriverInstallResult(
                     DriverInstallStatus.Cancelled,
-                    "Driver setup was cancelled at the Windows permission prompt.");
+                    "The operation was cancelled at the Windows permission prompt.");
             }
             catch (Exception ex)
             {
@@ -84,14 +103,14 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
             using (process)
             {
                 process.WaitForExit();
-                return MapExitCode(process.ExitCode);
+                return mapExitCode(process.ExitCode);
             }
         }, cancellationToken);
     }
 
-    private static DriverInstallResult MapExitCode(int exitCode)
+    private static DriverInstallResult MapInstallExitCode(int exitCode)
     {
-        DiagnosticLog.Write($"Driver setup: helper exited with code {exitCode}.");
+        DiagnosticLog.Write($"Driver setup: install helper exited with code {exitCode}.");
         return exitCode switch
         {
             DriverSetupExitCodes.Success => new DriverInstallResult(
@@ -106,6 +125,27 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
             _ => new DriverInstallResult(
                 DriverInstallStatus.Failed,
                 $"Driver setup failed (code {exitCode}). See the diagnostics log for " +
+                $"details:\n{DiagnosticLog.FilePath}"),
+        };
+    }
+
+    private static DriverInstallResult MapUninstallExitCode(int exitCode)
+    {
+        DiagnosticLog.Write($"Driver setup: uninstall helper exited with code {exitCode}.");
+        return exitCode switch
+        {
+            DriverSetupExitCodes.Success => new DriverInstallResult(
+                DriverInstallStatus.Success,
+                "Driver reset. The Apple display was reverted to the default Windows " +
+                "driver. You can now re-run setup to test the install flow."),
+
+            DriverSetupExitCodes.DeviceNotFound => new DriverInstallResult(
+                DriverInstallStatus.DeviceNotFound,
+                "No matching Apple display is connected, so there was nothing to reset."),
+
+            _ => new DriverInstallResult(
+                DriverInstallStatus.Failed,
+                $"Driver reset failed (code {exitCode}). See the diagnostics log for " +
                 $"details:\n{DiagnosticLog.FilePath}"),
         };
     }

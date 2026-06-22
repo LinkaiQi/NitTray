@@ -13,4 +13,5 @@ public static class DriverSetupExitCodes
     public const int DeviceNotFound = 3;
     public const int PrepareFailed = 4;
     public const int InstallFailed = 5;
+    public const int UninstallFailed = 6;
 }

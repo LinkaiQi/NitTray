@@ -12,8 +12,17 @@
  * whole-device binding is what lets DisplayDial open a single WinUSB handle and
  * reach the brightness interface via WinUsb_GetAssociatedInterface.
  *
- * Usage:    DisplayDial.DriverSetup.exe install <VID-hex> <PID-hex>
- * Example:  DisplayDial.DriverSetup.exe install 05AC 9243
+ * Usage:    DisplayDial.DriverSetup.exe install   <VID-hex> <PID-hex>
+ *           DisplayDial.DriverSetup.exe uninstall <VID-hex> <PID-hex>
+ * Example:  DisplayDial.DriverSetup.exe install   05AC 9243
+ *           DisplayDial.DriverSetup.exe uninstall 05AC 9243
+ *
+ * "uninstall" is the reverse operation (primarily a testing/troubleshooting
+ * aid): it removes the WinUSB binding and deletes the generated OEM driver
+ * package from the driver store so the device reverts to Windows' in-box
+ * default driver. It uses plain SetupAPI (no libwdi), so it is independent of
+ * how the driver was installed and will keep working if the install path later
+ * moves to a shipped INF+CAT.
  *
  * The result is communicated purely through the process exit code (see the
  * EXIT_* values below -- keep these in sync with the C# DriverSetupExitCodes).
@@ -22,6 +31,9 @@
  */
 
 #include <windows.h>
+#include <setupapi.h>
+#include <newdev.h>
+#include <cfgmgr32.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +47,7 @@
 #define EXIT_DEVICE_NOT_FOUND 3
 #define EXIT_PREPARE_FAILED   4
 #define EXIT_INSTALL_FAILED   5
+#define EXIT_UNINSTALL_FAILED 6
 
 #define INF_NAME "apple_display.inf"
 
@@ -111,7 +124,7 @@ static int contains_ci(const char* hay, const char* needle)
     return 0;
 }
 
-int __cdecl main(int argc, char** argv)
+static int do_install(unsigned short vid, unsigned short pid)
 {
     struct wdi_device_info dev = { NULL, 0, 0, FALSE, 0,
                                    "Apple Display (WinUSB)", NULL, NULL, NULL, NULL, NULL, 0 };
@@ -119,28 +132,11 @@ int __cdecl main(int argc, char** argv)
     struct wdi_options_prepare_driver opd = { 0 };
     struct wdi_options_install_driver oid = { 0 };
     struct wdi_device_info *list = NULL, *node = NULL, *match = NULL;
-    unsigned long vid = 0, pid = 0;
     char ext_dir[MAX_PATH];
     int r, device_present = 0, exit_code = EXIT_GENERIC_ERROR;
 
-    log_open();
-
-    if (argc < 4 || _stricmp(argv[1], "install") != 0) {
-        log_msg("Bad arguments. Usage: DisplayDial.DriverSetup.exe install <VID-hex> <PID-hex>");
-        log_close();
-        return EXIT_BAD_ARGUMENTS;
-    }
-
-    vid = strtoul(argv[2], NULL, 16);
-    pid = strtoul(argv[3], NULL, 16);
-    if (vid == 0 || vid > 0xFFFF || pid == 0 || pid > 0xFFFF) {
-        log_msg("Bad VID/PID arguments: vid='%s' pid='%s'", argv[2], argv[3]);
-        log_close();
-        return EXIT_BAD_ARGUMENTS;
-    }
-
-    dev.vid = (unsigned short)vid;
-    dev.pid = (unsigned short)pid;
+    dev.vid = vid;
+    dev.pid = pid;
     log_msg("DisplayDial.DriverSetup starting: install VID_%04X PID_%04X.", dev.vid, dev.pid);
 
     /* Extraction directory for the generated INF / catalog / signed cert. */
@@ -195,7 +191,6 @@ int __cdecl main(int argc, char** argv)
         if (list != NULL) {
             wdi_destroy_list(list);
         }
-        log_close();
         return EXIT_DEVICE_NOT_FOUND;
     }
 
@@ -223,7 +218,6 @@ int __cdecl main(int argc, char** argv)
         if (list != NULL) {
             wdi_destroy_list(list);
         }
-        log_close();
         return EXIT_PREPARE_FAILED;
     }
 
@@ -247,7 +241,226 @@ int __cdecl main(int argc, char** argv)
         wdi_destroy_list(list);
     }
 
-    log_msg("Done. Exit code = %d.", exit_code);
-    log_close();
+    log_msg("Install done. Exit code = %d.", exit_code);
     return exit_code;
+}
+
+/* ------------------------------------------------------------------------- *
+ *  uninstall  (driver reset)
+ *
+ *  Backend-agnostic on purpose: it talks only to SetupAPI / Cfgmgr32, never to
+ *  libwdi, so it removes whatever WinUSB binding is present (ours or Zadig's)
+ *  and keeps working if the install path later switches to a shipped INF+CAT.
+ * ------------------------------------------------------------------------- */
+
+/* Returns 1 if any string in the REG_MULTI_SZ 'multisz' contains 'needle' (ci). */
+static int multisz_contains_ci(const char* multisz, const char* needle)
+{
+    const char* p = multisz;
+    while (p != NULL && *p != '\0') {
+        if (contains_ci(p, needle)) {
+            return 1;
+        }
+        p += strlen(p) + 1;
+    }
+    return 0;
+}
+
+/*
+ * Resolves the OEM INF (e.g. "oem42.inf") a device is currently bound to by
+ * reading InfPath from its driver registry key. We need the published name so
+ * we can delete that package from the driver store after uninstalling. Returns
+ * 1 on success.
+ */
+static int get_device_inf(HDEVINFO set, SP_DEVINFO_DATA* did, char* inf, DWORD inf_cap)
+{
+    char driver_key[256];
+    char subkey[512];
+    HKEY hk;
+    DWORD type = 0, size = 0, vtype = 0, vsize = inf_cap;
+    LONG rc;
+
+    if (!SetupDiGetDeviceRegistryPropertyA(set, did, SPDRP_DRIVER, &type,
+            (PBYTE)driver_key, sizeof(driver_key), &size)) {
+        return 0;
+    }
+    _snprintf_s(subkey, sizeof(subkey), _TRUNCATE,
+        "SYSTEM\\CurrentControlSet\\Control\\Class\\%s", driver_key);
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, subkey, 0, KEY_QUERY_VALUE, &hk) != ERROR_SUCCESS) {
+        return 0;
+    }
+    rc = RegQueryValueExA(hk, "InfPath", NULL, &vtype, (PBYTE)inf, &vsize);
+    RegCloseKey(hk);
+    if (rc != ERROR_SUCCESS) {
+        return 0;
+    }
+    inf[inf_cap - 1] = '\0';
+    return 1;
+}
+
+#define MAX_UNINSTALL_TARGETS 16
+
+static int do_uninstall(unsigned short vid, unsigned short pid)
+{
+    HDEVINFO set;
+    SP_DEVINFO_DATA did = { sizeof(SP_DEVINFO_DATA) };
+    SP_DEVINFO_DATA targets[MAX_UNINSTALL_TARGETS];
+    char target_inf[MAX_UNINSTALL_TARGETS][MAX_PATH];
+    int target_count = 0;
+    char needle[32];
+    int present = 0, removed = 0, idx, i, j;
+
+    _snprintf_s(needle, sizeof(needle), _TRUNCATE, "VID_%04X&PID_%04X", vid, pid);
+    log_msg("DisplayDial.DriverSetup starting: uninstall %s.", needle);
+
+    set = SetupDiGetClassDevsA(NULL, "USB", NULL, DIGCF_ALLCLASSES | DIGCF_PRESENT);
+    if (set == INVALID_HANDLE_VALUE) {
+        log_msg("SetupDiGetClassDevs failed: %lu", (unsigned long)GetLastError());
+        return EXIT_UNINSTALL_FAILED;
+    }
+
+    /*
+     * Pass 1: find present USB nodes for this VID/PID that are bound to an OEM
+     * (third-party) INF, and remember each one plus its INF name. We must read
+     * the INF *before* uninstalling, and must not mutate the device-info set
+     * while still enumerating it -- hence the two passes.
+     */
+    for (idx = 0; SetupDiEnumDeviceInfo(set, idx, &did); idx++) {
+        char hwids[1024];
+        char inf[MAX_PATH];
+        DWORD type = 0, size = 0;
+
+        if (!SetupDiGetDeviceRegistryPropertyA(set, &did, SPDRP_HARDWAREID, &type,
+                (PBYTE)hwids, sizeof(hwids), &size)) {
+            continue;
+        }
+        if (!multisz_contains_ci(hwids, needle)) {
+            continue;
+        }
+        present = 1;
+
+        if (!get_device_inf(set, &did, inf, sizeof(inf))) {
+            log_msg("  match but no driver INF resolved -- skipping.");
+            continue;
+        }
+        /* OEM packages are named oemNN.inf; in-box drivers keep real names. */
+        if (_strnicmp(inf, "oem", 3) != 0) {
+            log_msg("  match on in-box driver '%s' -- already default, skipping.", inf);
+            continue;
+        }
+        if (target_count < MAX_UNINSTALL_TARGETS) {
+            targets[target_count] = did;
+            strcpy_s(target_inf[target_count], MAX_PATH, inf);
+            target_count++;
+            log_msg("  queued removal: inf='%s'", inf);
+        }
+    }
+
+    if (!present) {
+        SetupDiDestroyDeviceInfoList(set);
+        log_msg("No present device matches %s. Connect the display and retry.", needle);
+        return EXIT_DEVICE_NOT_FOUND;
+    }
+
+    /* Pass 2: uninstall each queued device node (drops the WinUSB binding). */
+    for (i = 0; i < target_count; i++) {
+        BOOL reboot = FALSE;
+        if (DiUninstallDevice(NULL, set, &targets[i], 0, &reboot)) {
+            removed = 1;
+            log_msg("  DiUninstallDevice OK (inf='%s', reboot=%d).", target_inf[i], (int)reboot);
+        } else {
+            log_msg("  DiUninstallDevice failed (inf='%s'): %lu",
+                target_inf[i], (unsigned long)GetLastError());
+        }
+    }
+
+    SetupDiDestroyDeviceInfoList(set);
+
+    /*
+     * Delete the OEM driver packages from the store so Windows can't silently
+     * re-apply WinUSB on the next re-enumeration. Best-effort, deduped by name.
+     */
+    for (i = 0; i < target_count; i++) {
+        wchar_t winf[MAX_PATH];
+        int dup = 0;
+        for (j = 0; j < i; j++) {
+            if (_stricmp(target_inf[i], target_inf[j]) == 0) {
+                dup = 1;
+                break;
+            }
+        }
+        if (dup) {
+            continue;
+        }
+        MultiByteToWideChar(CP_ACP, 0, target_inf[i], -1, winf, MAX_PATH);
+        if (SetupUninstallOEMInfW(winf, SUOI_FORCEDELETE, NULL)) {
+            log_msg("  Removed driver package '%s' from the store.", target_inf[i]);
+        } else {
+            log_msg("  SetupUninstallOEMInf('%s') failed: %lu (non-fatal).",
+                target_inf[i], (unsigned long)GetLastError());
+        }
+    }
+
+    /*
+     * Re-enumerate from the root so the still-connected device rebinds to the
+     * default in-box driver without the user having to unplug it.
+     */
+    {
+        DEVINST root;
+        if (CM_Locate_DevNodeA(&root, NULL, CM_LOCATE_DEVNODE_NORMAL) == CR_SUCCESS) {
+            CM_Reenumerate_DevNode(root, 0);
+            log_msg("  Triggered PnP re-enumeration.");
+        }
+    }
+
+    if (target_count > 0 && !removed) {
+        log_msg("Uninstall failed: matched WinUSB device(s) but none could be removed.");
+        return EXIT_UNINSTALL_FAILED;
+    }
+    if (removed) {
+        log_msg("Reset complete: WinUSB removed; device reverted to the default driver.");
+    } else {
+        log_msg("Nothing to reset: device already on the default driver.");
+    }
+    return EXIT_OK_SUCCESS;
+}
+
+int __cdecl main(int argc, char** argv)
+{
+    const char* cmd;
+    unsigned long vid, pid;
+    int code;
+
+    log_open();
+
+    if (argc < 4) {
+        log_msg("Bad arguments. Usage:");
+        log_msg("  DisplayDial.DriverSetup.exe install   <VID-hex> <PID-hex>");
+        log_msg("  DisplayDial.DriverSetup.exe uninstall <VID-hex> <PID-hex>");
+        log_close();
+        return EXIT_BAD_ARGUMENTS;
+    }
+
+    cmd = argv[1];
+    vid = strtoul(argv[2], NULL, 16);
+    pid = strtoul(argv[3], NULL, 16);
+    if (vid == 0 || vid > 0xFFFF || pid == 0 || pid > 0xFFFF) {
+        log_msg("Bad VID/PID arguments: vid='%s' pid='%s'", argv[2], argv[3]);
+        log_close();
+        return EXIT_BAD_ARGUMENTS;
+    }
+
+    if (_stricmp(cmd, "install") == 0) {
+        code = do_install((unsigned short)vid, (unsigned short)pid);
+    } else if (_stricmp(cmd, "uninstall") == 0) {
+        code = do_uninstall((unsigned short)vid, (unsigned short)pid);
+    } else {
+        log_msg("Unknown command '%s'. Use 'install' or 'uninstall'.", cmd);
+        log_close();
+        return EXIT_BAD_ARGUMENTS;
+    }
+
+    log_msg("Exit code = %d.", code);
+    log_close();
+    return code;
 }

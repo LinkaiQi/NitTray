@@ -11,4 +11,12 @@ public interface IDriverInstallService
     Task<DriverInstallResult> InstallAsync(
         PendingDriverSetup target,
         CancellationToken cancellationToken = default);
+
+    // Reverses an install: removes the WinUSB binding from the Apple display with
+    // this VID/PID and deletes the generated driver package, reverting the device
+    // to Windows' in-box default driver. Primarily a testing/troubleshooting aid.
+    Task<DriverInstallResult> UninstallAsync(
+        ushort vendorId,
+        ushort productId,
+        CancellationToken cancellationToken = default);
 }
