@@ -4,7 +4,9 @@
 
 .DESCRIPTION
     1. Clones libwdi (pinned tag) into native/third_party/libwdi if absent.
-    2. Patches libwdi to build x64-only and co-installer-free (see NOTES).
+    2. Patches libwdi to build co-installer-free (see NOTES). By default it also
+       trims libwdi to x64-only so no WDK and no ARM64 tools are needed; pass
+       -Arm64 to additionally embed the ARM64 installer (see "ARM64 support").
     3. Builds the libwdi static library (Release|x64) with MSBuild.
     4. Stages libwdi.h + libwdi.lib into a single folder.
     5. Configures and builds this helper with CMake, linking libwdi.
@@ -18,27 +20,33 @@
     Build configuration (default: Release).
 
 .PARAMETER Platform
-    Target platform (default: x64). DisplayDial ships x64 only.
+    Host architecture of the helper exe (default: x64). The helper is always a
+    single x64 binary; -Arm64 controls which target installers it can run, not
+    the helper's own architecture (see "ARM64 support" in NOTES).
 
 .PARAMETER LibwdiTag
     Git tag of libwdi to build (default: v1.5.1).
 
 .PARAMETER Toolset
-    MSVC platform toolset for the CMake helper build (default: v143). This must
-    match the toolset libwdi is built with (libwdi pins v143) so the static CRT
-    objects link cleanly.
+    MSVC platform toolset for the CMake helper build (default: v143). Must match
+    the toolset libwdi is built with (libwdi pins v143) so the static CRT objects
+    link cleanly.
 
 .PARAMETER Generator
     CMake generator override (e.g. "Visual Studio 18 2026"). Leave empty to let
-    CMake auto-detect the installed Visual Studio — the most reliable option when
-    you run from a Developer PowerShell.
+    CMake auto-detect the installed Visual Studio.
+
+.PARAMETER Arm64
+    Also embed the ARM64 WinUSB installer so the (x64) helper works on Windows on
+    ARM. Requires the "MSVC v143 - ARM64 build tools" component. See "ARM64
+    support" in NOTES.
 
 .PARAMETER AppOutputDir
     Where to copy the built helper. Defaults to the DisplayDial Release output
     (..\..\src\DisplayDial\bin\<Config>\net10.0-windows).
 
 .NOTES
-    *** No WDK and no ARM64 build tools are required. ***
+    *** By default, no WDK and no ARM64 build tools are required. ***
 
     Stock libwdi targets x86 + x64 + ARM64 and embeds the legacy WinUSB/WDF
     co-installer DLLs from the Windows Driver Kit. That breaks on a modern
@@ -51,29 +59,53 @@
 
     Co-installers have been unnecessary since Windows 10 (WinUSB is in-box), and
     libwdi's own ARM64 path already installs WinUSB inbox with no co-installer.
-    Invoke-LibwdiPatch makes the x64 build behave exactly like that ARM64 path:
+    Invoke-LibwdiPatch makes every install path behave that way:
 
-      * msvc/config.h               -> x64-only (comment out OPT_M32 + OPT_ARM).
-                                       WDK_DIR stays *defined* (it is only a
-                                       compile-time gate in libwdi.c that keeps
-                                       WinUSB a "supported" driver type; its path
-                                       value is never read once the embeds below
-                                       are removed).
-      * libwdi/embedder_files.h      -> drop the 4 WinUSB/WDF co-installer embeds.
-      * libwdi/winusb.inf.in         -> blank the NTamd64 CoInstallers +
-                                       SourceDisksFiles.amd64 sections (mirrors the
-                                       already-shipping arm64 sections).
-      * libwdi/.msvc/libwdi_static.vcxproj
-                                     -> drop the installer_arm64 + installer_x86
-                                       project references so the static lib builds
-                                       with x64 tools only.
+      * libwdi/embedder_files.h  -> drop the 4 WinUSB/WDF co-installer embeds.
+      * libwdi/winusb.inf.in     -> blank the x86 + amd64 CoInstallers +
+                                    SourceDisksFiles sections (mirrors the
+                                    already-shipping arm64 sections).
 
     winusb.cat.in is intentionally left untouched: libwdi's catalog builder hashes
     only the files actually present in the package dir (and always adds the INF),
-    so the now-absent co-installers are simply skipped — exactly as on arm64.
+    so the now-absent co-installers are simply skipped -- exactly as on arm64.
+
+    --- Default (x64-only) build ---------------------------------------------
+    Additionally trims libwdi so no WDK / ARM64 tools are needed:
+      * msvc/config.h                 -> x64-only (comment out OPT_M32 + OPT_ARM;
+                                         keep OPT_M64). WDK_DIR stays *defined*: it
+                                         is only a compile-time gate in libwdi.c
+                                         that keeps WinUSB a supported driver type;
+                                         its path is never read once embeds are
+                                         removed.
+      * libwdi/.msvc/libwdi_static.vcxproj
+                                      -> drop the installer_arm64 + installer_x86
+                                         project references.
+    The static-lib .vcxproj is then built directly (never touching the arm64/x86
+    installer projects).
+
+    --- ARM64 support (-Arm64) -----------------------------------------------
+    libwdi has no ARM64 *solution* platform; instead the static lib is built for
+    the host arch (x64) and EMBEDS an installer exe for each target arch. At
+    runtime wdi_install_driver picks installer_<os-arch>.exe based on the native
+    OS architecture (libwdi.c GetPlatformArch via IsWow64Process2) -- even when the
+    x64 helper runs under emulation on Windows on ARM. So a single x64 helper that
+    embeds installer_arm64.exe works on BOTH x64 and ARM64 (this is exactly how
+    Zadig ships one binary for every architecture). No separate ARM64 helper and
+    no per-RID bundling are required.
+
+    With -Arm64 we therefore leave config.h and the .vcxproj stock (so the static
+    lib embeds the x86/x64/arm64 installers) and build the whole .sln as
+    Release|x64. The .sln pins each installer project to its own architecture
+    (installer_arm64 -> ARM64, embedder host-tool -> Win32) regardless of the
+    solution platform, which is why a .sln build -- not a direct .vcxproj build --
+    is used in this mode. This requires the "MSVC v143 - ARM64 build tools"
+    component (the x86 tools come with the standard C++ workload). The resulting
+    DisplayDial.DriverSetup.exe is still a single x64 file; ship it as-is for both
+    x64 and ARM64 releases.
 
     The patch is applied to a pristine checkout every run (git checkout -- .), so
-    re-running build.ps1 is idempotent.
+    re-running build.ps1 -- including switching -Arm64 on/off -- is idempotent.
 #>
 [CmdletBinding()]
 param(
@@ -82,6 +114,7 @@ param(
     [string]$LibwdiTag = "v1.5.1",
     [string]$Toolset = "v143",
     [string]$Generator = "",
+    [switch]$Arm64,
     [string]$AppOutputDir = ""
 )
 
@@ -121,10 +154,11 @@ function Assert-PatchCount {
     }
 }
 
-# Patch a pristine libwdi checkout to build x64-only and co-installer-free.
-# See the NOTES block above for the rationale behind each edit.
+# Patch a pristine libwdi checkout to build co-installer-free. By default also
+# trims it to x64-only; with -IncludeArm64 the config.h/.vcxproj are left stock so
+# the .sln build embeds the x86/x64/arm64 installers. See the NOTES block above.
 function Invoke-LibwdiPatch {
-    param([string]$Root)
+    param([string]$Root, [switch]$IncludeArm64)
 
     $configH   = Join-Path $Root "msvc\config.h"
     $embedderH = Join-Path $Root "libwdi\embedder_files.h"
@@ -134,7 +168,7 @@ function Invoke-LibwdiPatch {
         if (-not (Test-Path $f)) { throw "Expected libwdi file is missing: $f" }
     }
 
-    # Reset to pristine so re-running build.ps1 re-patches cleanly.
+    # Reset to pristine so re-running build.ps1 (or switching -Arm64) re-patches cleanly.
     if (Test-Path (Join-Path $Root ".git")) {
         & git -C $Root checkout -- . 2>$null | Out-Null
     }
@@ -142,38 +176,53 @@ function Invoke-LibwdiPatch {
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     $utf8Bom   = New-Object System.Text.UTF8Encoding($true)
 
-    Write-Host "==> Patching libwdi (x64-only, co-installer-free)..." -ForegroundColor Cyan
+    $mode = if ($IncludeArm64) { "x64 + ARM64 universal" } else { "x64-only" }
+    Write-Host "==> Patching libwdi ($mode, co-installer-free)..." -ForegroundColor Cyan
 
-    # (1) config.h -- x64 only: comment out OPT_M32 and OPT_ARM, keep OPT_M64.
-    $t = [System.IO.File]::ReadAllText($configH)
-    $t = [regex]::Replace($t, '(?m)^#define OPT_M32\b', '//#define OPT_M32')
-    $t = [regex]::Replace($t, '(?m)^#define OPT_ARM\b', '//#define OPT_ARM')
-    Assert-PatchCount ([regex]::Matches($t, '(?m)^//#define OPT_M32\b').Count) 1 "config.h OPT_M32 disabled"
-    Assert-PatchCount ([regex]::Matches($t, '(?m)^//#define OPT_ARM\b').Count) 1 "config.h OPT_ARM disabled"
-    Assert-PatchCount ([regex]::Matches($t, '(?m)^#define OPT_M64\b').Count)   1 "config.h OPT_M64 kept"
-    [System.IO.File]::WriteAllText($configH, $t, $utf8NoBom)
-
-    # (2) embedder_files.h -- drop the 4 WinUSB/WDF co-installer embed entries.
+    # (A) embedder_files.h -- drop the 4 WinUSB/WDF co-installer embeds (always;
+    #     the modern WDK no longer ships them and embedder hard-fails on a missing
+    #     file). Inbox WinUSB needs no co-installer on Windows 10+.
     $t = [System.IO.File]::ReadAllText($embedderH)
     Assert-PatchCount ([regex]::Matches($t, 'WDK_DIR "\\\\redist').Count) 4 "embedder_files.h co-installer embeds present"
     $t = [regex]::Replace($t, '(?m)^[^\r\n]*WDK_DIR "\\\\redist[^\r\n]*\r?\n', '')
     Assert-PatchCount ([regex]::Matches($t, 'WDK_DIR "\\\\redist').Count) 0 "embedder_files.h co-installer embeds removed"
     [System.IO.File]::WriteAllText($embedderH, $t, $utf8NoBom)
 
-    # (3) winusb.inf.in -- make the amd64 install path co-installer-free
-    #     (mirror the arm64 sections that are already shipped that way).
+    # (B) winusb.inf.in -- make every per-arch install path co-installer-free
+    #     (mirror the arm64 sections that already ship that way).
     $t = [System.IO.File]::ReadAllText($infIn)
     $eol = if ($t.Contains("`r`n")) { "`r`n" } else { "`n" }
-    $coPat = '(?m)^\[USB_Install\.NTamd64\.CoInstallers\]\r?\nAddReg\s*=\s*CoInstallers_AddReg\r?\nCopyFiles\s*=\s*CoInstallers_CopyFiles\r?\n'
-    Assert-PatchCount ([regex]::Matches($t, $coPat).Count) 1 "inf NTamd64.CoInstallers section"
-    $t = [regex]::Replace($t, $coPat, "[USB_Install.NTamd64.CoInstallers]$eol;$eol")
-    $sdPat = '(?m)^\[SourceDisksFiles\.amd64\]\r?\nWinUSBCoInstaller2\.dll = 1,amd64\r?\nWdfCoInstaller#WDF_VERSION#\.dll = 1,amd64\r?\n'
-    Assert-PatchCount ([regex]::Matches($t, $sdPat).Count) 1 "inf SourceDisksFiles.amd64 section"
-    $t = [regex]::Replace($t, $sdPat, "[SourceDisksFiles.amd64]$eol;$eol")
-    Assert-PatchCount ([regex]::Matches($t, 'WinUSBCoInstaller2\.dll = 1,amd64').Count) 0 "inf amd64 co-installer refs removed"
+    foreach ($a in @('x86', 'amd64')) {
+        $coPat = "(?m)^\[USB_Install\.NT$a\.CoInstallers\]\r?\nAddReg\s*=\s*CoInstallers_AddReg\r?\nCopyFiles\s*=\s*CoInstallers_CopyFiles\r?\n"
+        Assert-PatchCount ([regex]::Matches($t, $coPat).Count) 1 "inf NT$a.CoInstallers section"
+        $t = [regex]::Replace($t, $coPat, "[USB_Install.NT$a.CoInstallers]$eol;$eol")
+        $sdPat = "(?m)^\[SourceDisksFiles\.$a\]\r?\nWinUSBCoInstaller2\.dll = 1,$a\r?\nWdfCoInstaller#WDF_VERSION#\.dll = 1,$a\r?\n"
+        Assert-PatchCount ([regex]::Matches($t, $sdPat).Count) 1 "inf SourceDisksFiles.$a section"
+        $t = [regex]::Replace($t, $sdPat, "[SourceDisksFiles.$a]$eol;$eol")
+    }
+    Assert-PatchCount ([regex]::Matches($t, 'WinUSBCoInstaller2\.dll = 1,').Count) 0 "inf co-installer source refs removed"
     [System.IO.File]::WriteAllText($infIn, $t, $utf8NoBom)
 
-    # (4) libwdi_static.vcxproj -- drop the arm64 + x86 installer project refs.
+    if ($IncludeArm64) {
+        # Universal build: keep config.h + the .vcxproj stock so the static lib
+        # embeds installer_x86/x64/arm64. The .sln build pins each installer to its
+        # own arch, and a single x64 helper serves x64 AND ARM64 (libwdi selects
+        # installer_arm64.exe at runtime on ARM64).
+        Write-Host "    libwdi patched: co-installer-free; config.h/.vcxproj left stock for the .sln (x86+x64+arm64) build." -ForegroundColor DarkGray
+        return
+    }
+
+    # (C) config.h -- x64-only: comment out OPT_M32 + OPT_ARM (keep OPT_M64).
+    $t = [System.IO.File]::ReadAllText($configH)
+    foreach ($opt in @('OPT_M32', 'OPT_ARM')) {
+        $t = [regex]::Replace($t, "(?m)^#define $opt\b", "//#define $opt")
+        Assert-PatchCount ([regex]::Matches($t, "(?m)^//#define $opt\b").Count) 1 "config.h $opt disabled"
+    }
+    Assert-PatchCount ([regex]::Matches($t, '(?m)^#define OPT_M64\b').Count) 1 "config.h OPT_M64 kept"
+    [System.IO.File]::WriteAllText($configH, $t, $utf8NoBom)
+
+    # (D) libwdi_static.vcxproj -- drop the arm64 + x86 installer project refs so
+    #     the static lib builds with x64 tools only.
     $t = [System.IO.File]::ReadAllText($staticVcx)
     foreach ($name in @('installer_arm64.vcxproj', 'installer_x86.vcxproj')) {
         $pat = '(?s)[ \t]*<ProjectReference Include="' + [regex]::Escape($name) + '">.*?</ProjectReference>\r?\n'
@@ -188,8 +237,9 @@ function Invoke-LibwdiPatch {
     Write-Host "    libwdi patched: x64-only, no co-installer, no WDK/ARM64 tools needed." -ForegroundColor DarkGray
 }
 
+$buildMode = if ($Arm64) { "x64 + ARM64 universal" } else { "x64-only" }
 Write-Host "==> DisplayDial.DriverSetup build" -ForegroundColor Cyan
-Write-Host "    Config=$Config Platform=$Platform libwdi=$LibwdiTag toolset=$Toolset"
+Write-Host "    Config=$Config Platform=$Platform libwdi=$LibwdiTag toolset=$Toolset mode=$buildMode"
 
 # --- 1. Fetch libwdi --------------------------------------------------------
 New-Item -ItemType Directory -Force -Path $thirdParty | Out-Null
@@ -203,18 +253,29 @@ if (-not (Test-Path (Join-Path $libwdiDir "libwdi.sln"))) {
 
 # --- 2. Patch + build the libwdi static lib --------------------------------
 $msbuild = Find-MSBuild
-Invoke-LibwdiPatch -Root $libwdiDir
+Invoke-LibwdiPatch -Root $libwdiDir -IncludeArm64:$Arm64
 
-# Build the static-lib project directly (not the whole .sln) so the dropped
-# arm64/x86 installer projects are never touched. The project uses
-# $(SolutionDir) for its output path, so pass it explicitly (forward slashes
-# avoid a trailing-backslash quoting pitfall when launching MSBuild).
+$libwdiSln = Join-Path $libwdiDir "libwdi.sln"
 $staticVcx = Join-Path $libwdiDir "libwdi\.msvc\libwdi_static.vcxproj"
-$solnDir = ($libwdiDir -replace '\\', '/') + '/'
-Write-Host "==> Building libwdi static lib (x64-only, co-installer-free)..." -ForegroundColor Cyan
-& $msbuild $staticVcx `
-    /p:Configuration=$Config /p:Platform=$Platform "/p:SolutionDir=$solnDir" `
-    /m /v:minimal
+
+if ($Arm64) {
+    # Build the whole .sln so the per-project arch pinning applies
+    # (installer_arm64 -> ARM64, embedder host-tool -> Win32). The static lib then
+    # embeds the x86/x64/arm64 installers. Unrelated .sln projects may fail in a
+    # minimal environment, so verify libwdi.lib below rather than trust exit code.
+    Write-Host "==> Building libwdi via solution (embeds x86/x64/ARM64 installers)..." -ForegroundColor Cyan
+    Write-Host "    Requires the 'MSVC v143 - ARM64 build tools' component." -ForegroundColor DarkGray
+    & $msbuild $libwdiSln /p:Configuration=$Config /p:Platform=x64 /m /v:minimal
+} else {
+    # Build the static-lib project directly so the dropped arm64/x86 installer
+    # projects are never touched (no ARM64 tools needed). Pass $(SolutionDir)
+    # explicitly; forward slashes avoid a trailing-backslash quoting pitfall.
+    $solnDir = ($libwdiDir -replace '\\', '/') + '/'
+    Write-Host "==> Building libwdi static lib (x64-only, co-installer-free)..." -ForegroundColor Cyan
+    & $msbuild $staticVcx `
+        /p:Configuration=$Config /p:Platform=$Platform "/p:SolutionDir=$solnDir" `
+        /m /v:minimal
+}
 # Verify the artifact we need was produced (don't hard-fail solely on exit code).
 
 $libwdiLib = Get-ChildItem -Path $libwdiDir -Recurse -Filter "libwdi.lib" `
@@ -228,8 +289,12 @@ if (-not $libwdiLib) {
 $libwdiHeader = Join-Path $libwdiDir "libwdi\libwdi.h"
 
 if (-not $libwdiLib -or -not (Test-Path $libwdiHeader)) {
-    throw "libwdi did not build. Expected libwdi.lib + libwdi\libwdi.h. " +
-          "Re-run from a 'Developer PowerShell for VS' with the v143 x64 toolset installed."
+    $hint = if ($Arm64) {
+        "In -Arm64 mode you also need the 'MSVC v143 - ARM64 build tools' component."
+    } else {
+        "Re-run from a 'Developer PowerShell for VS' with the v143 x64 toolset installed."
+    }
+    throw "libwdi did not build. Expected libwdi.lib + libwdi\libwdi.h. $hint"
 }
 Write-Host "    libwdi.lib: $($libwdiLib.FullName)" -ForegroundColor DarkGray
 

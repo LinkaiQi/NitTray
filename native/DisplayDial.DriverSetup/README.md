@@ -52,9 +52,11 @@ Detailed progress is appended to `%LOCALAPPDATA%\DisplayDial\driver-setup.log`.
 This helper links libwdi statically, so it can **only be built on Windows with
 MSVC** — it cannot be cross-compiled from macOS or Linux.
 
-`build.ps1` patches libwdi to build **x64-only and co-installer-free**, so you do
-**not** need the WDK or the ARM64 build tools (see
-[Why the libwdi patch](#why-the-libwdi-patch) below).
+By default, `build.ps1` patches libwdi to build **x64-only and co-installer-free**,
+so you do **not** need the WDK or the ARM64 build tools (see
+[Why the libwdi patch](#why-the-libwdi-patch) below). The single x64 helper this
+produces runs on x64 Windows. To also support **Windows on ARM**, build with
+`-Arm64` (see [Windows on ARM](#windows-on-arm-arm64)).
 
 ### Prerequisites
 
@@ -66,7 +68,8 @@ MSVC** — it cannot be cross-compiled from macOS or Linux.
   build tools*.
 - **Git**.
 
-That's it — **no Windows Driver Kit and no ARM64 tools are required.**
+That's it for an **x64** build — **no Windows Driver Kit and no ARM64 tools are
+required.** (To also target Windows on ARM, see [Windows on ARM](#windows-on-arm-arm64).)
 
 ### One-shot build
 
@@ -99,6 +102,30 @@ Override defaults if needed:
 If CMake can't auto-detect your Visual Studio, pass `-Generator` explicitly
 (`"Visual Studio 17 2022"` or `"Visual Studio 18 2026"`).
 
+### Windows on ARM (ARM64)
+
+You do **not** build a separate ARM64 helper. libwdi embeds an installer executable
+for each target architecture and, at install time, picks `installer_<os-arch>.exe`
+based on the **native OS architecture** — even when the x64 helper itself is running
+under emulation on an ARM64 PC. So a single x64 `DisplayDial.DriverSetup.exe` that
+*also embeds* `installer_arm64.exe` works on **both** x64 and ARM64 Windows. (This is
+exactly how Zadig ships one binary for every architecture.)
+
+To produce that universal helper, add the **MSVC v143 - ARM64 build tools** component
+to Visual Studio (*Individual components → MSVC v143 - VS 2022 C++ ARM64 build
+tools*), then build with:
+
+```powershell
+./build.ps1 -Arm64
+```
+
+In `-Arm64` mode the libwdi patch only removes the co-installers (it leaves
+`config.h` and the project references stock), and the build goes through the full
+solution so each embedded installer is compiled for its own architecture. The output
+is still a single x64 `DisplayDial.DriverSetup.exe` — **ship the same file for your
+x64 and ARM64 releases**; no per-architecture bundling is needed. The default
+`./build.ps1` (no switch) stays x64-only and needs no ARM64 tools.
+
 ### Why the libwdi patch
 
 Stock libwdi targets x86 + x64 + ARM64 and embeds the legacy WinUSB/WDF
@@ -110,10 +137,12 @@ Stock libwdi targets x86 + x64 + ARM64 and embeds the legacy WinUSB/WDF
    so libwdi's "embedder" step fails trying to open them.
 
 Co-installers have been unnecessary since Windows 10 (WinUSB is in-box), and
-libwdi's own ARM64 path already installs WinUSB inbox with no co-installer.
-`build.ps1` simply makes the x64 build behave like that ARM64 path: it drops the
-x86/ARM64 project references, switches `config.h` to x64-only, removes the
-co-installer embeds, and blanks the co-installer sections of the generated INF.
+libwdi's own ARM64 path already installs WinUSB inbox with no co-installer, so the
+patch **always** removes the co-installer embeds and blanks the co-installer
+sections of the generated INF. In the default (x64-only) build it *also* drops the
+x86/ARM64 installer project references and switches `config.h` to x64-only, so no
+ARM64 tools are needed; with `-Arm64` those are left stock so the solution can embed
+every architecture's installer (see [Windows on ARM](#windows-on-arm-arm64)).
 `winusb.cat.in` is left untouched — libwdi's catalog builder hashes only the
 files actually present (and always adds the INF), so the absent co-installers are
 skipped, exactly as on ARM64. The exact edits are documented in the `.NOTES`
