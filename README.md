@@ -203,6 +203,27 @@ native/DisplayDial.DriverSetup/   - elevated WinUSB installer (C + libwdi),
   reported. File an issue with the HID device paths if you see duplicates.
 - **Slider snaps to an integer percent:** intentional. The raw range is
   per-device (`400..60000` or `400..50000`) and we round to integer percent.
+- **"Windows can't confirm who published DisplayDial.dll" / the app won't launch:**
+  DisplayDial isn't code-signed, so when its files carry Windows' *Mark of the Web*
+  (the flag added to anything that arrived via a download, zip extract, or cloud
+  sync) SmartScreen and **Smart App Control** can warn about — or block — the
+  unsigned `DisplayDial.dll`. A fresh rebuild has no reputation, so this can appear
+  even when a previous build launched fine. Fixes, easiest first:
+  1. Remove the Mark of the Web from the whole app folder, then relaunch:
+     ```powershell
+     Get-ChildItem -Path .\publish -Recurse | Unblock-File
+     ```
+     (or right-click `DisplayDial.exe` → **Properties** → tick **Unblock** → **OK**).
+  2. If a blue **"Windows protected your PC"** dialog appears, click
+     **More info → Run anyway**.
+  3. Prefer launching the copy you **built locally** on that same PC — e.g.
+     `dotnet run --project src/DisplayDial` or the `bin\Release\net10.0-windows\`
+     output. Locally produced files have no Mark of the Web and usually don't trip
+     the warning.
+  4. If **Smart App Control** is what's blocking it (Windows Security → *App &
+     browser control → Smart App Control*), an unsigned hobby build can't satisfy
+     it: keep running a locally-built copy, code-sign the binaries, or — accepting
+     the tradeoff — turn Smart App Control off.
 
 ## Pro Display XDR setup (Windows)
 
