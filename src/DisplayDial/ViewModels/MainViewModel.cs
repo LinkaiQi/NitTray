@@ -184,8 +184,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         IsInstallingDriver = true;
         var previousMessage = DriverSetupMessage;
         DriverSetupMessage =
-            $"Setting up {target.ProductName}… approve the Windows permission prompt.";
-        StatusMessage = "Installing display driver…";
+            $"Setting up {target.ProductName}… approve the Windows permission prompt, then " +
+            "allow up to a minute while Windows restarts the display. Please don't unplug it.";
+        StatusMessage = "Installing display driver… this can take up to a minute.";
 
         DriverInstallResult result;
         try
@@ -233,7 +234,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
 
         IsInstallingDriver = true;
-        StatusMessage = "Resetting display driver… approve the Windows permission prompt.";
+        StatusMessage = "Resetting display driver… approve the prompt, then allow up to a minute.";
 
         DriverInstallResult result;
         try
