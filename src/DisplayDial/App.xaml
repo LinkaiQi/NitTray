@@ -8,7 +8,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <!-- Fluent 2 theme + control styles (WPF-UI). The theme is switched to
-                     match the OS at startup via ApplicationThemeManager.ApplySystemTheme. -->
+                     match the OS at startup (see App.OnStartup / ApplyMatchingTheme). -->
                 <ui:ThemesDictionary Theme="Light" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>

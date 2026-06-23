@@ -28,11 +28,16 @@ public partial class App : Application
         _viewModel.DriverResetSucceeded += OnDriverResetSucceeded;
 
         _mainWindow = new MainWindow { DataContext = _viewModel };
+        // Register as the application main window so WPF-UI's theme manager applies
+        // the Mica backdrop and the immersive dark/light window attribute to THIS
+        // window (its theming step is a no-op when Application.MainWindow is null).
+        MainWindow = _mainWindow;
         _mainWindow.Closing += OnMainWindowClosing;
 
-        // Match the Windows light/dark setting and keep following it while running
-        // (also applies the Mica backdrop on the FluentWindow).
-        Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+        // Match the Windows light/dark setting before the first paint so the title
+        // bar, text, and Mica backdrop all render in the correct theme, then keep
+        // following the OS setting while the app runs.
+        ApplyMatchingTheme();
         Wpf.Ui.Appearance.SystemThemeWatcher.Watch(_mainWindow);
 
         _tray = new TrayIconHost();
@@ -49,7 +54,33 @@ public partial class App : Application
         _tray.QuitRequested += (_, _) => RequestShutdown();
 
         ShowMainWindow();
+        // Re-apply now that the window has a native handle, so the Mica backdrop and
+        // the dark/light window attribute are applied to the live window (the first
+        // apply runs before the handle exists, when those native calls are no-ops).
+        ApplyMatchingTheme();
         _ = _viewModel.RefreshAsync();
+    }
+
+    // Detect the current Windows theme and apply the matching WPF-UI theme + Mica
+    // backdrop in one shot, so the text brushes can never end up out of sync with
+    // the window background (which is what makes text "invisible" in one mode).
+    private static void ApplyMatchingTheme()
+    {
+        var systemTheme = Wpf.Ui.Appearance.ApplicationThemeManager.GetSystemTheme();
+        var appTheme = systemTheme switch
+        {
+            Wpf.Ui.Appearance.SystemTheme.Dark
+            or Wpf.Ui.Appearance.SystemTheme.HCBlack
+            or Wpf.Ui.Appearance.SystemTheme.Glow
+            or Wpf.Ui.Appearance.SystemTheme.CapturedMotion
+                => Wpf.Ui.Appearance.ApplicationTheme.Dark,
+            _ => Wpf.Ui.Appearance.ApplicationTheme.Light,
+        };
+
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
+            appTheme,
+            Wpf.Ui.Controls.WindowBackdropType.Mica,
+            true);
     }
 
     private void ShowMainWindow()

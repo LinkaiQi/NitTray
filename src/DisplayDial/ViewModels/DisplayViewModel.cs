@@ -30,7 +30,7 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
 
     public string SerialDescription => string.IsNullOrWhiteSpace(_info.SerialNumber)
         ? $"PID 0x{_info.ProductId:X4}"
-        : $"PID 0x{_info.ProductId:X4} · Serial {_info.SerialNumber}";
+        : $"PID 0x{_info.ProductId:X4} · Serial {_info.SerialNumber.ToUpperInvariant()}";
 
     // Identity line shown under the product name: serial (when reported) plus the
     // control channel, so two displays of the same model stay easy to tell apart.
@@ -43,7 +43,7 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
                 : "HID control";
             return string.IsNullOrWhiteSpace(_info.SerialNumber)
                 ? $"USB-C · {connection}"
-                : $"Serial {_info.SerialNumber} · {connection}";
+                : $"Serial {_info.SerialNumber.ToUpperInvariant()} · {connection}";
         }
     }
 
