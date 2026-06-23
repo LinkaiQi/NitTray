@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Input;
 using DisplayDial.Models;
 using DisplayDial.Services;
 
@@ -10,6 +11,7 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
 {
     private readonly StudioDisplayInfo _info;
     private readonly IDisplayService _service;
+    private readonly Action<DisplayViewModel>? _onUninstallRequested;
 
     private int _brightnessPercent;
     private string _statusText = string.Empty;
@@ -19,11 +21,19 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
     private int? _pendingPercent;
     private Task _writeLoop = Task.CompletedTask;
 
-    public DisplayViewModel(StudioDisplayInfo info, int initialPercent, IDisplayService service)
+    public DisplayViewModel(
+        StudioDisplayInfo info,
+        int initialPercent,
+        IDisplayService service,
+        Action<DisplayViewModel>? onUninstallRequested = null)
     {
         _info = info ?? throw new ArgumentNullException(nameof(info));
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _brightnessPercent = Math.Clamp(initialPercent, 0, 100);
+        _onUninstallRequested = onUninstallRequested;
+        UninstallDriverCommand = new RelayCommand(
+            _ => _onUninstallRequested?.Invoke(this),
+            _ => IsWinUsb);
     }
 
     public string ProductName => _info.ProductName;
@@ -35,25 +45,23 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
     // driver DisplayDial installed and can therefore be reverted to the in-box driver.
     public bool IsWinUsb => _info.Transport == DisplayTransport.WinUsb;
 
-    // The per-display "Uninstall driver" button only makes sense for WinUSB displays;
-    // Studio Displays use the Windows in-box HID driver, which there is nothing to remove.
-    public Visibility UninstallButtonVisibility => IsWinUsb
+    // The ⋯ overflow menu only carries the "Uninstall driver" action, so it is shown
+    // for WinUSB displays only; Studio Displays use the in-box HID driver (nothing to
+    // remove) and get no menu.
+    public Visibility OverflowMenuVisibility => IsWinUsb
         ? Visibility.Visible
         : Visibility.Collapsed;
 
-    // Serial as printed on the device (uppercased), shown in the secondary "Details"
-    // section rather than the primary card so the main UI stays uncluttered.
-    public string SerialNumberDisplay => string.IsNullOrWhiteSpace(_info.SerialNumber)
-        ? "Not reported"
-        : _info.SerialNumber.ToUpperInvariant();
+    // Invoked from the ⋯ overflow menu. Routes back to the MainViewModel via the
+    // callback supplied at construction, which shows the confirmation prompt and
+    // performs the elevated uninstall.
+    public ICommand UninstallDriverCommand { get; }
 
-    // Plain-language control channel, shown in the "Details" section.
-    public string ConnectionDescription => _info.Transport == DisplayTransport.WinUsb
-        ? "WinUSB control"
-        : "HID control";
-
-    // USB product id in hex, shown in the "Details" section.
-    public string ProductIdHex => $"0x{_info.ProductId:X4}";
+    // Identity line under the product name. Serial (when the display reports one) is
+    // the only reliable way to tell two same-model displays apart.
+    public string Subtitle => string.IsNullOrWhiteSpace(_info.SerialNumber)
+        ? "USB-C"
+        : $"Serial {_info.SerialNumber.ToUpperInvariant()}";
 
     public bool HasError => !string.IsNullOrEmpty(_statusText);
 

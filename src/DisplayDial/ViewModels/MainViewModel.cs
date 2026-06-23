@@ -14,7 +14,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly IDriverInstallService _driverInstaller;
     private readonly RelayCommand _refreshCommand;
     private readonly RelayCommand _setUpDriverCommand;
-    private readonly RelayCommand _uninstallDriverCommand;
 
     private bool _isLoading;
     private bool _isInstallingDriver;
@@ -28,18 +27,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ICommand SetUpDriverCommand => _setUpDriverCommand;
 
-    // Removes the WinUSB driver from a specific WinUSB-bound Apple display (currently
-    // the Pro Display XDR) and reverts it to the default Windows driver. Exposed per
-    // display via an "Uninstall driver" button on that display's card. The command
-    // parameter is the DisplayViewModel to act on.
-    public ICommand UninstallDriverCommand => _uninstallDriverCommand;
-
     // Raised when driver setup ends in a state worth interrupting the user for
     // (a hard failure or a missing helper). The App layer shows a message box.
     public event EventHandler<string>? DriverSetupFailed;
 
-    // Raised when the user clicks a display's "Uninstall driver" button. The App layer
-    // shows a per-display confirmation prompt and, on confirm, calls UninstallDriverAsync.
+    // Raised when the user picks "Uninstall driver" from a display's ⋯ menu. Each
+    // DisplayViewModel triggers this via a callback; the App layer shows a per-display
+    // confirmation prompt and, on confirm, calls UninstallDriverAsync.
     public event EventHandler<DisplayViewModel>? DriverUninstallRequested;
 
     // Raised after a successful driver uninstall so the App layer can confirm it.
@@ -60,7 +54,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(LoadingVisibility));
             _refreshCommand.RaiseCanExecuteChanged();
             _setUpDriverCommand.RaiseCanExecuteChanged();
-            _uninstallDriverCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -79,7 +72,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(InstallingVisibility));
             _refreshCommand.RaiseCanExecuteChanged();
             _setUpDriverCommand.RaiseCanExecuteChanged();
-            _uninstallDriverCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -143,19 +135,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _setUpDriverCommand = new RelayCommand(
             execute: async _ => await SetUpDriverAsync().ConfigureAwait(true),
             canExecute: _ => _pendingSetup is not null && !IsInstallingDriver && !IsLoading);
-        _uninstallDriverCommand = new RelayCommand(
-            execute: parameter =>
-            {
-                if (parameter is DisplayViewModel display)
-                {
-                    DriverUninstallRequested?.Invoke(this, display);
-                }
-            },
-            canExecute: parameter =>
-                parameter is DisplayViewModel display
-                && display.IsWinUsb
-                && !IsInstallingDriver
-                && !IsLoading);
 
         Displays.CollectionChanged += (_, _) => OnPropertyChanged(nameof(EmptyVisibility));
     }
@@ -188,7 +167,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
                     // Tolerate read failure; user can still drive the slider.
                 }
 
-                Displays.Add(new DisplayViewModel(info, initialPercent, _service));
+                Displays.Add(new DisplayViewModel(
+                    info, initialPercent, _service, RequestDriverUninstall));
             }
 
             UpdatePendingSetup(result.PendingDriverSetups);
@@ -257,6 +237,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 break;
         }
     }
+
+    // Callback handed to each DisplayViewModel so its ⋯ menu can request an uninstall.
+    private void RequestDriverUninstall(DisplayViewModel display)
+        => DriverUninstallRequested?.Invoke(this, display);
 
     public async Task UninstallDriverAsync(DisplayViewModel display)
     {
