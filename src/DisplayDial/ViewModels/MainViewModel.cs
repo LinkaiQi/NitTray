@@ -103,6 +103,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    // Title + serial for the pending display, so the driver-setup card mirrors a
+    // connected display card (name as the heading, serial on the line beneath).
+    public string DriverSetupProductName => _pendingSetup?.ProductName ?? string.Empty;
+
+    public string DriverSetupSerial => string.IsNullOrWhiteSpace(_pendingSetup?.SerialNumber)
+        ? "USB-C"
+        : $"Serial {_pendingSetup!.SerialNumber!.ToUpperInvariant()}";
+
     public Visibility DriverSetupVisibility => _pendingSetup is not null
         ? Visibility.Visible
         : Visibility.Collapsed;
@@ -300,8 +308,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _pendingSetup = next;
         DriverSetupMessage = next is null
             ? string.Empty
-            : $"{next.ProductName} is connected but needs a one-time driver setup before " +
-              "DisplayDial can control its brightness.";
+            : "Connected but needs a one-time driver setup before DisplayDial can " +
+              "control its brightness.";
+        OnPropertyChanged(nameof(DriverSetupProductName));
+        OnPropertyChanged(nameof(DriverSetupSerial));
         OnPropertyChanged(nameof(DriverSetupVisibility));
         OnPropertyChanged(nameof(SetUpButtonVisibility));
         OnPropertyChanged(nameof(EmptyVisibility));

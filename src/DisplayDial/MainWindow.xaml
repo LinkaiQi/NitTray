@@ -60,32 +60,57 @@
             <!-- Driver setup prompt -->
             <ui:Card Grid.Row="1" Margin="0,14,0,0" Visibility="{Binding DriverSetupVisibility}">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <ui:SymbolIcon Grid.Column="0" Symbol="WrenchScrewdriver24" FontSize="24"
-                                   VerticalAlignment="Top" Margin="0,2,14,0"
-                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                    <!-- Identity (mirrors a connected display card) -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <ui:TextBlock Text="Driver setup needed" FontTypography="BodyStrong"/>
-                        <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                    </StackPanel>
+                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8"
+                                Margin="0,0,14,0" VerticalAlignment="Top"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}">
+                            <ui:SymbolIcon Symbol="Desktop24" FontSize="24"
+                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                        </Border>
 
-                    <ui:Button Grid.Column="2" Content="Set up display"
-                               Appearance="Primary" VerticalAlignment="Center" Margin="14,0,0,0"
-                               Command="{Binding SetUpDriverCommand}"
-                               Visibility="{Binding SetUpButtonVisibility}"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <ui:TextBlock Text="{Binding DriverSetupProductName}" FontTypography="BodyStrong"/>
+                            <ui:TextBlock Text="{Binding DriverSetupSerial}" FontTypography="Caption"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"
+                                          TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
-                                Margin="14,0,0,0" Visibility="{Binding InstallingVisibility}">
-                        <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"/>
-                        <ui:TextBlock Text="Installing… up to a minute" FontTypography="Caption"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                        <ui:Button Grid.Column="2" Content="Set up display"
+                                   Appearance="Primary" VerticalAlignment="Center" Margin="14,0,0,0"
+                                   Command="{Binding SetUpDriverCommand}"
+                                   Visibility="{Binding SetUpButtonVisibility}"/>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                    Margin="14,0,0,0" Visibility="{Binding InstallingVisibility}">
+                            <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"/>
+                            <ui:TextBlock Text="Installing… up to a minute" FontTypography="Caption"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Status line -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,14,0,0">
+                        <ui:SymbolIcon Symbol="WrenchScrewdriver24" FontSize="18" Margin="0,1,10,0"
+                                       VerticalAlignment="Top"
+                                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                        <StackPanel>
+                            <ui:TextBlock Text="Driver setup needed" FontTypography="BodyStrong"/>
+                            <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          TextWrapping="Wrap" Margin="0,2,0,0"/>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </ui:Card>
