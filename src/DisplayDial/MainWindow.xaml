@@ -44,7 +44,7 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <ui:TextBlock Text="Displays" FontTypography="Title"/>
                     <ui:TextBlock Text="Adjust the brightness of each connected Apple display."
-                                  FontTypography="Caption" Appearance="Secondary" Margin="0,2,0,0"/>
+                                  FontTypography="Caption" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"
@@ -73,7 +73,7 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <ui:TextBlock Text="Driver setup needed" FontTypography="BodyStrong"/>
                         <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
-                                      Appearance="Secondary" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
                     </StackPanel>
 
                     <ui:Button Grid.Column="2" Content="Set up display"
@@ -85,7 +85,7 @@
                                 Margin="14,0,0,0" Visibility="{Binding InstallingVisibility}">
                         <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"/>
                         <ui:TextBlock Text="Installing… up to a minute" FontTypography="Caption"
-                                      Appearance="Secondary" VerticalAlignment="Center"/>
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
             </ui:Card>
@@ -118,7 +118,7 @@
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <ui:TextBlock Text="{Binding ProductName}" FontTypography="BodyStrong"/>
                                             <ui:TextBlock Text="{Binding Subtitle}" FontTypography="Caption"
-                                                          Appearance="Secondary" Margin="0,2,0,0"
+                                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"
                                                           TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </Grid>
@@ -166,7 +166,7 @@
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                 <ui:TextBlock Text="No Apple display detected" FontTypography="BodyStrong"
                               HorizontalAlignment="Center" Margin="0,10,0,0"/>
-                <ui:TextBlock TextAlignment="Center" TextWrapping="Wrap" Appearance="Secondary"
+                <ui:TextBlock TextAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                               FontTypography="Caption" Margin="0,4,0,0"
                               Text="Connect an Apple Studio Display or Pro Display XDR over USB-C / Thunderbolt, then click Refresh."/>
             </StackPanel>
@@ -178,10 +178,10 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ui:TextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontTypography="Caption"
-                              Appearance="Secondary" VerticalAlignment="Center"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"
                               TextTrimming="CharacterEllipsis"/>
                 <ui:TextBlock Grid.Column="1" Text="Closing keeps DisplayDial in the system tray."
-                              FontTypography="Caption" Appearance="Tertiary" VerticalAlignment="Center"/>
+                              FontTypography="Caption" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center"/>
             </Grid>
         </Grid>
     </Grid>
