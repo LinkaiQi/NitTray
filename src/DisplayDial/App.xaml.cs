@@ -25,7 +25,8 @@ public partial class App : Application
         var driverInstaller = new WinUsbDriverInstallService();
         _viewModel = new MainViewModel(service, driverInstaller);
         _viewModel.DriverSetupFailed += OnDriverSetupFailed;
-        _viewModel.DriverResetSucceeded += OnDriverResetSucceeded;
+        _viewModel.DriverUninstallRequested += OnDriverUninstallRequested;
+        _viewModel.DriverUninstallSucceeded += OnDriverUninstallSucceeded;
 
         _mainWindow = new MainWindow { DataContext = _viewModel };
         _mainWindow.Closing += OnMainWindowClosing;
@@ -45,7 +46,6 @@ public partial class App : Application
             }
         };
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
-        _tray.ResetDriverRequested += (_, _) => OnResetDriverRequested();
         _tray.QuitRequested += (_, _) => RequestShutdown();
 
         ShowMainWindow();
@@ -82,20 +82,20 @@ public partial class App : Application
         }
     }
 
-    private void OnResetDriverRequested()
+    private void OnDriverUninstallRequested(object? sender, DisplayViewModel display)
     {
         if (_viewModel is null)
         {
             return;
         }
 
-        const string caption = "DisplayDial — reset driver";
-        const string prompt =
-            "This removes the WinUSB driver from the Apple Pro Display XDR and reverts it " +
+        const string caption = "DisplayDial — uninstall driver";
+        var prompt =
+            $"This removes the WinUSB driver from {display.ProductName} and reverts it " +
             "to the default Windows driver.\n\n" +
             "DisplayDial will not be able to control its brightness until you run setup " +
-            "again. This is mainly intended for testing the install flow.\n\n" +
-            "Reset the driver now?";
+            "again.\n\n" +
+            "Uninstall the driver now?";
 
         var choice = _mainWindow is not null
             ? System.Windows.MessageBox.Show(
@@ -107,13 +107,13 @@ public partial class App : Application
 
         if (choice == MessageBoxResult.Yes)
         {
-            _ = _viewModel.ResetDriverAsync();
+            _ = _viewModel.UninstallDriverAsync(display);
         }
     }
 
-    private void OnDriverResetSucceeded(object? sender, string message)
+    private void OnDriverUninstallSucceeded(object? sender, string message)
     {
-        const string caption = "DisplayDial — reset driver";
+        const string caption = "DisplayDial — uninstall driver";
         if (_mainWindow is not null)
         {
             System.Windows.MessageBox.Show(

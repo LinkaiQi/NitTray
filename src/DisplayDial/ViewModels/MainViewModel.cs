@@ -14,7 +14,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly IDriverInstallService _driverInstaller;
     private readonly RelayCommand _refreshCommand;
     private readonly RelayCommand _setUpDriverCommand;
-    private readonly RelayCommand _resetDriverCommand;
+    private readonly RelayCommand _uninstallDriverCommand;
 
     private bool _isLoading;
     private bool _isInstallingDriver;
@@ -28,17 +28,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ICommand SetUpDriverCommand => _setUpDriverCommand;
 
-    // Removes the WinUSB driver from the Apple Pro Display XDR and reverts it to
-    // the default Windows driver. Mainly a testing aid so the install flow can be
-    // re-exercised without hand-running pnputil / Device Manager.
-    public ICommand ResetDriverCommand => _resetDriverCommand;
+    // Removes the WinUSB driver from a specific WinUSB-bound Apple display (currently
+    // the Pro Display XDR) and reverts it to the default Windows driver. Exposed per
+    // display via an "Uninstall driver" button on that display's card. The command
+    // parameter is the DisplayViewModel to act on.
+    public ICommand UninstallDriverCommand => _uninstallDriverCommand;
 
     // Raised when driver setup ends in a state worth interrupting the user for
     // (a hard failure or a missing helper). The App layer shows a message box.
     public event EventHandler<string>? DriverSetupFailed;
 
-    // Raised after a successful driver reset so the App layer can confirm it.
-    public event EventHandler<string>? DriverResetSucceeded;
+    // Raised when the user clicks a display's "Uninstall driver" button. The App layer
+    // shows a per-display confirmation prompt and, on confirm, calls UninstallDriverAsync.
+    public event EventHandler<DisplayViewModel>? DriverUninstallRequested;
+
+    // Raised after a successful driver uninstall so the App layer can confirm it.
+    public event EventHandler<string>? DriverUninstallSucceeded;
 
     public bool IsLoading
     {
@@ -55,7 +60,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(LoadingVisibility));
             _refreshCommand.RaiseCanExecuteChanged();
             _setUpDriverCommand.RaiseCanExecuteChanged();
-            _resetDriverCommand.RaiseCanExecuteChanged();
+            _uninstallDriverCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -74,7 +79,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(InstallingVisibility));
             _refreshCommand.RaiseCanExecuteChanged();
             _setUpDriverCommand.RaiseCanExecuteChanged();
-            _resetDriverCommand.RaiseCanExecuteChanged();
+            _uninstallDriverCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -138,9 +143,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _setUpDriverCommand = new RelayCommand(
             execute: async _ => await SetUpDriverAsync().ConfigureAwait(true),
             canExecute: _ => _pendingSetup is not null && !IsInstallingDriver && !IsLoading);
-        _resetDriverCommand = new RelayCommand(
-            execute: async _ => await ResetDriverAsync().ConfigureAwait(true),
-            canExecute: _ => !IsInstallingDriver && !IsLoading);
+        _uninstallDriverCommand = new RelayCommand(
+            execute: parameter =>
+            {
+                if (parameter is DisplayViewModel display)
+                {
+                    DriverUninstallRequested?.Invoke(this, display);
+                }
+            },
+            canExecute: parameter =>
+                parameter is DisplayViewModel display
+                && display.IsWinUsb
+                && !IsInstallingDriver
+                && !IsLoading);
 
         Displays.CollectionChanged += (_, _) => OnPropertyChanged(nameof(EmptyVisibility));
     }
@@ -243,28 +258,32 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task ResetDriverAsync()
+    public async Task UninstallDriverAsync(DisplayViewModel display)
     {
+        ArgumentNullException.ThrowIfNull(display);
+
         if (IsInstallingDriver || IsLoading)
         {
             return;
         }
 
         IsInstallingDriver = true;
-        StatusMessage = "Resetting display driver… approve the prompt, then allow up to a minute.";
+        StatusMessage =
+            $"Uninstalling the driver for {display.ProductName}… approve the prompt, " +
+            "then allow up to a minute.";
 
         DriverInstallResult result;
         try
         {
             result = await _driverInstaller.UninstallAsync(
                 AppleDisplays.VendorId,
-                AppleDisplays.ProDisplayXdrProductId).ConfigureAwait(true);
+                display.ProductId).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
             IsInstallingDriver = false;
-            StatusMessage = "Driver reset failed.";
-            DriverSetupFailed?.Invoke(this, $"Driver reset failed unexpectedly: {ex.Message}");
+            StatusMessage = "Driver uninstall failed.";
+            DriverSetupFailed?.Invoke(this, $"Driver uninstall failed unexpectedly: {ex.Message}");
             return;
         }
 
@@ -274,18 +293,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             case DriverInstallStatus.Success:
                 StatusMessage = result.Message;
-                DriverResetSucceeded?.Invoke(this, result.Message);
+                DriverUninstallSucceeded?.Invoke(this, result.Message);
                 // Re-enumerate: the display is now driverless again, so it returns
                 // to the "needs setup" state and the install flow can be retested.
                 await RefreshAsync().ConfigureAwait(true);
                 break;
 
             case DriverInstallStatus.Cancelled:
-                StatusMessage = "Driver reset was cancelled.";
+                StatusMessage = "Driver uninstall was cancelled.";
                 break;
 
             default:
-                StatusMessage = "Driver reset failed.";
+                StatusMessage = "Driver uninstall failed.";
                 DriverSetupFailed?.Invoke(this, result.Message);
                 break;
         }

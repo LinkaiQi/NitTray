@@ -108,6 +108,7 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8"
                                                 Margin="0,0,14,0" VerticalAlignment="Top"
@@ -121,6 +122,17 @@
                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"
                                                           TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
+                                        <ui:Button Grid.Column="2" Content="Uninstall driver"
+                                                   Appearance="Secondary" VerticalAlignment="Top" Margin="14,0,0,0"
+                                                   Visibility="{Binding UninstallButtonVisibility}"
+                                                   Command="{Binding DataContext.UninstallDriverCommand,
+                                                             RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                   CommandParameter="{Binding}"
+                                                   ToolTip="Remove the WinUSB driver and revert this display to the default Windows driver. You can run setup again afterwards.">
+                                            <ui:Button.Icon>
+                                                <ui:SymbolIcon Symbol="PlugDisconnected24"/>
+                                            </ui:Button.Icon>
+                                        </ui:Button>
                                     </Grid>
 
                                     <!-- Brightness -->

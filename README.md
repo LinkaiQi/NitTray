@@ -24,6 +24,10 @@ which DisplayDial does for you with a single admin prompt.)
   driver, DisplayDial shows a **Set up display** button that installs it in-app
   (via [libwdi](https://github.com/pbatard/libwdi), the engine behind Zadig) —
   one UAC prompt, no separate tools to download.
+- **Per-display driver uninstall**: a display whose WinUSB driver DisplayDial
+  installed (the Pro Display XDR) gets an **Uninstall driver** button on its card
+  that reverts it to the default Windows driver (one UAC prompt). Studio Displays
+  use the Windows in-box HID driver, so they don't show the button.
 
 ## How the protocol works
 

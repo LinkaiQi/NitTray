@@ -28,6 +28,19 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
 
     public string ProductName => _info.ProductName;
 
+    // USB product id of this display, used to target a per-display driver uninstall.
+    public ushort ProductId => _info.ProductId;
+
+    // Only WinUSB-bound displays (currently the Pro Display XDR after setup) have a
+    // driver DisplayDial installed and can therefore be reverted to the in-box driver.
+    public bool IsWinUsb => _info.Transport == DisplayTransport.WinUsb;
+
+    // The per-display "Uninstall driver" button only makes sense for WinUSB displays;
+    // Studio Displays use the Windows in-box HID driver, which there is nothing to remove.
+    public Visibility UninstallButtonVisibility => IsWinUsb
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
     public string SerialDescription => string.IsNullOrWhiteSpace(_info.SerialNumber)
         ? $"PID 0x{_info.ProductId:X4}"
         : $"PID 0x{_info.ProductId:X4} · Serial {_info.SerialNumber.ToUpperInvariant()}";

@@ -136,16 +136,17 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
         {
             DriverSetupExitCodes.Success => new DriverInstallResult(
                 DriverInstallStatus.Success,
-                "Driver reset. The Apple display was reverted to the default Windows " +
-                "driver. You can now re-run setup to test the install flow."),
+                "Driver uninstalled. The Apple display was reverted to the default " +
+                "Windows driver. Run setup again whenever you want DisplayDial to " +
+                "control its brightness."),
 
             DriverSetupExitCodes.DeviceNotFound => new DriverInstallResult(
                 DriverInstallStatus.DeviceNotFound,
-                "No matching Apple display is connected, so there was nothing to reset."),
+                "No matching Apple display is connected, so there was nothing to uninstall."),
 
             _ => new DriverInstallResult(
                 DriverInstallStatus.Failed,
-                $"Driver reset failed (code {exitCode}). See the diagnostics log for " +
+                $"Driver uninstall failed (code {exitCode}). See the diagnostics log for " +
                 $"details:\n{DiagnosticLog.FilePath}"),
         };
     }
