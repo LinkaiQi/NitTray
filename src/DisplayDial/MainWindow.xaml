@@ -63,6 +63,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Identity (mirrors a connected display card) -->
@@ -100,12 +101,22 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Status: a self-contained warning banner reads cleaner than a
-                         loose icon + text row, and supplies its own warning glyph. -->
-                    <ui:InfoBar Grid.Row="1" Margin="0,14,0,0" Severity="Warning" IsClosable="False"
-                                IsOpen="True"
-                                Title="Driver setup needed"
-                                Message="{Binding DriverSetupMessage}"/>
+                    <!-- Divider between the display identity and its setup status -->
+                    <Border Grid.Row="1" Height="1" Margin="0,14,0,14"
+                            Background="{DynamicResource DividerStrokeColorDefaultBrush}"/>
+
+                    <!-- Status line -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Warning24" FontSize="18" Margin="0,1,10,0"
+                                       VerticalAlignment="Top"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
+                        <StackPanel>
+                            <ui:TextBlock Text="Driver setup needed" FontTypography="BodyStrong"/>
+                            <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          TextWrapping="Wrap" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
                 </Grid>
             </ui:Card>
 
