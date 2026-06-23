@@ -41,24 +41,19 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
         ? Visibility.Visible
         : Visibility.Collapsed;
 
-    public string SerialDescription => string.IsNullOrWhiteSpace(_info.SerialNumber)
-        ? $"PID 0x{_info.ProductId:X4}"
-        : $"PID 0x{_info.ProductId:X4} · Serial {_info.SerialNumber.ToUpperInvariant()}";
+    // Serial as printed on the device (uppercased), shown in the secondary "Details"
+    // section rather than the primary card so the main UI stays uncluttered.
+    public string SerialNumberDisplay => string.IsNullOrWhiteSpace(_info.SerialNumber)
+        ? "Not reported"
+        : _info.SerialNumber.ToUpperInvariant();
 
-    // Identity line shown under the product name: serial (when reported) plus the
-    // control channel, so two displays of the same model stay easy to tell apart.
-    public string Subtitle
-    {
-        get
-        {
-            var connection = _info.Transport == DisplayTransport.WinUsb
-                ? "WinUSB control"
-                : "HID control";
-            return string.IsNullOrWhiteSpace(_info.SerialNumber)
-                ? $"USB-C · {connection}"
-                : $"Serial {_info.SerialNumber.ToUpperInvariant()} · {connection}";
-        }
-    }
+    // Plain-language control channel, shown in the "Details" section.
+    public string ConnectionDescription => _info.Transport == DisplayTransport.WinUsb
+        ? "WinUSB control"
+        : "HID control";
+
+    // USB product id in hex, shown in the "Details" section.
+    public string ProductIdHex => $"0x{_info.ProductId:X4}";
 
     public bool HasError => !string.IsNullOrEmpty(_statusText);
 
