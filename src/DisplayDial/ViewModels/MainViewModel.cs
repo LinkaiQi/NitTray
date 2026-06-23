@@ -52,6 +52,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             _isLoading = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(EmptyVisibility));
+            OnPropertyChanged(nameof(LoadingVisibility));
             _refreshCommand.RaiseCanExecuteChanged();
             _setUpDriverCommand.RaiseCanExecuteChanged();
             _resetDriverCommand.RaiseCanExecuteChanged();
@@ -69,6 +70,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
             _isInstallingDriver = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(SetUpButtonVisibility));
+            OnPropertyChanged(nameof(InstallingVisibility));
             _refreshCommand.RaiseCanExecuteChanged();
             _setUpDriverCommand.RaiseCanExecuteChanged();
             _resetDriverCommand.RaiseCanExecuteChanged();
@@ -104,6 +107,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     public Visibility DriverSetupVisibility => _pendingSetup is not null
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
+    // The action button shows only while a setup is pending and not already running;
+    // the inline progress indicator takes its place during the install.
+    public Visibility SetUpButtonVisibility => _pendingSetup is not null && !IsInstallingDriver
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
+    public Visibility InstallingVisibility => IsInstallingDriver
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
+    public Visibility LoadingVisibility => IsLoading
         ? Visibility.Visible
         : Visibility.Collapsed;
 
@@ -283,6 +300,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             : $"{next.ProductName} is connected but needs a one-time driver setup before " +
               "DisplayDial can control its brightness.";
         OnPropertyChanged(nameof(DriverSetupVisibility));
+        OnPropertyChanged(nameof(SetUpButtonVisibility));
         OnPropertyChanged(nameof(EmptyVisibility));
         _setUpDriverCommand.RaiseCanExecuteChanged();
     }

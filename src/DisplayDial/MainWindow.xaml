@@ -1,105 +1,188 @@
-<Window x:Class="DisplayDial.MainWindow"
+<ui:FluentWindow x:Class="DisplayDial.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:vm="clr-namespace:DisplayDial.ViewModels"
-        mc:Ignorable="d"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        Title="DisplayDial — Apple Studio Display"
-        Width="540" Height="460" MinWidth="440" MinHeight="320"
+        mc:Ignorable="d"
+        Title="DisplayDial"
+        Width="580" Height="640" MinWidth="480" MinHeight="460"
         WindowStartupLocation="CenterScreen"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
         ShowInTaskbar="True"
-        Background="#F4F4F6"
         d:DataContext="{d:DesignInstance vm:MainViewModel}">
-    <Grid Margin="18">
+
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <DockPanel Grid.Row="0" LastChildFill="True">
-            <Button DockPanel.Dock="Right" Content="Refresh"
-                    Command="{Binding RefreshCommand}"
-                    Padding="12,5" MinWidth="80"/>
-            <StackPanel Orientation="Vertical">
-                <TextBlock Text="Connected Displays" FontSize="20" FontWeight="SemiBold" Foreground="#202024"/>
-                <TextBlock Text="Apple Studio Display and Pro Display XDR — drag a slider to set brightness." FontSize="11" Foreground="#6E6E73" Margin="0,2,0,0"/>
-            </StackPanel>
-        </DockPanel>
+        <ui:TitleBar Grid.Row="0" Title="DisplayDial">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="BrightnessHigh24"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
-        <Border Grid.Row="1" Margin="0,12,0,0" Padding="14,10"
-                Background="#FFF4E5" BorderBrush="#F2C879" BorderThickness="1" CornerRadius="8"
-                Visibility="{Binding DriverSetupVisibility}">
-            <DockPanel LastChildFill="True">
-                <Button DockPanel.Dock="Right" Content="Set up display"
-                        Command="{Binding SetUpDriverCommand}"
-                        Padding="14,6" MinWidth="120" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding DriverSetupMessage}" TextWrapping="Wrap"
-                           Foreground="#7A5300" VerticalAlignment="Center" Margin="0,0,12,0"/>
-            </DockPanel>
-        </Border>
+        <Grid Grid.Row="1" Margin="18,8,18,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <Grid Grid.Row="2" Margin="0,14,0,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+            <!-- Header -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <ui:TextBlock Text="Displays" FontTypography="Title"/>
+                    <ui:TextBlock Text="Adjust the brightness of each connected Apple display."
+                                  FontTypography="Caption" Appearance="Secondary" Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"
+                                     Visibility="{Binding LoadingVisibility}"/>
+                    <ui:Button Content="Refresh" Command="{Binding RefreshCommand}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="ArrowClockwise24"/>
+                        </ui:Button.Icon>
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- Driver setup prompt -->
+            <ui:Card Grid.Row="1" Margin="0,14,0,0" Visibility="{Binding DriverSetupVisibility}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ui:SymbolIcon Grid.Column="0" Symbol="WrenchScrewdriver24" FontSize="24"
+                                   VerticalAlignment="Top" Margin="0,2,14,0"
+                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <ui:TextBlock Text="Driver setup needed" FontTypography="BodyStrong"/>
+                        <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
+                                      Appearance="Secondary" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <ui:Button Grid.Column="2" Content="Set up display"
+                               Appearance="Primary" VerticalAlignment="Center" Margin="14,0,0,0"
+                               Command="{Binding SetUpDriverCommand}"
+                               Visibility="{Binding SetUpButtonVisibility}"/>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                Margin="14,0,0,0" Visibility="{Binding InstallingVisibility}">
+                        <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"/>
+                        <ui:TextBlock Text="Installing… up to a minute" FontTypography="Caption"
+                                      Appearance="Secondary" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </ui:Card>
+
+            <!-- Display list -->
+            <ScrollViewer Grid.Row="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
                 <ItemsControl ItemsSource="{Binding Displays}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:DisplayViewModel}">
-                            <Border BorderBrush="#D8D8DC" BorderThickness="1" CornerRadius="8"
-                                    Padding="14" Margin="0,0,0,10" Background="#FFFFFF">
+                            <ui:Card Margin="0,0,0,12">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Text="{Binding ProductName}"
-                                               FontSize="14" FontWeight="SemiBold" Foreground="#202024"/>
-                                    <TextBlock Grid.Row="1" Text="{Binding SerialDescription}"
-                                               Foreground="#6E6E73" FontSize="11" Margin="0,3,0,0"
-                                               TextTrimming="CharacterEllipsis"/>
+                                    <!-- Identity -->
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8"
+                                                Margin="0,0,14,0" VerticalAlignment="Top"
+                                                Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                            <ui:SymbolIcon Symbol="Desktop24" FontSize="24"
+                                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <ui:TextBlock Text="{Binding ProductName}" FontTypography="BodyStrong"/>
+                                            <ui:TextBlock Text="{Binding Subtitle}" FontTypography="Caption"
+                                                          Appearance="Secondary" Margin="0,2,0,0"
+                                                          TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <DockPanel Grid.Row="2" Margin="0,14,0,0" LastChildFill="True">
-                                        <TextBlock DockPanel.Dock="Left" Text="Brightness" VerticalAlignment="Center"
-                                                   Foreground="#3A3A3D"/>
-                                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center"
-                                                   Width="44" TextAlignment="Right"
-                                                   Foreground="#202024"
-                                                   Text="{Binding BrightnessPercent, StringFormat={}{0}%}"/>
-                                        <Slider Margin="14,0,14,0" Minimum="0" Maximum="100"
+                                    <!-- Brightness -->
+                                    <Grid Grid.Row="1" Margin="0,16,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ui:SymbolIcon Grid.Column="0" Symbol="BrightnessLow24" FontSize="18"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <Slider Grid.Column="1" Margin="12,0,12,0" Minimum="0" Maximum="100"
                                                 IsSnapToTickEnabled="True" TickFrequency="1"
                                                 IsEnabled="{Binding IsAvailable}"
                                                 Value="{Binding BrightnessPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                 VerticalAlignment="Center"/>
-                                    </DockPanel>
+                                        <ui:SymbolIcon Grid.Column="2" Symbol="BrightnessHigh24" FontSize="22"
+                                                       VerticalAlignment="Center" Margin="0,0,12,0"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <ui:TextBlock Grid.Column="3" Width="44" TextAlignment="Right"
+                                                      VerticalAlignment="Center" FontTypography="BodyStrong"
+                                                      Text="{Binding BrightnessPercent, StringFormat={}{0}%}"/>
+                                    </Grid>
 
-                                    <TextBlock Grid.Row="3" Text="{Binding StatusText}" Foreground="#A1A1A6"
-                                               FontSize="10" Margin="0,6,0,0"
-                                               Visibility="{Binding StatusVisibility}"/>
+                                    <!-- Per-display error -->
+                                    <ui:InfoBar Grid.Row="2" Margin="0,12,0,0" Severity="Error" IsClosable="False"
+                                                Title="Brightness unavailable"
+                                                Message="{Binding StatusText}"
+                                                IsOpen="{Binding HasError}"/>
                                 </Grid>
-                            </Border>
+                            </ui:Card>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
 
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Visibility="{Binding EmptyVisibility}">
-                <TextBlock Text="No Apple display detected." FontSize="14" Foreground="#6E6E73"
-                           HorizontalAlignment="Center"/>
-                <TextBlock Text="Plug in an Apple Studio Display or Pro Display XDR over USB-C / Thunderbolt and click Refresh."
-                           FontSize="11" Foreground="#A1A1A6" Margin="0,4,0,0" HorizontalAlignment="Center"/>
+            <!-- Empty state -->
+            <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        MaxWidth="320" Visibility="{Binding EmptyVisibility}">
+                <ui:SymbolIcon Symbol="Desktop24" FontSize="40" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                <ui:TextBlock Text="No Apple display detected" FontTypography="BodyStrong"
+                              HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                <ui:TextBlock TextAlignment="Center" TextWrapping="Wrap" Appearance="Secondary"
+                              FontTypography="Caption" Margin="0,4,0,0"
+                              Text="Connect an Apple Studio Display or Pro Display XDR over USB-C / Thunderbolt, then click Refresh."/>
             </StackPanel>
-        </Grid>
 
-        <DockPanel Grid.Row="3" Margin="0,12,0,0" LastChildFill="True">
-            <TextBlock DockPanel.Dock="Right" Text="Close to keep DisplayDial in the system tray."
-                       Foreground="#A1A1A6" FontSize="11" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding StatusMessage}" Foreground="#6E6E73" FontSize="11"
-                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-        </DockPanel>
+            <!-- Footer -->
+            <Grid Grid.Row="3" Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontTypography="Caption"
+                              Appearance="Secondary" VerticalAlignment="Center"
+                              TextTrimming="CharacterEllipsis"/>
+                <ui:TextBlock Grid.Column="1" Text="Closing keeps DisplayDial in the system tray."
+                              FontTypography="Caption" Appearance="Tertiary" VerticalAlignment="Center"/>
+            </Grid>
+        </Grid>
     </Grid>
-</Window>
+</ui:FluentWindow>

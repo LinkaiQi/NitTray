@@ -32,6 +32,23 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
         ? $"PID 0x{_info.ProductId:X4}"
         : $"PID 0x{_info.ProductId:X4} · Serial {_info.SerialNumber}";
 
+    // Identity line shown under the product name: serial (when reported) plus the
+    // control channel, so two displays of the same model stay easy to tell apart.
+    public string Subtitle
+    {
+        get
+        {
+            var connection = _info.Transport == DisplayTransport.WinUsb
+                ? "WinUSB control"
+                : "HID control";
+            return string.IsNullOrWhiteSpace(_info.SerialNumber)
+                ? $"USB-C · {connection}"
+                : $"Serial {_info.SerialNumber} · {connection}";
+        }
+    }
+
+    public bool HasError => !string.IsNullOrEmpty(_statusText);
+
     public int BrightnessPercent
     {
         get => _brightnessPercent;
@@ -79,6 +96,7 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
             _statusText = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(StatusVisibility));
+            OnPropertyChanged(nameof(HasError));
         }
     }
 

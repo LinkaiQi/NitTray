@@ -30,6 +30,11 @@ public partial class App : Application
         _mainWindow = new MainWindow { DataContext = _viewModel };
         _mainWindow.Closing += OnMainWindowClosing;
 
+        // Match the Windows light/dark setting and keep following it while running
+        // (also applies the Mica backdrop on the FluentWindow).
+        Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(_mainWindow);
+
         _tray = new TrayIconHost();
         _tray.ShowRequested += (_, _) => ShowMainWindow();
         _tray.RefreshRequested += (_, _) =>

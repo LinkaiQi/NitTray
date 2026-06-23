@@ -15,6 +15,11 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
+  <!-- Fluent 2 design system for WPF (Mica, FluentWindow, themed controls). MIT-licensed. -->
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
   <!--
     Bundle the elevated WinUSB installer helper when it has been built.
 
