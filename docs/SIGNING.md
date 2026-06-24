@@ -94,12 +94,21 @@ artifacts until you finish this one-time Azure setup and flip the flag:
    Verifier*; assigning roles needs Owner / User Access Administrator). Then
    complete **identity validation** (an individual identity is fine) and create a
    **certificate profile** (Public Trust).
-2. Create a **Microsoft Entra app registration**, and on the signing account grant
-   it the **Artifact Signing Certificate Profile Signer** role.
+2. Create a **Microsoft Entra app registration** (this is the identity GitHub
+   Actions logs in as). Note its **Application (client) ID** and **Directory
+   (tenant) ID**. On the signing account, grant this app the **Artifact Signing
+   Certificate Profile Signer** role (Access control (IAM) → Add role assignment →
+   assign to the app registration).
 3. Authenticate with **OIDC / federated credentials** (recommended — no stored
-   secret): add a *Federated credential* on the app registration for this repo
-   (subject e.g. `repo:LinkaiQi/NitTray:ref:refs/tags/v*` and/or your
-   environment), then add these GitHub repo **secrets**: `AZURE_CLIENT_ID`,
+   secret). The release workflow runs in a GitHub **Environment** named `release`,
+   which gives a stable token subject regardless of the tag version. On the app
+   registration → *Certificates & secrets* → *Federated credentials* → *Add* →
+   scenario **GitHub Actions deploying Azure resources**:
+   - Organization: `LinkaiQi`, Repository: `NitTray`
+   - Entity type: **Environment**, name: `release`
+   - This produces subject `repo:LinkaiQi/NitTray:environment:release`.
+
+   Then add these GitHub repo **secrets**: `AZURE_CLIENT_ID` (the app's client ID),
    `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
 4. Add these GitHub repo **variables**:
    - `ARTIFACT_SIGNING` = `true`  (the on/off flag the workflow checks)
