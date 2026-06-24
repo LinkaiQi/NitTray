@@ -87,8 +87,12 @@ The release workflow (`.github/workflows/release.yml`) already calls the action.
 It is **gated behind the repo variable `ARTIFACT_SIGNING`**, so it builds unsigned
 artifacts until you finish this one-time Azure setup and flip the flag:
 
-1. In the Azure portal, create an **Artifact Signing account**, complete
-   **identity validation** (an individual identity is fine), and create a
+1. In the Azure portal, create an **Artifact Signing account**. Before you can
+   start **identity validation**, assign your own Azure user the
+   **Artifact Signing Identity Verifier** role on the account (Access control
+   (IAM) → Add role assignment — older portals call it *Trusted Signing Identity
+   Verifier*; assigning roles needs Owner / User Access Administrator). Then
+   complete **identity validation** (an individual identity is fine) and create a
    **certificate profile** (Public Trust).
 2. Create a **Microsoft Entra app registration**, and on the signing account grant
    it the **Artifact Signing Certificate Profile Signer** role.
