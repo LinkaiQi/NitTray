@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>NitTray</RootNamespace>
+    <AssemblyName>NitTray</AssemblyName>
+    <!-- Product + version metadata, stamped into the binaries and read by Windows,
+         Authenticode tooling, and (later) the in-app About box. Keep Company/Authors
+         aligned with the code-signing certificate subject once you have one. -->
+    <Product>NitTray</Product>
+    <Authors>Linkai Qi</Authors>
+    <Company>Linkai Qi</Company>
+    <Copyright>Copyright © 2026 Linkai Qi</Copyright>
+    <Description>Control Apple display brightness from Windows.</Description>
+    <Version>0.1.0</Version>
+    <RepositoryUrl>https://github.com/LinkaiQi/NitTray</RepositoryUrl>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Lets us build the Windows-targeted project from macOS / Linux. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <!-- Fluent 2 design system for WPF (Mica, FluentWindow, themed controls). MIT-licensed. -->
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <!--
+    Bundle the elevated WinUSB installer helper when it has been built.
+
+    The native helper (native/NitTray.DriverSetup) is compiled separately on
+    Windows by native/NitTray.DriverSetup/build.ps1, which stages the result
+    into that project's dist/ folder. When present, copy it next to the app (and
+    into publish output) so WinUsbDriverInstallService can launch it. The Exists
+    condition keeps the app build green when the helper hasn't been built yet
+    (e.g. on macOS/Linux or before running build.ps1).
+  -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\..\native\NitTray.DriverSetup\dist\NitTray.DriverSetup.exe')">
+    <None Include="$(MSBuildProjectDirectory)\..\..\native\NitTray.DriverSetup\dist\NitTray.DriverSetup.exe">
+      <Link>NitTray.DriverSetup.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Authenticode-signs DisplayDial's executables, library, native helper and installer.
+    Authenticode-signs NitTray's executables, library, native helper and installer.
 
 .DESCRIPTION
-    DisplayDial ships unsigned by default, so Windows SmartScreen / Smart App Control
+    NitTray ships unsigned by default, so Windows SmartScreen / Smart App Control
     warns that it "can't confirm the publisher" (and driver-install tools draw extra
     antivirus scrutiny). This script signs every artifact and timestamps each
     signature so it stays valid after the certificate expires.
@@ -35,7 +35,7 @@
 
 .EXAMPLE
     # Stopgap: sign your local build so THIS PC stops warning.
-    .\tools\sign.ps1 -SelfSigned -Path .\src\DisplayDial\bin\Release\net10.0-windows
+    .\tools\sign.ps1 -SelfSigned -Path .\src\NitTray\bin\Release\net10.0-windows
 
 .EXAMPLE
     # Release: sign a published folder with a real certificate file.
@@ -60,7 +60,7 @@ param(
 
     [string]$Path = '.\publish',
     [string]$TimestampUrl = 'http://timestamp.digicert.com',
-    [string]$SelfSignedSubject = 'CN=DisplayDial (self-signed, local testing only)'
+    [string]$SelfSignedSubject = 'CN=NitTray (self-signed, local testing only)'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -74,7 +74,7 @@ function Resolve-TargetFiles {
 
     # The app apphost, its managed assembly, the elevated native helper, and any
     # generated installer. Glob so this works for both bin\Release and publish folders.
-    $patterns = @('DisplayDial.exe', 'DisplayDial.dll', 'DisplayDial.DriverSetup.exe', '*Setup*.exe', '*Install*.exe')
+    $patterns = @('NitTray.exe', 'NitTray.dll', 'NitTray.DriverSetup.exe', '*Setup*.exe', '*Install*.exe')
     $found = foreach ($p in $patterns) {
         Get-ChildItem -LiteralPath $Root -Recurse -Filter $p -File -ErrorAction SilentlyContinue
     }
@@ -105,7 +105,7 @@ function Get-SelfSignedCert {
         -CertStoreLocation Cert:\CurrentUser\My
 
     # Trust it for the current user so its signatures validate on THIS machine.
-    $tmp = Join-Path $env:TEMP "displaydial-selfsign.cer"
+    $tmp = Join-Path $env:TEMP "nittray-selfsign.cer"
     Export-Certificate -Cert $cert -FilePath $tmp | Out-Null
     foreach ($store in @('Cert:\CurrentUser\Root', 'Cert:\CurrentUser\TrustedPublisher')) {
         Import-Certificate -FilePath $tmp -CertStoreLocation $store | Out-Null
@@ -147,7 +147,7 @@ switch ($PSCmdlet.ParameterSetName) {
 # --- Sign --------------------------------------------------------------------
 $files = Resolve-TargetFiles -Root $Path
 if (-not $files) {
-    throw "No signable artifacts found under $Path (looked for DisplayDial.exe/.dll, DisplayDial.DriverSetup.exe, *Setup*.exe)."
+    throw "No signable artifacts found under $Path (looked for NitTray.exe/.dll, NitTray.DriverSetup.exe, *Setup*.exe)."
 }
 
 Write-Host ""

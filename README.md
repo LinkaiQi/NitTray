@@ -1,10 +1,10 @@
-# DisplayDial
+# NitTray
 
 A Windows tray app for controlling **Apple display brightness** without needing
 a Mac. It talks to the display over the same USB HID feature report that macOS
 uses internally — no DDC/CI, no kernel driver, no admin rights for day-to-day
 brightness control. (The Pro Display XDR needs a one-time WinUSB driver install,
-which DisplayDial does for you with a single admin prompt.)
+which NitTray does for you with a single admin prompt.)
 
 > **Supported:** Apple Studio Display (`0x1114`), Studio Display Gen 2 (`0x1118`),
 > Studio Display XDR (`0x1116`), **Apple Pro Display XDR (`0x9243`)**, plus any
@@ -21,10 +21,10 @@ which DisplayDial does for you with a single admin prompt.)
   report ID, and raw min/max range are all read from the device's HID
   descriptor at enumeration time. No hard-coded `MI_07`, no hard-coded `60000`.
 - **One-click Pro Display XDR setup**: when a Pro Display XDR needs the WinUSB
-  driver, DisplayDial shows a **Set up display** button that installs it in-app
+  driver, NitTray shows a **Set up display** button that installs it in-app
   (via [libwdi](https://github.com/pbatard/libwdi), the engine behind Zadig) —
   one UAC prompt, no separate tools to download.
-- **Per-display driver uninstall**: a display whose WinUSB driver DisplayDial
+- **Per-display driver uninstall**: a display whose WinUSB driver NitTray
   installed (the Pro Display XDR) gets a **⋯ overflow menu** on its card with an
   **Uninstall driver** action that reverts it to the default Windows driver (one
   UAC prompt). Studio Displays use the Windows in-box HID driver, so they don't
@@ -36,7 +36,7 @@ Apple displays do **not** expose DDC/CI. Instead they ship a USB HID control
 interface (the Studio Display puts it on USB interface `MI_07`; the Pro
 Display XDR exposes it as one of four HID interfaces under PID `0x9243`) that
 accepts an Apple-specific feature report on the same USB-C / Thunderbolt cable
-that carries video. DisplayDial sends and reads the same report macOS does.
+that carries video. NitTray sends and reads the same report macOS does.
 
 ### USB identification
 
@@ -60,7 +60,7 @@ Same buffer is used for `HidD_GetFeature` (read) and `HidD_SetFeature` (write).
 
 ### Detection strategy
 
-Rather than hard-coding interface numbers or brightness ranges, DisplayDial uses
+Rather than hard-coding interface numbers or brightness ranges, NitTray uses
 the HID parser to ask each Apple HID interface what it exposes:
 
 1. Enumerate every HID device whose path contains `vid_05ac`.
@@ -83,7 +83,7 @@ everything we need.
 
 If no display is detected, right-click the tray icon and choose
 **"Open diagnostics log…"**. The log (at
-`%LOCALAPPDATA%\DisplayDial\diagnostic.log`) records every HID device that was
+`%LOCALAPPDATA%\NitTray\diagnostic.log`) records every HID device that was
 enumerated, every probe attempt, and the full HID capability map for each
 Apple-vendor interface. Share it on a GitHub issue and we can usually identify
 a new display variant in minutes.
@@ -91,7 +91,7 @@ a new display variant in minutes.
 ### Cross-references
 
 The protocol was reverse-engineered and proven by several community projects.
-DisplayDial's behaviour matches them byte-for-byte:
+NitTray's behaviour matches them byte-for-byte:
 
 - [`2yxh/BrightStudio`](https://github.com/2yxh/BrightStudio) — C# / Windows / Studio Display
 - [`juliuszint/asdbctl`](https://github.com/juliuszint/asdbctl) — Rust / Linux / Studio Display
@@ -116,12 +116,12 @@ once, then never again — see [Pro Display XDR setup](#pro-display-xdr-setup-wi
 ```powershell
 # from the repo root, on Windows
 dotnet build -c Release
-dotnet run --project src/DisplayDial
+dotnet run --project src/NitTray
 ```
 
 > **Pro Display XDR support** also needs the native WinUSB installer helper
-> (`DisplayDial.DriverSetup.exe`). It is built separately — run
-> `native/DisplayDial.DriverSetup/build.ps1` on Windows (Visual Studio 2022 or
+> (`NitTray.DriverSetup.exe`). It is built separately — run
+> `native/NitTray.DriverSetup/build.ps1` on Windows (Visual Studio 2022 or
 > 2026 with the *Desktop development with C++* workload + the **v143 x64**
 > toolset; **no WDK or ARM64 tools needed**). The single x64 helper this produces
 > runs on x64 Windows; for a **Windows on ARM** release, add the *MSVC v143 - ARM64
@@ -129,19 +129,19 @@ dotnet run --project src/DisplayDial
 > that serves both x64 and ARM64 (no per-architecture bundling). The build copies
 > the helper next to the app so the **Set up display** button can find it. The
 > Studio Display family works without this helper. See
-> [`native/DisplayDial.DriverSetup/README.md`](native/DisplayDial.DriverSetup/README.md).
+> [`native/NitTray.DriverSetup/README.md`](native/NitTray.DriverSetup/README.md).
 
 Or publish a single-folder framework-dependent build:
 
 ```powershell
-dotnet publish src/DisplayDial -c Release -r win-x64 --self-contained false -o publish
-.\publish\DisplayDial.exe
+dotnet publish src/NitTray -c Release -r win-x64 --self-contained false -o publish
+.\publish\NitTray.exe
 ```
 
 For a fully self-contained build (no .NET runtime needed on the target):
 
 ```powershell
-dotnet publish src/DisplayDial -c Release -r win-x64 --self-contained true `
+dotnet publish src/NitTray -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
   -o publish-standalone
 ```
@@ -152,7 +152,7 @@ the app from macOS or Linux for CI.
 ## Project layout
 
 ```
-src/DisplayDial/
+src/NitTray/
   App.xaml / App.xaml.cs          - WPF app entry, owns tray + window lifecycle
   MainWindow.xaml / .cs           - displays + sliders UI
   Tray/TrayIconHost.cs            - WinForms NotifyIcon wrapper
@@ -179,7 +179,7 @@ src/DisplayDial/
     DisplayEnumerationResult.cs   - displays + pending driver setups
     PendingDriverSetup.cs         - a display present but not WinUSB-bound yet
 
-native/DisplayDial.DriverSetup/   - elevated WinUSB installer (C + libwdi),
+native/NitTray.DriverSetup/   - elevated WinUSB installer (C + libwdi),
                                     built separately on Windows (see its README)
 ```
 
@@ -188,36 +188,36 @@ native/DisplayDial.DriverSetup/   - elevated WinUSB installer (C + libwdi),
 - **No displays found:** Some USB-C docks and adapters strip the HID interface
   while passing video through. Try a direct USB-C connection from PC to display.
   Then right-click the tray icon → **Open diagnostics log…** and inspect
-  (or share) the log at `%LOCALAPPDATA%\DisplayDial\diagnostic.log`. It lists
+  (or share) the log at `%LOCALAPPDATA%\NitTray\diagnostic.log`. It lists
   every Apple-vendor HID interface seen and why each one was or wasn't picked
   as the brightness control.
 - **Pro Display XDR with a yellow warning (Code 10) in Device Manager:**
   Windows' built-in HID driver doesn't understand Apple's HID descriptor for
   this display, so brightness has to go through a WinUSB driver instead.
-  DisplayDial installs it for you — click **Set up display** in the app (see
+  NitTray installs it for you — click **Set up display** in the app (see
   **Pro Display XDR setup** below).
 - **Permission denied:** None expected on Windows — `CreateFile` with
   `GENERIC_READ | GENERIC_WRITE` and shared access works for normal users.
-- **Pro Display XDR shows up multiple times:** shouldn't happen — DisplayDial
+- **Pro Display XDR shows up multiple times:** shouldn't happen — NitTray
   deduplicates by serial number, falling back to PID if a serial isn't
   reported. File an issue with the HID device paths if you see duplicates.
 - **Slider snaps to an integer percent:** intentional. The raw range is
   per-device (`400..60000` or `400..50000`) and we round to integer percent.
-- **"Windows can't confirm who published DisplayDial.dll" / the app won't launch:**
-  DisplayDial isn't code-signed, so when its files carry Windows' *Mark of the Web*
+- **"Windows can't confirm who published NitTray.dll" / the app won't launch:**
+  NitTray isn't code-signed, so when its files carry Windows' *Mark of the Web*
   (the flag added to anything that arrived via a download, zip extract, or cloud
   sync) SmartScreen and **Smart App Control** can warn about — or block — the
-  unsigned `DisplayDial.dll`. A fresh rebuild has no reputation, so this can appear
+  unsigned `NitTray.dll`. A fresh rebuild has no reputation, so this can appear
   even when a previous build launched fine. Fixes, easiest first:
   1. Remove the Mark of the Web from the whole app folder, then relaunch:
      ```powershell
      Get-ChildItem -Path .\publish -Recurse | Unblock-File
      ```
-     (or right-click `DisplayDial.exe` → **Properties** → tick **Unblock** → **OK**).
+     (or right-click `NitTray.exe` → **Properties** → tick **Unblock** → **OK**).
   2. If a blue **"Windows protected your PC"** dialog appears, click
      **More info → Run anyway**.
   3. Prefer launching the copy you **built locally** on that same PC — e.g.
-     `dotnet run --project src/DisplayDial` or the `bin\Release\net10.0-windows\`
+     `dotnet run --project src/NitTray` or the `bin\Release\net10.0-windows\`
      output. Locally produced files have no Mark of the Web and usually don't trip
      the warning.
   4. If **Smart App Control** is what's blocking it (Windows Security → *App &
@@ -231,40 +231,40 @@ The Apple Pro Display XDR ships an HID descriptor that Windows' built-in HID
 driver (`hidclass.sys`) cannot parse — when you connect the display directly,
 Device Manager shows its **USB Input Device** (`VID_05AC` `PID_9243`) with a
 yellow warning and **Code 10 ("This device cannot start")**. Until the driver
-is replaced, no application on Windows — not just DisplayDial — can talk to the
+is replaced, no application on Windows — not just NitTray — can talk to the
 brightness interface.
 
 The fix is to bind the Microsoft-provided **WinUSB** driver to the whole device.
-DisplayDial does this for you:
+NitTray does this for you:
 
-1. Connect the Pro Display XDR. DisplayDial detects it and shows a banner with a
+1. Connect the Pro Display XDR. NitTray detects it and shows a banner with a
    **Set up display** button.
 2. Click **Set up display** and approve the single Windows permission (UAC)
    prompt.
-3. Wait ~10–20 seconds. DisplayDial installs WinUSB, re-scans, and the display
+3. Wait ~10–20 seconds. NitTray installs WinUSB, re-scans, and the display
    appears with a working brightness slider.
 
 Under the hood this runs a small elevated helper
-(`DisplayDial.DriverSetup.exe`) that uses
+(`NitTray.DriverSetup.exe`) that uses
 [libwdi](https://github.com/pbatard/libwdi) — the same engine Zadig uses — to
 generate and install a self-signed WinUSB driver package. You only need to do
-this once per machine. If the install fails, DisplayDial shows the error and
-writes details to `%LOCALAPPDATA%\DisplayDial\driver-setup.log`.
+this once per machine. If the install fails, NitTray shows the error and
+writes details to `%LOCALAPPDATA%\NitTray\driver-setup.log`.
 
 The Apple Studio Display family does **not** need this step — its HID descriptor
 is well-formed and Windows binds it correctly out of the box.
 
 > **Note:** the helper is a native (C + libwdi) component compiled separately on
 > Windows; see
-> [`native/DisplayDial.DriverSetup/README.md`](native/DisplayDial.DriverSetup/README.md).
-> If `DisplayDial.DriverSetup.exe` isn't bundled next to the app, the **Set up
+> [`native/NitTray.DriverSetup/README.md`](native/NitTray.DriverSetup/README.md).
+> If `NitTray.DriverSetup.exe` isn't bundled next to the app, the **Set up
 > display** button reports that the helper is missing.
 
 ## License
 
 **GPLv3** — see [`LICENSE`](LICENSE).
 
-DisplayDial bundles and (statically) links
+NitTray bundles and (statically) links
 [libwdi](https://github.com/pbatard/libwdi), which is licensed LGPLv3/GPLv3. To
 keep the combined work's licensing clean, the whole project is released under the
 GNU General Public License v3.0. You are free to use, study, modify, and

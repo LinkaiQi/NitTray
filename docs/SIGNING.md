@@ -1,6 +1,6 @@
-# Code signing DisplayDial
+# Code signing NitTray
 
-DisplayDial is currently **unsigned**, so when users download it Windows
+NitTray is currently **unsigned**, so when users download it Windows
 SmartScreen / Smart App Control warns that it "can't confirm the publisher," and
 some antivirus engines are extra suspicious because the app installs a USB
 (WinUSB) driver. Signing every released binary — and timestamping each signature
@@ -8,13 +8,13 @@ some antivirus engines are extra suspicious because the app installs a USB
 
 ## What must be signed
 
-A DisplayDial release contains four Authenticode targets:
+A NitTray release contains four Authenticode targets:
 
 | Artifact                        | What it is                                   |
 | ------------------------------- | -------------------------------------------- |
-| `DisplayDial.exe`               | the app launcher (apphost)                   |
-| `DisplayDial.dll`               | the actual managed app assembly              |
-| `DisplayDial.DriverSetup.exe`   | the elevated native WinUSB installer helper  |
+| `NitTray.exe`               | the app launcher (apphost)                   |
+| `NitTray.dll`               | the actual managed app assembly              |
+| `NitTray.DriverSetup.exe`   | the elevated native WinUSB installer helper  |
 | `Setup.exe` / the installer     | whatever users actually download and run     |
 
 > The WinUSB **driver package** that the helper installs is a *separate*,
@@ -55,21 +55,21 @@ It does **not** help anyone else — do not ship self-signed builds.
 ```powershell
 # Build, then sign the output folder with a local self-signed cert:
 dotnet build -c Release
-.\tools\sign.ps1 -SelfSigned -Path .\src\DisplayDial\bin\Release\net10.0-windows
+.\tools\sign.ps1 -SelfSigned -Path .\src\NitTray\bin\Release\net10.0-windows
 ```
 
 `sign.ps1` creates the certificate once, trusts it in your CurrentUser stores, and
 reuses it afterwards. Verify with:
 
 ```powershell
-Get-AuthenticodeSignature .\src\DisplayDial\bin\Release\net10.0-windows\DisplayDial.dll | Format-List
+Get-AuthenticodeSignature .\src\NitTray\bin\Release\net10.0-windows\NitTray.dll | Format-List
 ```
 
 ## Sign a release with a real certificate
 
 ```powershell
 # From an exported PFX/P12 file (e.g. a Certum IV cert):
-.\tools\sign.ps1 -PfxPath .\displaydial.pfx -PfxPassword '<password>' -Path .\publish
+.\tools\sign.ps1 -PfxPath .\nittray.pfx -PfxPassword '<password>' -Path .\publish
 
 # Or from a token/HSM cert already installed in the Windows store:
 .\tools\sign.ps1 -Thumbprint <THUMBPRINT> -Path .\publish
@@ -98,7 +98,7 @@ artifacts until you finish this one-time Azure setup and flip the flag:
    it the **Artifact Signing Certificate Profile Signer** role.
 3. Authenticate with **OIDC / federated credentials** (recommended — no stored
    secret): add a *Federated credential* on the app registration for this repo
-   (subject e.g. `repo:LinkaiQi/DisplayDial:ref:refs/tags/v*` and/or your
+   (subject e.g. `repo:LinkaiQi/NitTray:ref:refs/tags/v*` and/or your
    environment), then add these GitHub repo **secrets**: `AZURE_CLIENT_ID`,
    `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
 4. Add these GitHub repo **variables**:
@@ -112,7 +112,7 @@ artifacts until you finish this one-time Azure setup and flip the flag:
    `http://timestamp.acs.microsoft.com`.
 
 > Note: the release workflow currently builds and signs the **app**. The native
-> helper (`DisplayDial.DriverSetup.exe`) and the installer are added to the same
+> helper (`NitTray.DriverSetup.exe`) and the installer are added to the same
 > job during the packaging phase; the same signing step then covers them too.
 
 ## Verifying signatures

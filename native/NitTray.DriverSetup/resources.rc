@@ -1,0 +1,7 @@
+#include <windows.h>
+
+/*
+ * Embed the requireAdministrator manifest so the helper always elevates,
+ * even if it is ever launched directly rather than via the tray app.
+ */
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "NitTray.DriverSetup.manifest"

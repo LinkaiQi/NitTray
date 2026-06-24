@@ -1,6 +1,6 @@
 name: Release
 
-# Builds DisplayDial and (once Azure Artifact Signing is configured) signs it.
+# Builds NitTray and (once Azure Artifact Signing is configured) signs it.
 # Triggered by pushing a version tag like v0.1.0, or run manually from the Actions
 # tab. Signing stays OFF until you set the repo variable ARTIFACT_SIGNING=true and
 # configure the Azure inputs below — until then the job still publishes UNSIGNED
@@ -29,7 +29,7 @@ jobs:
 
       - name: Publish (self-contained, win-x64)
         run: >
-          dotnet publish src/DisplayDial -c Release -r win-x64
+          dotnet publish src/NitTray -c Release -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
@@ -63,11 +63,11 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DisplayDial-win-x64
+          name: NitTray-win-x64
           path: publish/win-x64
 
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: publish/win-x64/DisplayDial.exe
+          files: publish/win-x64/NitTray.exe

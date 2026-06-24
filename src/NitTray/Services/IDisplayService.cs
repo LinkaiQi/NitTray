@@ -1,0 +1,12 @@
+using NitTray.Models;
+
+namespace NitTray.Services;
+
+public interface IDisplayService
+{
+    Task<DisplayEnumerationResult> EnumerateAsync(CancellationToken cancellationToken = default);
+
+    Task<int> ReadBrightnessPercentAsync(StudioDisplayInfo display, CancellationToken cancellationToken = default);
+
+    Task SetBrightnessPercentAsync(StudioDisplayInfo display, int percent, CancellationToken cancellationToken = default);
+}
