@@ -1,10 +1,18 @@
 # NitTray
 
-A Windows tray app for controlling **Apple display brightness** without needing
-a Mac. It talks to the display over the same USB HID feature report that macOS
-uses internally — no DDC/CI, no kernel driver, no admin rights for day-to-day
+**Adjust Apple display brightness from Windows — straight from the system tray.**
+
+NitTray is a lightweight Windows tray app for controlling the brightness of an
+**Apple Studio Display**, **Studio Display XDR**, or **Pro Display XDR** without a
+Mac. It talks to the display over the same USB HID feature report macOS uses
+internally — no DDC/CI, no kernel driver, and no admin rights for day-to-day
 brightness control. (The Pro Display XDR needs a one-time WinUSB driver install,
 which NitTray does for you with a single admin prompt.)
+
+![Platform: Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white)
+![Built with .NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
+![UI: WPF + Fluent 2](https://img.shields.io/badge/UI-WPF%20%2B%20Fluent%202-2563EB)
+![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)
 
 > **Supported:** Apple Studio Display (`0x1114`), Studio Display Gen 2 (`0x1118`),
 > Studio Display XDR (`0x1116`), **Apple Pro Display XDR (`0x9243`)**, plus any
@@ -269,3 +277,11 @@ NitTray bundles and (statically) links
 keep the combined work's licensing clean, the whole project is released under the
 GNU General Public License v3.0. You are free to use, study, modify, and
 redistribute it under those terms.
+
+## Trademarks
+
+Apple, Studio Display, Pro Display XDR, Mac, and macOS are trademarks of Apple
+Inc., registered in the U.S. and other countries. NitTray is an independent,
+unofficial project and is **not** affiliated with, endorsed by, or sponsored by
+Apple Inc. Product names are used only to describe the hardware NitTray is
+compatible with.
