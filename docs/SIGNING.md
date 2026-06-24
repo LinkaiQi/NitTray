@@ -25,13 +25,14 @@ A DisplayDial release contains four Authenticode targets:
 
 | Option | Cost | Identity | Hardware token / HSM | SmartScreen at launch | CI-friendly | Public trust |
 | ------ | ---- | -------- | -------------------- | --------------------- | ----------- | ------------ |
-| **Azure Trusted Signing** | ~$10/mo | Individual **or** org (identity validated) | No (Azure-managed) | Clears quickly | Yes (official Action) | Yes |
+| **Azure Artifact Signing** (formerly Trusted Signing) | ~$10/mo | Individual **or** org (identity validated) | No (Azure-managed) | Clears quickly | Yes (official Action) | Yes |
 | **EV certificate** | $300–700+/yr | Org (business entity) | Yes | **Instant** | Hard (token) / cloud-HSM only | Yes |
 | **OV / IV certificate** (e.g. Certum, Sectigo, SSL.com) | ~$70–400/yr | Org (OV) or individual (IV) | Yes (since 2023) | Builds over downloads | Cloud-HSM only | Yes |
 | **Self-signed** (`tools/sign.ps1 -SelfSigned`) | Free | n/a | No | n/a | n/a | **No — local only** |
 
 ### Recommendation
-- **Azure Trusted Signing** is the best modern value: ~$10/month, no hardware
+- **Azure Artifact Signing** (formerly Trusted Signing) is the best modern value:
+  ~$10/month, no hardware
   token, integrates cleanly with GitHub Actions, and individuals are eligible
   (verify current requirements for your country when you sign up). Trust clears
   faster than a plain OV cert because Microsoft validates your identity.
@@ -77,24 +78,38 @@ Get-AuthenticodeSignature .\src\DisplayDial\bin\Release\net10.0-windows\DisplayD
 Both paths timestamp via `http://timestamp.digicert.com` (override with
 `-TimestampUrl`).
 
-## Sign in CI with Azure Trusted Signing
+## Sign in CI with Azure Artifact Signing
 
-Once a Trusted Signing account exists, signing moves into the release workflow
-(`.github/workflows/`) and no secret cert file ever touches the repo:
+> Azure **Trusted Signing** is now called **Azure Artifact Signing**; the GitHub
+> Action is [`azure/artifact-signing-action@v2`](https://github.com/Azure/artifact-signing-action).
 
-1. In Azure, create a **Trusted Signing account**, complete **identity
-   validation**, and create a **certificate profile**.
-2. Create an **Entra app registration / service principal** and grant it the
-   **Trusted Signing Certificate Profile Signer** role on the account.
-3. Add these as GitHub repository **secrets**: `AZURE_TENANT_ID`,
-   `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (plus the account name / profile name
-   as workflow inputs or secrets).
-4. In the workflow, after building + packaging, call
-   [`azure/trusted-signing-action`](https://github.com/Azure/trusted-signing-action)
-   pointing at the publish folder so it signs `DisplayDial.exe`,
-   `DisplayDial.dll`, `DisplayDial.DriverSetup.exe`, and the installer.
+The release workflow (`.github/workflows/release.yml`) already calls the action.
+It is **gated behind the repo variable `ARTIFACT_SIGNING`**, so it builds unsigned
+artifacts until you finish this one-time Azure setup and flip the flag:
 
-We'll wire the exact workflow step once the certificate strategy is chosen.
+1. In the Azure portal, create an **Artifact Signing account**, complete
+   **identity validation** (an individual identity is fine), and create a
+   **certificate profile** (Public Trust).
+2. Create a **Microsoft Entra app registration**, and on the signing account grant
+   it the **Artifact Signing Certificate Profile Signer** role.
+3. Authenticate with **OIDC / federated credentials** (recommended — no stored
+   secret): add a *Federated credential* on the app registration for this repo
+   (subject e.g. `repo:LinkaiQi/DisplayDial:ref:refs/tags/v*` and/or your
+   environment), then add these GitHub repo **secrets**: `AZURE_CLIENT_ID`,
+   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
+4. Add these GitHub repo **variables**:
+   - `ARTIFACT_SIGNING` = `true`  (the on/off flag the workflow checks)
+   - `ARTIFACT_SIGNING_ENDPOINT` = your region endpoint, e.g.
+     `https://eus.codesigning.azure.net/`
+   - `ARTIFACT_SIGNING_ACCOUNT` = your signing account name
+   - `ARTIFACT_SIGNING_PROFILE` = your certificate profile name
+5. Push a tag (`git tag v0.1.0 && git push --tags`) or run the workflow manually.
+   The action signs the published `.exe`(s) and timestamps via
+   `http://timestamp.acs.microsoft.com`.
+
+> Note: the release workflow currently builds and signs the **app**. The native
+> helper (`DisplayDial.DriverSetup.exe`) and the installer are added to the same
+> job during the packaging phase; the same signing step then covers them too.
 
 ## Verifying signatures
 
