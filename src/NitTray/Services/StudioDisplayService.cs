@@ -47,10 +47,10 @@ public sealed class StudioDisplayService : IDisplayService
     // back to "any Apple HID interface that exposes Monitor/Brightness usage".
     private static readonly (ushort Pid, string Name)[] KnownDisplays =
     {
-        (0x1114, "Apple Studio Display"),
-        (0x1116, "Apple Studio Display XDR"),
-        (0x1118, "Apple Studio Display"),
-        (ProDisplayXdrPid, "Apple Pro Display XDR"),
+        (0x1114, "Studio Display"),
+        (0x1116, "Studio Display XDR"),
+        (0x1118, "Studio Display (2nd Generation)"),
+        (ProDisplayXdrPid, "Pro Display XDR"),
     };
 
     public Task<DisplayEnumerationResult> EnumerateAsync(CancellationToken cancellationToken = default)
@@ -586,7 +586,7 @@ public sealed class StudioDisplayService : IDisplayService
                     pending.Add(new PendingDriverSetup(
                         VendorId: AppleVendorId,
                         ProductId: ProDisplayXdrPid,
-                        ProductName: "Apple Pro Display XDR",
+                        ProductName: "Pro Display XDR",
                         SerialNumber: TryParseSerialFromPath(path),
                         DevicePath: path));
                 }
@@ -666,7 +666,7 @@ public sealed class StudioDisplayService : IDisplayService
                 return new PendingDriverSetup(
                     VendorId: AppleVendorId,
                     ProductId: ProDisplayXdrPid,
-                    ProductName: "Apple Pro Display XDR",
+                    ProductName: "Pro Display XDR",
                     SerialNumber: instanceId is null ? null : TryParseSerialFromInstanceId(instanceId),
                     DevicePath: instanceId ?? string.Empty);
             }
@@ -861,7 +861,7 @@ public sealed class StudioDisplayService : IDisplayService
 
                 return (new StudioDisplayInfo(
                     DevicePath: path,
-                    ProductName: "Apple Pro Display XDR",
+                    ProductName: "Pro Display XDR",
                     SerialNumber: TryParseSerialFromPath(path),
                     ProductId: ProDisplayXdrPid,
                     FeatureReportByteLength: ProXdrFeatureReportByteLength,
@@ -1228,7 +1228,7 @@ public sealed class StudioDisplayService : IDisplayService
             // Prefer our curated marketing name for recognised Apple PIDs. The
             // per-interface HID product string is unreliable as a display name —
             // e.g. the Studio Display's brightness interface (MI_07) reports the
-            // generic internal label "HID Relay" rather than "Apple Studio Display".
+            // generic internal label "HID Relay" rather than "Studio Display (2nd Generation)".
             // Only fall back to the HID string for unknown displays, and never
             // surface that internal label.
             var hidProductName = ReadHidString(handle, HidNative.HidD_GetProductString);
