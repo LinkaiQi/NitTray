@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using NitTray.Models;
+using NitTray.Models.Displays;
 using NitTray.Services;
 
 namespace NitTray.ViewModels;
@@ -268,7 +269,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         try
         {
             result = await _driverInstaller.UninstallAsync(
-                AppleDisplays.VendorId,
+                DisplayCatalog.AppleVendorId,
                 display.ProductId).ConfigureAwait(true);
         }
         catch (Exception ex)

@@ -9,7 +9,7 @@ namespace NitTray.ViewModels;
 
 public sealed class DisplayViewModel : INotifyPropertyChanged
 {
-    private readonly StudioDisplayInfo _info;
+    private readonly ConnectedDisplay _info;
     private readonly IDisplayService _service;
     private readonly Action<DisplayViewModel>? _onUninstallRequested;
 
@@ -22,7 +22,7 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
     private Task _writeLoop = Task.CompletedTask;
 
     public DisplayViewModel(
-        StudioDisplayInfo info,
+        ConnectedDisplay info,
         int initialPercent,
         IDisplayService service,
         Action<DisplayViewModel>? onUninstallRequested = null)

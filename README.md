@@ -3,7 +3,7 @@
 **Adjust Apple display brightness from Windows — straight from the system tray.**
 
 NitTray is a lightweight Windows tray app for controlling the brightness of an
-**Apple Studio Display**, **Studio Display XDR**, or **Pro Display XDR** without a
+**Studio Display**, **Studio Display XDR**, or **Pro Display XDR** without a
 Mac. It talks to the display over the same USB HID feature report macOS uses
 internally — no DDC/CI, no kernel driver, and no admin rights for day-to-day
 brightness control. (The Pro Display XDR needs a one-time WinUSB driver install,
@@ -14,9 +14,9 @@ which NitTray does for you with a single admin prompt.)
 ![UI: WPF + Fluent 2](https://img.shields.io/badge/UI-WPF%20%2B%20Fluent%202-2563EB)
 ![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)
 
-> **Supported:** Apple Studio Display (`0x1114`), Studio Display Gen 2 (`0x1118`),
-> Studio Display XDR (`0x1116`), **Apple Pro Display XDR (`0x9243`)**, plus any
-> other Apple HID display that advertises the standard Monitor/Brightness usage.
+> **Supported:** Studio Display (`0x1114`), Studio Display (2nd Generation)
+> (`0x1118`), Studio Display XDR (`0x1116`), **Pro Display XDR (`0x9243`)**, plus
+> any other Apple HID display that advertises the standard Monitor/Brightness usage.
 
 ## Features
 
@@ -48,12 +48,12 @@ that carries video. NitTray sends and reads the same report macOS does.
 
 ### USB identification
 
-| Display                | VID    | PID     | Brightness range (raw) | Interface             |
-|------------------------|--------|---------|------------------------|------------------------|
-| Apple Studio Display   | 0x05AC | 0x1114  | 400 – 60000            | `MI_07`               |
-| Studio Display Gen 2   | 0x05AC | 0x1118  | 400 – 60000            | `MI_07`               |
-| Studio Display XDR     | 0x05AC | 0x1116  | 400 – 60000            | `MI_07&col01`         |
-| **Apple Pro Display XDR** | 0x05AC | **0x9243** | **400 – 50000**     | one of 4 HID interfaces |
+| Display                          | VID    | PID        | Brightness range (raw) | Interface               |
+|----------------------------------|--------|------------|------------------------|-------------------------|
+| Studio Display                   | 0x05AC | 0x1114     | 400 – 60000            | `MI_07`                 |
+| Studio Display (2nd Generation)  | 0x05AC | 0x1118     | 400 – 60000            | `MI_07`                 |
+| Studio Display XDR               | 0x05AC | 0x1116     | 400 – 60000            | `MI_07&col01`           |
+| **Pro Display XDR**              | 0x05AC | **0x9243** | **400 – 50000**        | one of 4 HID interfaces |
 
 ### HID feature report (Report ID `0x01`)
 
@@ -75,17 +75,19 @@ the HID parser to ask each Apple HID interface what it exposes:
 2. Open it (`CreateFile` with read/write + shared access — no admin needed).
 3. `HidD_GetPreparsedData` → `HidP_GetCaps` → `HidP_GetValueCaps`.
 4. Pick the feature value cap that matches one of:
-   - **UsagePage `0x0082` (Monitor) + Usage `0x0010` (Brightness)** — Studio Display family
-   - **UsagePage `0x8005` + Usage `0x1009`** — Apple vendor page used by the **Pro Display XDR**
+   - **UsagePage `0x0082` (Monitor) + Usage `0x0010` (Brightness)** — the Studio Display family *and* the Pro Display XDR brightness interface
+   - **UsagePage `0x8005` + Usage `0x1009`** — an Apple vendor page accepted only as a fallback for a future display
    - Fallback: any 32-bit single-value feature cap with `LogicalMax >= 400`
 5. The chosen cap supplies the report ID, raw min/max, and the descriptor
    supplies the feature report length.
 6. Read/write that interface's feature report.
 
-That's why the Pro Display XDR works even though its USB layout (4 HID
-interfaces, Apple-vendor usage `0x8005/0x1009`, max brightness `0xC350` =
-50 000) is different from the Studio Display family — the descriptor tells us
-everything we need.
+The Pro Display XDR is reached differently: Windows' in-box HID driver rejects
+its brightness interface (Code 10), so NitTray drives it over **WinUSB** and
+finds the brightness interface by the same Monitor/Brightness usage
+(`0x0082`/`0x0010`) in its raw HID report descriptor. Its layout differs (several
+HID interfaces, max brightness `0xC350` = 50 000), but the descriptor still tells
+us everything we need.
 
 ### Diagnostics
 
@@ -170,7 +172,7 @@ src/NitTray/
     RelayCommand.cs               - minimal ICommand
   Services/
     IDisplayService.cs            - abstraction
-    StudioDisplayService.cs       - HID + WinUSB enumeration and read/write
+    AppleDisplayService.cs        - HID + WinUSB enumeration and read/write
     IDriverInstallService.cs      - abstraction for the WinUSB installer
     WinUsbDriverInstallService.cs - launches the elevated helper (UAC)
     DriverInstallResult.cs        - install status + message
@@ -183,9 +185,18 @@ src/NitTray/
       Kernel32Native.cs           - kernel32.dll CreateFile / CloseHandle
       HidDeviceSafeHandle.cs      - SafeHandle wrapper
   Models/
-    StudioDisplayInfo.cs          - immutable device descriptor + HID caps
+    ConnectedDisplay.cs           - immutable device descriptor + HID caps
+    DisplayTransport.cs           - HID vs WinUSB transport enum
     DisplayEnumerationResult.cs   - displays + pending driver setups
     PendingDriverSetup.cs         - a display present but not WinUSB-bound yet
+    Displays/                     - per-model catalog (add a file to support a display)
+      DisplayCatalog.cs           - registry + Apple vendor id + lookups
+      DisplayModel.cs             - a known model's identity + protocol
+      BrightnessProtocol.cs       - WinUSB feature-report layout
+      StudioDisplay.cs            - 0x1114
+      StudioDisplayXdr.cs         - 0x1116
+      StudioDisplay2ndGen.cs      - 0x1118
+      ProDisplayXdr.cs            - 0x9243 (WinUSB)
 
 native/NitTray.DriverSetup/   - elevated WinUSB installer (C + libwdi),
                                     built separately on Windows (see its README)
@@ -235,7 +246,7 @@ native/NitTray.DriverSetup/   - elevated WinUSB installer (C + libwdi),
 
 ## Pro Display XDR setup (Windows)
 
-The Apple Pro Display XDR ships an HID descriptor that Windows' built-in HID
+The Pro Display XDR ships an HID descriptor that Windows' built-in HID
 driver (`hidclass.sys`) cannot parse — when you connect the display directly,
 Device Manager shows its **USB Input Device** (`VID_05AC` `PID_9243`) with a
 yellow warning and **Code 10 ("This device cannot start")**. Until the driver
@@ -259,7 +270,7 @@ generate and install a self-signed WinUSB driver package. You only need to do
 this once per machine. If the install fails, NitTray shows the error and
 writes details to `%LOCALAPPDATA%\NitTray\driver-setup.log`.
 
-The Apple Studio Display family does **not** need this step — its HID descriptor
+The Studio Display family does **not** need this step — its HID descriptor
 is well-formed and Windows binds it correctly out of the box.
 
 > **Note:** the helper is a native (C + libwdi) component compiled separately on

@@ -3,72 +3,40 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
 using NitTray.Models;
+using NitTray.Models.Displays;
 using NitTray.Services.Native;
 
 namespace NitTray.Services;
 
-public sealed class StudioDisplayService : IDisplayService
+public sealed class AppleDisplayService : IDisplayService
 {
-    private const ushort AppleVendorId = Models.AppleDisplays.VendorId;
-    private const ushort ProDisplayXdrPid = Models.AppleDisplays.ProDisplayXdrProductId;
+    private const ushort AppleVendorId = DisplayCatalog.AppleVendorId;
     private const int ErrorNoMoreItems = 259;
 
-    // Pro Display XDR brightness HID protocol.
-    //
-    // Pro Display XDR exposes 5 HID interfaces. We identify the brightness
-    // one by walking each interface's HID report descriptor — the brightness
-    // interface (typically interface 2) carries the canonical VESA Monitor
-    // Brightness item, identified by the well-known pair:
-    //
-    //   Usage Page  = 0x0082   (VESA Virtual Controls; HID Usage Tables § 11)
-    //   Usage       = 0x0010   (Brightness)
-    //
-    // That interface's Feature Report 0x01 layout is exactly 7 bytes:
-    //
-    //   byte 0     : Report ID (0x01)
-    //   bytes 1..4 : BRIGHTNESS, uint32 little-endian, range 400..50000
-    //   bytes 5..6 : a second volatile uint16 (Page 0x0F / Usage 0x50,
-    //                range 0..20000) — preserved verbatim via read-modify-write
-    //
-    // Previously this code talked to whichever interface WinUSB returned
-    // first — typically interface 0, which on Pro XDR is a *sensor* interface
-    // (Usage Page 0x0020). Writes there were silently accepted but never
-    // affected the panel.
-    private const int ProXdrFeatureReportByteLength = 7;
-    private const byte ProXdrBrightnessReportId = 0x01;
-    private const int ProXdrBrightnessByteOffset = 1;
-    private const uint ProXdrMinBrightness = 400;
-    private const uint ProXdrMaxBrightness = 50000;
-    private const ushort ProXdrBrightnessUsagePage = 0x0082;
-    private const ushort ProXdrBrightnessUsage = 0x0010;
-
-    // Models we recognise. Used for friendly product names and as a fast-path filter
-    // when matching device paths. Devices not in this list can still work — we fall
-    // back to "any Apple HID interface that exposes Monitor/Brightness usage".
-    private static readonly (ushort Pid, string Name)[] KnownDisplays =
-    {
-        (0x1114, "Studio Display"),
-        (0x1116, "Studio Display XDR"),
-        (0x1118, "Studio Display (2nd Generation)"),
-        (ProDisplayXdrPid, "Pro Display XDR"),
-    };
+    // The Pro Display XDR is the one model whose brightness travels over WinUSB.
+    // Its identity and feature-report layout live in the catalog
+    // (Models/Displays/ProDisplayXdr.cs); we pull them out once here so the WinUSB
+    // read/write/probe paths can reference them by their protocol field names.
+    private static readonly DisplayModel ProXdrModel = ProDisplayXdr.Model;
+    private static readonly ushort ProDisplayXdrPid = ProXdrModel.ProductId;
+    private static readonly BrightnessProtocol ProXdr = ProXdrModel.Brightness!;
 
     public Task<DisplayEnumerationResult> EnumerateAsync(CancellationToken cancellationToken = default)
         => Task.Run(Enumerate, cancellationToken);
 
-    public Task<int> ReadBrightnessPercentAsync(StudioDisplayInfo display, CancellationToken cancellationToken = default)
+    public Task<int> ReadBrightnessPercentAsync(ConnectedDisplay display, CancellationToken cancellationToken = default)
         => Task.Run(() =>
         {
             return RawToPercent(display, ReadRawBrightness(display));
         }, cancellationToken);
 
-    public Task SetBrightnessPercentAsync(StudioDisplayInfo display, int percent, CancellationToken cancellationToken = default)
+    public Task SetBrightnessPercentAsync(ConnectedDisplay display, int percent, CancellationToken cancellationToken = default)
         => Task.Run(() =>
         {
             WriteRawBrightness(display, PercentToRaw(display, percent));
         }, cancellationToken);
 
-    private static uint ReadRawBrightness(StudioDisplayInfo display)
+    private static uint ReadRawBrightness(ConnectedDisplay display)
     {
         return display.Transport switch
         {
@@ -77,7 +45,7 @@ public sealed class StudioDisplayService : IDisplayService
         };
     }
 
-    private static void WriteRawBrightness(StudioDisplayInfo display, uint raw)
+    private static void WriteRawBrightness(ConnectedDisplay display, uint raw)
     {
         switch (display.Transport)
         {
@@ -90,7 +58,7 @@ public sealed class StudioDisplayService : IDisplayService
         }
     }
 
-    private static uint ReadRawBrightnessViaHid(StudioDisplayInfo display)
+    private static uint ReadRawBrightnessViaHid(ConnectedDisplay display)
     {
         using var handle = OpenDevice(display.DevicePath);
         var buffer = CreateFeatureBuffer(display, 0);
@@ -103,7 +71,7 @@ public sealed class StudioDisplayService : IDisplayService
         return BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(1, 4));
     }
 
-    private static void WriteRawBrightnessViaHid(StudioDisplayInfo display, uint raw)
+    private static void WriteRawBrightnessViaHid(ConnectedDisplay display, uint raw)
     {
         using var handle = OpenDevice(display.DevicePath);
         var buffer = CreateFeatureBuffer(display, raw);
@@ -115,7 +83,7 @@ public sealed class StudioDisplayService : IDisplayService
         }
     }
 
-    private static uint ReadRawBrightnessViaWinUsb(StudioDisplayInfo display)
+    private static uint ReadRawBrightnessViaWinUsb(ConnectedDisplay display)
     {
         using var ctx = OpenWinUsbBrightnessInterface(display);
         var buffer = GetFeatureReport(ctx.BrightnessHandle, display);
@@ -129,7 +97,7 @@ public sealed class StudioDisplayService : IDisplayService
             buffer.AsSpan(display.BrightnessByteOffset, 4));
     }
 
-    private static void WriteRawBrightnessViaWinUsb(StudioDisplayInfo display, uint raw)
+    private static void WriteRawBrightnessViaWinUsb(ConnectedDisplay display, uint raw)
     {
         using var ctx = OpenWinUsbBrightnessInterface(display);
 
@@ -222,7 +190,7 @@ public sealed class StudioDisplayService : IDisplayService
         }
     }
 
-    private static WinUsbContext OpenWinUsbBrightnessInterface(StudioDisplayInfo display)
+    private static WinUsbContext OpenWinUsbBrightnessInterface(ConnectedDisplay display)
     {
         var ctx = new WinUsbContext();
         try
@@ -264,7 +232,7 @@ public sealed class StudioDisplayService : IDisplayService
         }
     }
 
-    private static byte[] GetFeatureReport(IntPtr winUsb, StudioDisplayInfo display)
+    private static byte[] GetFeatureReport(IntPtr winUsb, ConnectedDisplay display)
     {
         var buffer = new byte[display.FeatureReportByteLength];
         buffer[0] = display.BrightnessReportId;
@@ -286,7 +254,7 @@ public sealed class StudioDisplayService : IDisplayService
         return buffer;
     }
 
-    private static int TrySetReport(IntPtr winUsb, StudioDisplayInfo display, byte reportType, byte[] data)
+    private static int TrySetReport(IntPtr winUsb, ConnectedDisplay display, byte reportType, byte[] data)
     {
         var setup = new WinUsbNative.WINUSB_SETUP_PACKET
         {
@@ -318,7 +286,7 @@ public sealed class StudioDisplayService : IDisplayService
     private static DisplayEnumerationResult Enumerate()
     {
         DiagnosticLog.Reset("Enumerate()");
-        var found = new List<StudioDisplayInfo>();
+        var found = new List<ConnectedDisplay>();
         var pendingSetups = new List<PendingDriverSetup>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int totalSeen = 0;
@@ -479,7 +447,7 @@ public sealed class StudioDisplayService : IDisplayService
             DiagnosticLog.Write("directly into the PC (not through a hub), and confirm the cable is");
             DiagnosticLog.Write("USB-C / Thunderbolt (not DisplayPort-only).");
             DiagnosticLog.Write("");
-            DiagnosticLog.Write("If your Apple Pro Display XDR appears in Device Manager with a yellow");
+            DiagnosticLog.Write("If your Pro Display XDR appears in Device Manager with a yellow");
             DiagnosticLog.Write("warning (Code 10), Windows' built-in HID driver doesn't understand");
             DiagnosticLog.Write("its descriptor and WinUSB is not bound yet. NitTray can install");
             DiagnosticLog.Write("the WinUSB driver for you — when the display is detected it shows a");
@@ -489,13 +457,13 @@ public sealed class StudioDisplayService : IDisplayService
     }
 
     private readonly record struct UsbProbeResult(
-        List<StudioDisplayInfo> Displays,
+        List<ConnectedDisplay> Displays,
         List<PendingDriverSetup> PendingSetups,
         bool SawProXdr);
 
     private static UsbProbeResult EnumerateUsbAndProbeWinUsb()
     {
-        var results = new List<StudioDisplayInfo>();
+        var results = new List<ConnectedDisplay>();
         var pending = new List<PendingDriverSetup>();
         bool sawProXdr = false;
         DiagnosticLog.Write("--- USB devices (GUID_DEVINTERFACE_USB_DEVICE) ---");
@@ -720,7 +688,7 @@ public sealed class StudioDisplayService : IDisplayService
         return string.IsNullOrWhiteSpace(candidate) ? null : candidate;
     }
 
-    private static (StudioDisplayInfo? Info, bool DriverNotBound) TryProbeProXdrViaWinUsb(string path)
+    private static (ConnectedDisplay? Info, bool DriverNotBound) TryProbeProXdrViaWinUsb(string path)
     {
         HidDeviceSafeHandle? handle = null;
         IntPtr primaryWinUsb = IntPtr.Zero;
@@ -797,10 +765,9 @@ public sealed class StudioDisplayService : IDisplayService
             }
 
             // For each interface, fetch and dump its HID report descriptor.
-            // Identify the brightness one by looking for the canonical pair
-            // Usage Page 0x8005 + Usage 0x1009 (Apple vendor brightness on
-            // Pro Display XDR — verified against the Linux apple_bl_usb
-            // driver and the macOS apdbctl CLI).
+            // Identify the brightness one by the canonical VESA Monitor
+            // Brightness pair (Usage Page 0x0082, Usage 0x0010) that the Pro
+            // Display XDR advertises — see ProDisplayXdr.Model.Brightness.
             foreach (var (ifaceNum, ifaceHandle, assocIdx) in interfaces)
             {
                 DiagnosticLog.Write(
@@ -815,11 +782,11 @@ public sealed class StudioDisplayService : IDisplayService
                 }
 
                 bool matches = DescriptorContainsUsage(
-                    reportDesc, ProXdrBrightnessUsagePage, ProXdrBrightnessUsage);
+                    reportDesc, ProXdr.UsagePage, ProXdr.Usage);
                 DiagnosticLog.Write(
                     $"  iface {ifaceNum}: HID report descriptor = {reportDesc.Length} bytes; " +
-                    $"contains Usage Page 0x{ProXdrBrightnessUsagePage:X4} / " +
-                    $"Usage 0x{ProXdrBrightnessUsage:X4} = {matches}.");
+                    $"contains Usage Page 0x{ProXdr.UsagePage:X4} / " +
+                    $"Usage 0x{ProXdr.Usage:X4} = {matches}.");
                 if (!matches)
                 {
                     continue;
@@ -827,13 +794,13 @@ public sealed class StudioDisplayService : IDisplayService
 
                 // Found the brightness interface. Read the current brightness
                 // value to confirm and surface it in the log.
-                var probe = new byte[ProXdrFeatureReportByteLength];
-                probe[0] = ProXdrBrightnessReportId;
+                var probe = new byte[ProXdr.FeatureReportByteLength];
+                probe[0] = ProXdr.ReportId;
                 var setup = new WinUsbNative.WINUSB_SETUP_PACKET
                 {
                     RequestType = WinUsbNative.RequestTypeClassInterfaceIn,
                     Request = WinUsbNative.HidRequestGetReport,
-                    Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | ProXdrBrightnessReportId),
+                    Value = (ushort)((WinUsbNative.HidReportTypeFeature << 8) | ProXdr.ReportId),
                     Index = ifaceNum,
                     Length = (ushort)probe.Length,
                 };
@@ -849,28 +816,28 @@ public sealed class StudioDisplayService : IDisplayService
                 DiagnosticLog.Write(
                     $"  iface {ifaceNum}: GET_REPORT ok, transferred {xfer} bytes. " +
                     $"Raw report = [{ToHex(probe.AsSpan(0, (int)xfer).ToArray())}]");
-                if ((int)xfer >= ProXdrBrightnessByteOffset + 4)
+                if ((int)xfer >= ProXdr.ByteOffset + 4)
                 {
                     var brightness = BinaryPrimitives.ReadUInt32LittleEndian(
-                        probe.AsSpan(ProXdrBrightnessByteOffset, 4));
+                        probe.AsSpan(ProXdr.ByteOffset, 4));
                     DiagnosticLog.Write(
                         $"  iface {ifaceNum}: decoded brightness (uint32-LE @offset " +
-                        $"{ProXdrBrightnessByteOffset}) = {brightness} " +
-                        $"(range {ProXdrMinBrightness}..{ProXdrMaxBrightness}).");
+                        $"{ProXdr.ByteOffset}) = {brightness} " +
+                        $"(range {ProXdr.MinRaw}..{ProXdr.MaxRaw}).");
                 }
 
-                return (new StudioDisplayInfo(
+                return (new ConnectedDisplay(
                     DevicePath: path,
                     ProductName: "Pro Display XDR",
                     SerialNumber: TryParseSerialFromPath(path),
                     ProductId: ProDisplayXdrPid,
-                    FeatureReportByteLength: ProXdrFeatureReportByteLength,
-                    BrightnessReportId: ProXdrBrightnessReportId,
-                    MinRawBrightness: ProXdrMinBrightness,
-                    MaxRawBrightness: ProXdrMaxBrightness,
+                    FeatureReportByteLength: ProXdr.FeatureReportByteLength,
+                    BrightnessReportId: ProXdr.ReportId,
+                    MinRawBrightness: ProXdr.MinRaw,
+                    MaxRawBrightness: ProXdr.MaxRaw,
                     Transport: DisplayTransport.WinUsb,
                     UsbInterfaceNumber: ifaceNum,
-                    BrightnessByteOffset: ProXdrBrightnessByteOffset,
+                    BrightnessByteOffset: ProXdr.ByteOffset,
                     WinUsbAssociatedInterfaceIndex: assocIdx), false);
             }
 
@@ -1125,7 +1092,7 @@ public sealed class StudioDisplayService : IDisplayService
         }
     }
 
-    private static StudioDisplayInfo? TryProbeDisplay(string path)
+    private static ConnectedDisplay? TryProbeDisplay(string path)
     {
         HidDeviceSafeHandle? handle = null;
         IntPtr preparsed = IntPtr.Zero;
@@ -1240,7 +1207,7 @@ public sealed class StudioDisplayService : IDisplayService
             var productName = productNameFromPid ?? hidProductName;
             var serial = ReadHidString(handle, HidNative.HidD_GetSerialNumberString);
 
-            return new StudioDisplayInfo(
+            return new ConnectedDisplay(
                 DevicePath: path,
                 ProductName: string.IsNullOrWhiteSpace(productName) ? "Apple Display" : productName!,
                 SerialNumber: string.IsNullOrWhiteSpace(serial) ? null : serial,
@@ -1265,11 +1232,11 @@ public sealed class StudioDisplayService : IDisplayService
         }
     }
 
-    private static IReadOnlyList<StudioDisplayInfo> DeduplicateBySerial(List<StudioDisplayInfo> all)
+    private static IReadOnlyList<ConnectedDisplay> DeduplicateBySerial(List<ConnectedDisplay> all)
     {
-        var bySerial = new Dictionary<string, StudioDisplayInfo>(StringComparer.OrdinalIgnoreCase);
-        var pidOnly = new Dictionary<ushort, StudioDisplayInfo>();
-        var noSerialPaths = new List<StudioDisplayInfo>();
+        var bySerial = new Dictionary<string, ConnectedDisplay>(StringComparer.OrdinalIgnoreCase);
+        var pidOnly = new Dictionary<ushort, ConnectedDisplay>();
+        var noSerialPaths = new List<ConnectedDisplay>();
 
         foreach (var info in all)
         {
@@ -1293,7 +1260,7 @@ public sealed class StudioDisplayService : IDisplayService
             }
         }
 
-        var result = new List<StudioDisplayInfo>();
+        var result = new List<ConnectedDisplay>();
         result.AddRange(bySerial.Values);
         foreach (var kv in pidOnly)
         {
@@ -1311,11 +1278,11 @@ public sealed class StudioDisplayService : IDisplayService
     private static (ushort Pid, string? Name) ParseIdsFromPath(string path)
     {
         var lower = path.ToLowerInvariant();
-        foreach (var (pid, name) in KnownDisplays)
+        foreach (var model in DisplayCatalog.All)
         {
-            if (lower.Contains($"pid_{pid:x4}"))
+            if (lower.Contains($"pid_{model.ProductId:x4}"))
             {
-                return (pid, name);
+                return (model.ProductId, model.Name);
             }
         }
 
@@ -1459,7 +1426,7 @@ public sealed class StudioDisplayService : IDisplayService
         return handle;
     }
 
-    private static byte[] CreateFeatureBuffer(StudioDisplayInfo display, uint raw)
+    private static byte[] CreateFeatureBuffer(ConnectedDisplay display, uint raw)
     {
         // Feature report layout: [ReportId][uint32 LE brightness][zero padding to FeatureReportByteLength].
         var len = Math.Max(display.FeatureReportByteLength, 5);
@@ -1469,7 +1436,7 @@ public sealed class StudioDisplayService : IDisplayService
         return buffer;
     }
 
-    private static uint PercentToRaw(StudioDisplayInfo display, int percent)
+    private static uint PercentToRaw(ConnectedDisplay display, int percent)
     {
         percent = Math.Clamp(percent, 0, 100);
         var span = (double)(display.MaxRawBrightness - display.MinRawBrightness);
@@ -1477,7 +1444,7 @@ public sealed class StudioDisplayService : IDisplayService
         return Math.Clamp(raw, display.MinRawBrightness, display.MaxRawBrightness);
     }
 
-    private static int RawToPercent(StudioDisplayInfo display, uint raw)
+    private static int RawToPercent(ConnectedDisplay display, uint raw)
     {
         var clamped = Math.Clamp(raw, display.MinRawBrightness, display.MaxRawBrightness);
         var span = (double)(display.MaxRawBrightness - display.MinRawBrightness);

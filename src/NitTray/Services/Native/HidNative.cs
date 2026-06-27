@@ -4,21 +4,17 @@ namespace NitTray.Services.Native;
 
 internal static class HidNative
 {
-    // HID Usage Page / Usage for the brightness control on Apple displays.
+    // HID Usage Page / Usage pairs that mark a brightness-control feature value
+    // when TryProbeDisplay walks an Apple HID interface. We accept either pair.
     //
-    // Apple uses two different usage page / usage tuples for brightness depending
-    // on the model:
+    //   - Monitor / Brightness (Usage Page 0x0082, Usage 0x0010): the standardized
+    //     VESA control from the HID Usage Tables. Every Apple display NitTray
+    //     supports advertises brightness here — including the Pro Display XDR's
+    //     brightness interface, which is matched on this pair over WinUSB.
     //
-    //   - Studio Display family (PID 0x1114, 0x1116, 0x1118): the standardized
-    //     Monitor / Brightness usage from HID Usage Tables 1.5
-    //     ("Monitor Page" 0x82, Usage 0x10).
-    //
-    //   - Pro Display XDR (PID 0x9243): an Apple vendor-defined usage page
-    //     (0x8005, Usage 0x1009) instead of the standardized one. Confirmed by
-    //     0xcharly/apdbctl, which inspects the raw HID report descriptor and
-    //     keys off these exact magic numbers.
-    //
-    // We accept either tuple as "this is a brightness value cap".
+    //   - Apple vendor page (Usage Page 0x8005, Usage 0x1009): accepted only as a
+    //     fallback in case a future Apple display exposes brightness under a
+    //     vendor-defined usage. No currently supported model is driven via this pair.
     public const ushort MonitorBrightnessUsagePage = 0x0082;
     public const ushort MonitorBrightnessUsage = 0x0010;
     public const ushort AppleVendorBrightnessUsagePage = 0x8005;

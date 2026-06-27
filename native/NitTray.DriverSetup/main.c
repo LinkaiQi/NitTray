@@ -4,7 +4,7 @@
  * This tiny console helper is launched by the NitTray tray app (elevated,
  * via the "runas" shell verb) to bind Microsoft's in-box WinUSB driver to an
  * Apple display whose brightness HID interface Windows' generic hidclass.sys
- * refuses (the Apple Pro Display XDR, VID_05AC / PID_9243).
+ * refuses (the Pro Display XDR, VID_05AC / PID_9243).
  *
  * It uses libwdi (the engine behind Zadig) to generate a WinUSB INF, self-sign
  * a catalog, install the certificate into the Trusted Publisher store, and bind

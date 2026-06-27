@@ -2,7 +2,7 @@
 
 A tiny **elevated** console helper that installs Microsoft's in-box **WinUSB**
 driver onto an Apple display that Windows' generic HID driver refuses — namely
-the **Apple Pro Display XDR** (`VID_05AC` / `PID_9243`).
+the **Pro Display XDR** (`VID_05AC` / `PID_9243`).
 
 The NitTray tray app launches this helper (raising a single UAC prompt) when
 it detects a Pro Display XDR on the USB bus that isn't WinUSB-bound yet. It is

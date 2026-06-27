@@ -21,7 +21,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var service = new StudioDisplayService();
+        var service = new AppleDisplayService();
         var driverInstaller = new WinUsbDriverInstallService();
         _viewModel = new MainViewModel(service, driverInstaller);
         _viewModel.DriverSetupFailed += OnDriverSetupFailed;
