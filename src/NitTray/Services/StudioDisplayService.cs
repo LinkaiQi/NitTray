@@ -1224,8 +1224,20 @@ public sealed class StudioDisplayService : IDisplayService
             var brightness = valueCaps[chosen];
 
             var (productId, productNameFromPid) = ParseIdsFromPath(path);
-            var productName = ReadHidString(handle, HidNative.HidD_GetProductString)
-                              ?? productNameFromPid;
+
+            // Prefer our curated marketing name for recognised Apple PIDs. The
+            // per-interface HID product string is unreliable as a display name —
+            // e.g. the Studio Display's brightness interface (MI_07) reports the
+            // generic internal label "HID Relay" rather than "Apple Studio Display".
+            // Only fall back to the HID string for unknown displays, and never
+            // surface that internal label.
+            var hidProductName = ReadHidString(handle, HidNative.HidD_GetProductString);
+            if (!string.IsNullOrWhiteSpace(hidProductName)
+                && hidProductName!.Trim().Equals("HID Relay", StringComparison.OrdinalIgnoreCase))
+            {
+                hidProductName = null;
+            }
+            var productName = productNameFromPid ?? hidProductName;
             var serial = ReadHidString(handle, HidNative.HidD_GetSerialNumberString);
 
             return new StudioDisplayInfo(
