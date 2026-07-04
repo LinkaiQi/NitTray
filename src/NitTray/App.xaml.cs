@@ -28,9 +28,6 @@ public partial class App : Application
         _singleInstance = new SingleInstance();
         if (!_singleInstance.IsFirstInstance)
         {
-            DiagnosticLog.Write(
-                "Startup: another NitTray instance already owns this session; " +
-                "requested it to focus and exiting this launch.");
             _singleInstance.SignalExistingInstance();
             _singleInstance.Dispose();
             _singleInstance = null;
@@ -73,22 +70,11 @@ public partial class App : Application
 
         // Now that the window exists, listen for later launches and surface the
         // window when one asks us to (its callback runs off the UI thread).
-        _singleInstance.ListenForActivation(OnSecondInstanceActivation);
+        _singleInstance.ListenForActivation(
+            () => Dispatcher.InvokeAsync(ShowMainWindow));
 
         ShowMainWindow();
         _ = _viewModel.RefreshAsync();
-    }
-
-    private void OnSecondInstanceActivation()
-    {
-        // Runs on a thread-pool thread (fired by the named event); marshal to the UI
-        // thread before touching the window.
-        Dispatcher.InvokeAsync(() =>
-        {
-            DiagnosticLog.Write(
-                "Received a focus request from a second launch; surfacing the window.");
-            ShowMainWindow();
-        });
     }
 
     private void OnAutoRefreshRequested(object? sender, string reason)
