@@ -16,6 +16,7 @@ public partial class App : Application
     private TrayIconHost? _tray;
     private MainWindow? _mainWindow;
     private MainViewModel? _viewModel;
+    private SystemRefreshTrigger? _refreshTrigger;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -48,7 +49,24 @@ public partial class App : Application
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
         _tray.QuitRequested += (_, _) => RequestShutdown();
 
+        // Auto-refresh the display list when Windows signals a moment where the set
+        // of connected displays may have changed (unlock, resume from sleep, monitor
+        // arrangement change, etc.) so the user doesn't have to refresh manually.
+        _refreshTrigger = new SystemRefreshTrigger();
+        _refreshTrigger.RefreshRequested += OnAutoRefreshRequested;
+
         ShowMainWindow();
+        _ = _viewModel.RefreshAsync();
+    }
+
+    private void OnAutoRefreshRequested(object? sender, string reason)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        DiagnosticLog.Write($"Auto-refresh triggered: {reason}.");
         _ = _viewModel.RefreshAsync();
     }
 
@@ -170,6 +188,12 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_refreshTrigger is not null)
+        {
+            _refreshTrigger.RefreshRequested -= OnAutoRefreshRequested;
+            _refreshTrigger.Dispose();
+        }
+
         _tray?.Dispose();
         base.OnExit(e);
     }
