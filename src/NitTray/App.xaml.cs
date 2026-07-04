@@ -17,10 +17,23 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private MainViewModel? _viewModel;
     private SystemRefreshTrigger? _refreshTrigger;
+    private SingleInstance? _singleInstance;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Enforce one instance per session. If a copy is already running, ask it to
+        // surface its window and exit before creating any windows or a tray icon.
+        _singleInstance = new SingleInstance();
+        if (!_singleInstance.IsFirstInstance)
+        {
+            _singleInstance.SignalExistingInstance();
+            _singleInstance.Dispose();
+            _singleInstance = null;
+            Shutdown();
+            return;
+        }
 
         var service = new AppleDisplayService();
         var driverInstaller = new WinUsbDriverInstallService();
@@ -55,6 +68,11 @@ public partial class App : Application
         _refreshTrigger = new SystemRefreshTrigger();
         _refreshTrigger.RefreshRequested += OnAutoRefreshRequested;
 
+        // Now that the window exists, listen for later launches and surface the
+        // window when one asks us to (its callback runs off the UI thread).
+        _singleInstance.ListenForActivation(
+            () => Dispatcher.InvokeAsync(ShowMainWindow));
+
         ShowMainWindow();
         _ = _viewModel.RefreshAsync();
     }
@@ -82,7 +100,15 @@ public partial class App : Application
         {
             _mainWindow.WindowState = WindowState.Normal;
         }
+
+        // Force the window to the top of the z-order. A plain Activate() is often
+        // ignored by Windows' foreground-lock (it just flashes the taskbar) when the
+        // request comes from a tray click or a second instance that has already
+        // exited; toggling Topmost reliably raises it, then we drop Topmost again.
         _mainWindow.Activate();
+        _mainWindow.Topmost = true;
+        _mainWindow.Topmost = false;
+        _mainWindow.Focus();
     }
 
     private void OnDriverSetupFailed(object? sender, string message)
@@ -195,6 +221,7 @@ public partial class App : Application
         }
 
         _tray?.Dispose();
+        _singleInstance?.Dispose();
         base.OnExit(e);
     }
 }
