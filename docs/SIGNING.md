@@ -108,6 +108,13 @@ artifacts until you finish this one-time Azure setup and flip the flag:
    - Entity type: **Environment**, name: `release`
    - This produces subject `repo:LinkaiQi/NitTray:environment:release`.
 
+   Lock the environment down so only release tags can use it (*Settings →
+   Environments → release → Deployment branches and tags → Selected branches and
+   tags*): add a **tag** rule with pattern `v*`. Now a run can only reach the
+   signing credentials from a `v*` tag ref — a manual `workflow_dispatch` from a
+   branch like `main` is blocked at the environment gate (pick a `v*` tag in the
+   *Use workflow from* dropdown to dispatch manually).
+
    Then add these GitHub repo **secrets**: `AZURE_CLIENT_ID` (the app's client ID),
    `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
 4. Add these GitHub repo **variables**:
