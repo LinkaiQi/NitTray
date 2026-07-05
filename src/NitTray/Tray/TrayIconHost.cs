@@ -1,4 +1,5 @@
 using System.Drawing;
+using Microsoft.Win32;
 using NitTray.Services;
 using WinForms = System.Windows.Forms;
 
@@ -7,7 +8,7 @@ namespace NitTray.Tray;
 internal sealed class TrayIconHost : IDisposable
 {
     private readonly WinForms.NotifyIcon _notifyIcon;
-    private readonly Icon _icon;
+    private Icon _icon;
 
     public event EventHandler? ShowRequested;
     public event EventHandler? RefreshRequested;
@@ -44,10 +45,29 @@ internal sealed class TrayIconHost : IDisposable
         };
 
         _notifyIcon.DoubleClick += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
+
+        // Keep the tray glyph legible when the user switches between the light and
+        // dark taskbar themes while the app is running.
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+    }
+
+    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category != UserPreferenceCategory.General)
+        {
+            return;
+        }
+
+        var refreshed = IconFactory.CreateTrayIcon();
+        var previous = _icon;
+        _icon = refreshed;
+        _notifyIcon.Icon = refreshed;
+        previous.Dispose();
     }
 
     public void Dispose()
     {
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _icon.Dispose();
