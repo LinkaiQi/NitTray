@@ -47,6 +47,15 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 
+        // A little extra breathing room around each clickable option.
+        foreach (WinForms.ToolStripItem item in menu.Items)
+        {
+            if (item is WinForms.ToolStripMenuItem)
+            {
+                item.Padding = new WinForms.Padding(2);
+            }
+        }
+
         _notifyIcon = new WinForms.NotifyIcon
         {
             Icon = _icon,
