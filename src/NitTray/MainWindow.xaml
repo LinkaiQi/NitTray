@@ -133,16 +133,17 @@
                             Background="{DynamicResource DividerStrokeColorDefaultBrush}"/>
 
                     <!-- Status line -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="Warning24" FontSize="18" Margin="0,1,10,0"
-                                       VerticalAlignment="Top"
-                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
-                        <StackPanel>
-                            <ui:TextBlock Text="Driver setup required" FontTypography="BodyStrong"/>
-                            <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
-                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                          TextWrapping="Wrap" Margin="0,2,0,0"/>
+                    <StackPanel Grid.Row="2">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:TextBlock Text="Driver setup required" FontTypography="BodyStrong"
+                                          VerticalAlignment="Center"/>
+                            <ui:SymbolIcon Symbol="Warning24" FontSize="18" Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
                         </StackPanel>
+                        <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      TextWrapping="Wrap" Margin="0,2,0,0"/>
                     </StackPanel>
                 </Grid>
             </ui:Card>
