@@ -169,7 +169,7 @@ public partial class App : Application
             "default Windows driver.\n\n" +
             "NitTray will not be able to control this display's brightness until setup " +
             "is run again.\n\n" +
-            "Remove the driver now?";
+            "Uninstall the driver now?";
 
         var choice = _mainWindow is not null
             ? System.Windows.MessageBox.Show(

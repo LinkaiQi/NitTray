@@ -136,7 +136,7 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
         {
             DriverSetupExitCodes.Success => new DriverInstallResult(
                 DriverInstallStatus.Success,
-                "Driver removed. The display has been restored to the default Windows driver. " +
+                "Driver uninstalled. The display has been restored to the default Windows driver. " +
                 "Run setup again whenever you want NitTray to control its brightness."),
 
             DriverSetupExitCodes.DeviceNotFound => new DriverInstallResult(
