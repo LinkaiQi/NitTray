@@ -20,7 +20,14 @@ internal sealed class TrayIconHost : IDisposable
     {
         _icon = IconFactory.CreateTrayIcon();
 
-        var menu = new WinForms.ContextMenuStrip();
+        var menu = new WinForms.ContextMenuStrip
+        {
+            // Flat, native menu look (removes the old gray gradient) with no left
+            // icon gutter — a light touch instead of the WinForms default.
+            RenderMode = WinForms.ToolStripRenderMode.System,
+            ShowImageMargin = false,
+            BackColor = System.Drawing.Color.White,
+        };
         var showItem = new WinForms.ToolStripMenuItem("Show NitTray");
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
         var refreshItem = new WinForms.ToolStripMenuItem("Refresh displays");
