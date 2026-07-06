@@ -1,9 +1,5 @@
 <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="screen" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4FC3F7"/>
-      <stop offset="100%" stop-color="#0D5C9E"/>
-    </linearGradient>
     <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#04121F" flood-opacity="0.25"/>
     </filter>
@@ -15,7 +11,7 @@
   <g transform="translate(128,128) scale(1.2) translate(-128,-128)">
   <!-- Monitor, large and centered, main background element -->
   <g filter="url(#softShadow)">
-    <rect x="21" y="53" width="214" height="150" rx="24" fill="url(#screen)"/>
+    <rect x="21" y="53" width="214" height="150" rx="24" fill="#2D64AF"/>
 
     <!-- Brightness slider on the screen -->
     <rect x="51" y="90" width="152" height="22" rx="11" fill="#FFFFFF" fill-opacity="0.25"/>
@@ -26,9 +22,9 @@
   <!-- White monitor silhouette badge, tucked into the bottom-right corner -->
   <g transform="translate(32,47) translate(128,128) scale(0.6) translate(-128,-128)" filter="url(#badgeShadow)">
     <!-- Screen, wider and taller -->
-    <rect x="53" y="58" width="150" height="100" rx="14" fill="#FF9800"/>
+    <rect x="53" y="58" width="150" height="100" rx="14" fill="#00BCF2"/>
     <!-- Stand, rounded trapezoid -->
-    <path d="M 117,150 L 139,150 Q 146,150 149,156 L 156,168 Q 159,174 152,174 L 104,174 Q 97,174 100,168 L 107,156 Q 110,150 117,150 Z" fill="#FF9800"/>
+    <path d="M 117,150 L 139,150 Q 146,150 149,156 L 156,168 Q 159,174 152,174 L 104,174 Q 97,174 100,168 L 107,156 Q 110,150 117,150 Z" fill="#00BCF2"/>
   </g>
   </g>
 </svg>
