@@ -70,7 +70,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <ui:TextBlock Text="Displays" FontTypography="Title"/>
-                    <ui:TextBlock Text="Adjust the brightness of each connected Apple display."
+                    <ui:TextBlock Text="Adjust brightness for supported Apple displays."
                                   FontTypography="Caption" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -123,7 +123,7 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="14,0,0,0" Visibility="{Binding InstallingVisibility}">
                             <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"/>
-                            <ui:TextBlock Text="Installing… up to a minute" FontTypography="Caption"
+                            <ui:TextBlock Text="Setting up the driver… This may take a few minutes" FontTypography="Caption"
                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
@@ -138,7 +138,7 @@
                                        VerticalAlignment="Top"
                                        Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
                         <StackPanel>
-                            <ui:TextBlock Text="Driver setup needed" FontTypography="BodyStrong"/>
+                            <ui:TextBlock Text="Driver setup required" FontTypography="BodyStrong"/>
                             <ui:TextBlock Text="{Binding DriverSetupMessage}" FontTypography="Caption"
                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                           TextWrapping="Wrap" Margin="0,2,0,0"/>

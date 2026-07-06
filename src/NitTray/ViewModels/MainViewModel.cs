@@ -309,8 +309,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _pendingSetup = next;
         DriverSetupMessage = next is null
             ? string.Empty
-            : "Connected but needs a one-time driver setup before NitTray can " +
-              "control its brightness.";
+            : "Approve the Windows permission prompt to continue. Keep the display connected.";
         OnPropertyChanged(nameof(DriverSetupProductName));
         OnPropertyChanged(nameof(DriverSetupSerial));
         OnPropertyChanged(nameof(DriverSetupVisibility));
