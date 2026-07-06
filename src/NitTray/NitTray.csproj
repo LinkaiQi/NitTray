@@ -15,6 +15,7 @@
     <Description>Control Apple display brightness from Windows.</Description>
     <Version>0.1.0</Version>
     <RepositoryUrl>https://github.com/LinkaiQi/NitTray</RepositoryUrl>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -28,6 +29,12 @@
   <!-- Fluent 2 design system for WPF (Mica, FluentWindow, themed controls). MIT-licensed. -->
   <ItemGroup>
     <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <!-- Brand icon. AppIcon.ico is the .exe icon (ApplicationIcon above) and is also
+       embedded so the window/taskbar and tray can load it via a pack URI. -->
+  <ItemGroup>
+    <Resource Include="Assets\AppIcon.ico" />
   </ItemGroup>
 
   <!--

@@ -7,6 +7,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="NitTray"
+        Icon="pack://application:,,,/Assets/AppIcon.ico"
         Width="580" Height="640" MinWidth="480" MinHeight="460"
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True"
@@ -23,7 +24,7 @@
 
         <ui:TitleBar Grid.Row="0" Title="NitTray">
             <ui:TitleBar.Icon>
-                <ui:SymbolIcon Symbol="BrightnessHigh24"/>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
