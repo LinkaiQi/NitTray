@@ -47,3 +47,6 @@ publish/
 # NitTray native helper build outputs (libwdi clone + staged helper exe)
 native/third_party/
 native/NitTray.DriverSetup/dist/
+
+# Installer build output
+installer/output/

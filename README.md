@@ -18,6 +18,22 @@ which NitTray does for you with a single admin prompt.)
 > (`0x1118`), Studio Display XDR (`0x1116`), **Pro Display XDR (`0x9243`)**, plus
 > any other Apple HID display that advertises the standard Monitor/Brightness usage.
 
+## Install
+
+Grab the latest [release](https://github.com/LinkaiQi/NitTray/releases) and pick
+the build that matches your PC — **x64** for most Windows PCs, **arm64** for
+Windows on ARM (Snapdragon X, Surface Pro X, etc.):
+
+- **Installer (recommended)** — `NitTray-<version>-setup-<arch>.exe`. Installs
+  per-user (no admin needed), adds a Start Menu shortcut, an optional "start when
+  I sign in" checkbox, and an uninstaller.
+- **Portable zip** — `NitTray-<version>-win-<arch>.zip`. Extract and run
+  `NitTray.exe`; keep `NitTray.DriverSetup.exe` next to it (the Pro Display XDR
+  driver setup needs it).
+
+Both bundle the WinUSB helper. Day-to-day brightness control needs no admin; the
+one-time Pro Display XDR driver install shows a single UAC prompt.
+
 ## Features
 
 - Lives in the system tray (sun icon). Double-click to show, right-click for

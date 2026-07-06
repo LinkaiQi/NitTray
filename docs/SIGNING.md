@@ -131,9 +131,11 @@ artifacts until you finish this one-time Azure setup and flip the flag:
 > WinUSB helper (`NitTray.DriverSetup.exe`, built via `build.ps1 -SupportArm64`)
 > is a single x64 binary that installs the correct driver on both architectures
 > (it runs under x64 emulation on Windows on ARM); it is bundled into each
-> per-arch publish and signed alongside the app. Each architecture ships as its
-> own zip (`NitTray-<tag>-win-x64.zip`, `NitTray-<tag>-win-arm64.zip`). A
-> dedicated installer is still future work.
+> per-arch publish and signed alongside the app. Each architecture then ships two
+> ways: an **Inno Setup installer** (`NitTray-<tag>-setup-<arch>.exe`, built from
+> `installer/NitTray.iss` and signed after the app binaries) and a **portable
+> zip** (`NitTray-<tag>-win-<arch>.zip`). The signing steps cover the app exes,
+> the bundled helper, and the installer.
 
 ## Verifying signatures
 
