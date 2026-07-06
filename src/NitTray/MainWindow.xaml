@@ -24,16 +24,7 @@
 
         <ui:TitleBar Grid.Row="0" Title="NitTray">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon>
-                    <ui:ImageIcon.Source>
-                        <!-- DecodePixelWidth forces WPF to select and decode the small,
-                             pre-rendered frame from the .ico for this ~16-20px title-bar
-                             slot, instead of smoothly downscaling the 256px frame (which
-                             looks blurry). -->
-                        <BitmapImage UriSource="pack://application:,,,/Assets/AppIcon.ico"
-                                     DecodePixelWidth="32"/>
-                    </ui:ImageIcon.Source>
-                </ui:ImageIcon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 

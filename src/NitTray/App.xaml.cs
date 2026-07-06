@@ -23,6 +23,17 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Never let an unexpected error (e.g. a XAML load failure) silently kill the
+        // app at launch — log the full exception and surface it so it can be
+        // diagnosed instead of the window just failing to appear.
+        DispatcherUnhandledException += (_, args) =>
+        {
+            LogFatal("Dispatcher", args.Exception);
+            args.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            LogFatal("AppDomain", args.ExceptionObject as Exception);
+
         // Enforce one instance per session. If a copy is already running, ask it to
         // surface its window and exit before creating any windows or a tray icon.
         _singleInstance = new SingleInstance();
@@ -75,6 +86,24 @@ public partial class App : Application
 
         ShowMainWindow();
         _ = _viewModel.RefreshAsync();
+    }
+
+    private static void LogFatal(string source, Exception? ex)
+    {
+        var message = ex?.ToString() ?? "Unknown error (no exception object).";
+        DiagnosticLog.Write($"FATAL [{source}]: {message}");
+        try
+        {
+            System.Windows.MessageBox.Show(
+                "NitTray hit an unexpected error and may not work correctly.\n\n" +
+                "Details have been written to the diagnostics log " +
+                "(tray menu → Open diagnostics log…).\n\n" + message,
+                "NitTray — error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch
+        {
+            // A message box may be impossible this early; the log line is what matters.
+        }
     }
 
     private void OnAutoRefreshRequested(object? sender, string reason)
