@@ -127,11 +127,13 @@ artifacts until you finish this one-time Azure setup and flip the flag:
    The action signs the published `.exe`(s) and timestamps via
    `http://timestamp.acs.microsoft.com`.
 
-> Note: the release workflow builds **both** the app and the native WinUSB
-> helper (`NitTray.DriverSetup.exe`, via `native/NitTray.DriverSetup/build.ps1`)
-> and the signing step covers both `.exe`s in the publish folder. They are then
-> zipped together (the app launches the helper from beside itself). A dedicated
-> installer is still future work.
+> Note: the release workflow builds NitTray for **x64 and ARM64**. The native
+> WinUSB helper (`NitTray.DriverSetup.exe`, built via `build.ps1 -SupportArm64`)
+> is a single x64 binary that installs the correct driver on both architectures
+> (it runs under x64 emulation on Windows on ARM); it is bundled into each
+> per-arch publish and signed alongside the app. Each architecture ships as its
+> own zip (`NitTray-<tag>-win-x64.zip`, `NitTray-<tag>-win-arm64.zip`). A
+> dedicated installer is still future work.
 
 ## Verifying signatures
 

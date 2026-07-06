@@ -1,8 +1,8 @@
 name: Release
 
-# Builds NitTray — the .NET tray app plus the native WinUSB installer helper
-# (C + libwdi) — and (once Azure Artifact Signing is configured) signs both, then
-# publishes a zip containing the two binaries.
+# Builds NitTray for both x64 and ARM64 — the .NET tray app plus the native
+# WinUSB installer helper (C + libwdi) — and (once Azure Artifact Signing is
+# configured) signs everything, then publishes a per-architecture zip.
 #
 # Triggered by pushing a version tag like v0.1.0, or run manually from the Actions
 # tab. Signing stays OFF until you set the repo variable ARTIFACT_SIGNING=true and
@@ -31,27 +31,37 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Build the elevated WinUSB installer helper (C + libwdi). build.ps1 clones
-      # and patches libwdi, then builds it and the helper with MSBuild + CMake —
-      # located via vswhere, and windows-latest ships VS 2022 with the C++ workload
-      # so no extra setup is needed. It stages
+      # Build the elevated WinUSB installer helper (C + libwdi) once. -SupportArm64
+      # additionally embeds the ARM64 installer payload, so the single x64 helper
+      # installs the correct driver on BOTH x64 and ARM64 (libwdi selects
+      # installer_<os-arch>.exe at runtime, even under x64 emulation on ARM). Built
+      # with MSBuild + CMake, located via vswhere; needs the "MSVC v143 - ARM64
+      # build tools" component, which the windows-latest image includes. Stages
       # native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe, which the app
-      # .csproj bundles automatically — so this MUST run before the publish step.
-      - name: Build native WinUSB installer helper (libwdi)
+      # .csproj bundles into every publish — so this MUST run before publish.
+      - name: Build native WinUSB installer helper (libwdi, x64 + ARM64)
         shell: pwsh
         run: |
-          ./native/NitTray.DriverSetup/build.ps1
+          ./native/NitTray.DriverSetup/build.ps1 -SupportArm64
           if (-not (Test-Path native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe)) {
             throw "native helper build did not produce NitTray.DriverSetup.exe"
           }
 
-      - name: Publish (self-contained, win-x64)
+      - name: Publish x64 (self-contained, single file)
         run: >
           dotnet publish src/NitTray -c Release -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -o publish/win-x64
+
+      - name: Publish ARM64 (self-contained, single file)
+        run: >
+          dotnet publish src/NitTray -c Release -r win-arm64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -o publish/win-arm64
 
       # --- Azure Artifact Signing (formerly Trusted Signing) -------------------
       # Enable by setting repo variable ARTIFACT_SIGNING=true plus the account/
@@ -65,7 +75,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign with Azure Artifact Signing
+      - name: Sign x64 with Azure Artifact Signing
         if: vars.ARTIFACT_SIGNING == 'true'
         uses: azure/artifact-signing-action@v2
         with:
@@ -78,26 +88,41 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
-      # Zip the app + helper together. The tray app looks for
-      # NitTray.DriverSetup.exe next to itself, so the two binaries must ship as a
-      # pair. Runs after signing so the archive contains the signed binaries.
-      - name: Package (zip app + helper)
-        id: package
+      - name: Sign ARM64 with Azure Artifact Signing
+        if: vars.ARTIFACT_SIGNING == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\publish\win-arm64
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      # Zip each architecture's app + helper together. The tray app looks for
+      # NitTray.DriverSetup.exe next to itself, so the binaries must ship as a pair.
+      # Runs after signing so the archives contain the signed binaries.
+      - name: Package (zip per architecture)
         shell: pwsh
         run: |
-          $name = "NitTray-${{ github.ref_name }}-win-x64"
-          $items = Get-ChildItem publish/win-x64 -Exclude *.pdb
-          Compress-Archive -Path $items.FullName -DestinationPath "$name.zip" -Force
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip=$name.zip"
+          $tag = "${{ github.ref_name }}"
+          foreach ($rid in 'win-x64', 'win-arm64') {
+            $items = Get-ChildItem "publish/$rid" -Exclude *.pdb
+            Compress-Archive -Path $items.FullName -DestinationPath "NitTray-$tag-$rid.zip" -Force
+          }
 
-      - name: Upload build artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: NitTray-win-x64
-          path: publish/win-x64
+          name: NitTray-win
+          path: publish
 
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.package.outputs.zip }}
+          files: |
+            NitTray-${{ github.ref_name }}-win-x64.zip
+            NitTray-${{ github.ref_name }}-win-arm64.zip
