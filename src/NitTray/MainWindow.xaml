@@ -93,9 +93,12 @@
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <ui:TextBlock Text="{Binding DriverSetupProductName}" FontTypography="BodyStrong"/>
-                            <ui:TextBlock Text="{Binding DriverSetupSerial}" FontTypography="Caption"
-                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"
-                                          TextTrimming="CharacterEllipsis"/>
+                            <TextBox Text="{Binding DriverSetupSerial}" Style="{x:Null}"
+                                     IsReadOnly="True" IsTabStop="False"
+                                     BorderThickness="0" Background="Transparent" Padding="0"
+                                     Margin="0,2,0,0" FontFamily="Consolas" FontSize="12"
+                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                     ToolTip="Select to copy"/>
                         </StackPanel>
 
                         <ui:Button Grid.Column="2" Content="Set up display"
@@ -159,9 +162,12 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <ui:TextBlock Text="{Binding ProductName}" FontTypography="BodyStrong"/>
-                                            <ui:TextBlock Text="{Binding Subtitle}" FontTypography="Caption"
-                                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"
-                                                          TextTrimming="CharacterEllipsis"/>
+                                            <TextBox Text="{Binding Subtitle}" Style="{x:Null}"
+                                                     IsReadOnly="True" IsTabStop="False"
+                                                     BorderThickness="0" Background="Transparent" Padding="0"
+                                                     Margin="0,2,0,0" FontFamily="Consolas" FontSize="12"
+                                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                     ToolTip="Select to copy"/>
                                         </StackPanel>
                                         <ui:Button Grid.Column="2" VerticalAlignment="Top" Margin="14,0,0,0"
                                                    Padding="6" Appearance="Secondary"
