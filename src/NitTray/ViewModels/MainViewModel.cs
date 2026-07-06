@@ -205,8 +205,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         IsInstallingDriver = true;
         var previousMessage = DriverSetupMessage;
         DriverSetupMessage =
-            $"Setting up {target.ProductName}… approve the Windows permission prompt, then " +
-            "allow up to a minute while Windows restarts the display. Please don't unplug it.";
+            "Approve the Windows permission prompt to continue. Keep the display connected.";
         StatusMessage = "Installing display driver… this can take up to a minute.";
 
         DriverInstallResult result;
@@ -309,7 +308,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _pendingSetup = next;
         DriverSetupMessage = next is null
             ? string.Empty
-            : "Approve the Windows permission prompt to continue. Keep the display connected.";
+            : "Connected but needs a one-time driver setup before NitTray can " +
+              "control its brightness.";
         OnPropertyChanged(nameof(DriverSetupProductName));
         OnPropertyChanged(nameof(DriverSetupSerial));
         OnPropertyChanged(nameof(DriverSetupVisibility));
