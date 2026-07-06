@@ -136,9 +136,8 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
         {
             DriverSetupExitCodes.Success => new DriverInstallResult(
                 DriverInstallStatus.Success,
-                "Driver uninstalled. The Apple display was reverted to the default " +
-                "Windows driver. Run setup again whenever you want NitTray to " +
-                "control its brightness."),
+                "Driver removed. The display has been restored to the default Windows driver. " +
+                "Run setup again whenever you want NitTray to control its brightness."),
 
             DriverSetupExitCodes.DeviceNotFound => new DriverInstallResult(
                 DriverInstallStatus.DeviceNotFound,

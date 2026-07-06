@@ -165,11 +165,11 @@ public partial class App : Application
 
         const string caption = "NitTray — uninstall driver";
         var prompt =
-            $"This removes the WinUSB driver from {display.ProductName} and reverts it " +
-            "to the default Windows driver.\n\n" +
-            "NitTray will not be able to control its brightness until you run setup " +
-            "again.\n\n" +
-            "Uninstall the driver now?";
+            $"Removing the WinUSB driver from {display.ProductName} will restore the " +
+            "default Windows driver.\n\n" +
+            "NitTray will not be able to control this display's brightness until setup " +
+            "is run again.\n\n" +
+            "Remove the driver now?";
 
         var choice = _mainWindow is not null
             ? System.Windows.MessageBox.Show(
