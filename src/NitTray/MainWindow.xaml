@@ -131,7 +131,8 @@
             </ui:Card>
 
             <!-- Display list -->
-            <ScrollViewer Grid.Row="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+            <ScrollViewer Grid.Row="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                          Focusable="False">
                 <ItemsControl ItemsSource="{Binding Displays}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:DisplayViewModel}">
