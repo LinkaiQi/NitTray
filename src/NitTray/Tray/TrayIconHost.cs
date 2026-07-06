@@ -20,17 +20,7 @@ internal sealed class TrayIconHost : IDisposable
     {
         _icon = IconFactory.CreateTrayIcon();
 
-        var dark = !ModernTrayMenuRenderer.IsLightAppTheme();
-        var menu = new WinForms.ContextMenuStrip
-        {
-            Renderer = new ModernTrayMenuRenderer(dark),
-            ShowImageMargin = false,      // drop the dated left icon gutter
-            Font = ModernMenuFont(),
-            Padding = new WinForms.Padding(3),
-        };
-        // Round the popup corners on Windows 11 each time it opens.
-        menu.Opened += (_, _) => ModernTrayMenuRenderer.TryRoundCorners(menu.Handle);
-
+        var menu = new WinForms.ContextMenuStrip();
         var showItem = new WinForms.ToolStripMenuItem("Show NitTray");
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
         var refreshItem = new WinForms.ToolStripMenuItem("Refresh displays");
@@ -50,15 +40,6 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 
-        // A touch more breathing room per row than the WinForms default.
-        foreach (WinForms.ToolStripItem item in menu.Items)
-        {
-            if (item is WinForms.ToolStripMenuItem)
-            {
-                item.Padding = new WinForms.Padding(10, 5, 24, 5);
-            }
-        }
-
         _notifyIcon = new WinForms.NotifyIcon
         {
             Icon = _icon,
@@ -68,28 +49,6 @@ internal sealed class TrayIconHost : IDisposable
         };
 
         _notifyIcon.DoubleClick += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    // Prefer the modern Windows 11 UI font; fall back to Segoe UI on older systems.
-    private static Font ModernMenuFont()
-    {
-        foreach (var family in new[] { "Segoe UI Variable Text", "Segoe UI" })
-        {
-            try
-            {
-                var font = new Font(family, 9.75f, FontStyle.Regular, GraphicsUnit.Point);
-                if (string.Equals(font.Name, family, StringComparison.OrdinalIgnoreCase))
-                {
-                    return font;
-                }
-                font.Dispose();
-            }
-            catch
-            {
-                // Try the next family.
-            }
-        }
-        return WinForms.Control.DefaultFont;
     }
 
     public void Dispose()
