@@ -15,6 +15,7 @@ public partial class App : Application
 {
     private TrayIconHost? _tray;
     private MainWindow? _mainWindow;
+    private AboutWindow? _aboutWindow;
     private MainViewModel? _viewModel;
     private SystemRefreshTrigger? _refreshTrigger;
     private SingleInstance? _singleInstance;
@@ -74,6 +75,7 @@ public partial class App : Application
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
 #endif
         _tray.QuitRequested += (_, _) => RequestShutdown();
+        _tray.AboutRequested += (_, _) => ShowAbout();
 
         // Auto-refresh the display list when Windows signals a moment where the set
         // of connected displays may have changed (unlock, resume from sleep, monitor
@@ -139,6 +141,35 @@ public partial class App : Application
         _mainWindow.Topmost = true;
         _mainWindow.Topmost = false;
         _mainWindow.Focus();
+    }
+
+    // Opens (or re-focuses) the About window. Reachable from the header ⓘ button and
+    // the tray "About NitTray" item. A single reused instance avoids duplicates.
+    public void ShowAbout()
+    {
+        if (_aboutWindow is null)
+        {
+            _aboutWindow = new AboutWindow();
+            _aboutWindow.Closed += (_, _) => _aboutWindow = null;
+
+            // Center on the main window when it's visible; otherwise (opened from the
+            // tray while hidden) center on screen so it doesn't land in a corner.
+            if (_mainWindow is not null && _mainWindow.IsVisible)
+            {
+                _aboutWindow.Owner = _mainWindow;
+            }
+            else
+            {
+                _aboutWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+
+            _aboutWindow.Show();
+        }
+
+        _aboutWindow.Activate();
+        _aboutWindow.Topmost = true;
+        _aboutWindow.Topmost = false;
+        _aboutWindow.Focus();
     }
 
     private void OnDriverSetupFailed(object? sender, string message)

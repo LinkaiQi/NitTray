@@ -76,6 +76,12 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"
                                      Visibility="{Binding LoadingVisibility}"/>
+                    <ui:Button Appearance="Transparent" Padding="8" Margin="0,0,8,0"
+                               ToolTip="About NitTray" Click="OnAboutButtonClick">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Info24"/>
+                        </ui:Button.Icon>
+                    </ui:Button>
                     <ui:Button Content="Refresh" Command="{Binding RefreshCommand}">
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="ArrowClockwise24"/>

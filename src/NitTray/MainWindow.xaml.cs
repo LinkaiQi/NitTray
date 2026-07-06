@@ -10,6 +10,12 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
     }
 
+    // Opens the About window (also reachable from the tray menu).
+    private void OnAboutButtonClick(object sender, RoutedEventArgs e)
+    {
+        (System.Windows.Application.Current as App)?.ShowAbout();
+    }
+
     // Opens the per-display ⋯ overflow menu on left-click (Fluent "more options"
     // pattern). The button carries the MoreHorizontal glyph and no chevron, so this
     // pure-UI handler just shows its attached ContextMenu below the button.
