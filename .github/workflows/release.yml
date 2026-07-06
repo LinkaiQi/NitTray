@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest   # Artifact Signing requires a Windows runner
+    runs-on: windows-2022   # VS 2022 v143 x64+ARM64 tools for the libwdi helper; Windows runner for Artifact Signing
     environment: release      # stable OIDC subject (repo:OWNER/REPO:environment:release)
     steps:
       - name: Checkout
@@ -36,7 +36,8 @@ jobs:
       # installs the correct driver on BOTH x64 and ARM64 (libwdi selects
       # installer_<os-arch>.exe at runtime, even under x64 emulation on ARM). Built
       # with MSBuild + CMake, located via vswhere; needs the "MSVC v143 - ARM64
-      # build tools" component, which the windows-latest image includes. Stages
+      # build tools" component, which the windows-2022 image includes (windows-latest
+      # has migrated to VS 18 and no longer ships the v143 ARM64 toolset). Stages
       # native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe, which the app
       # .csproj bundles into every publish — so this MUST run before publish.
       - name: Build native WinUSB installer helper (libwdi, x64 + ARM64)
