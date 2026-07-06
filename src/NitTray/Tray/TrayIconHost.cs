@@ -52,7 +52,7 @@ internal sealed class TrayIconHost : IDisposable
         {
             if (item is WinForms.ToolStripMenuItem)
             {
-                item.Padding = new WinForms.Padding(2);
+                item.Padding = new WinForms.Padding(4);
             }
         }
 
