@@ -26,14 +26,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v4
         with:
@@ -42,41 +34,18 @@ jobs:
       # Build the elevated WinUSB installer helper (C + libwdi) once. -SupportArm64
       # additionally embeds the ARM64 installer payload, so the single x64 helper
       # installs the correct driver on BOTH x64 and ARM64 (libwdi selects
-      # installer_<os-arch>.exe at runtime, even under x64 emulation on ARM).
-      #
-      # The finished helper exe is cached and reused across runs — keyed on the
-      # helper sources + build.ps1 (which pins the libwdi tag) — so the slow libwdi
-      # clone + build only happens when one of those changes, saving several Windows
-      # minutes per release. The .csproj bundles the exe into every publish, so it
-      # must exist before publish.
-      - name: Restore cached native helper
-        id: helper-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: native/NitTray.DriverSetup/dist
-          key: nittray-helper-${{ runner.os }}-arm64-${{ hashFiles('native/NitTray.DriverSetup/build.ps1', 'native/NitTray.DriverSetup/main.c', 'native/NitTray.DriverSetup/resources.rc', 'native/NitTray.DriverSetup/CMakeLists.txt', 'native/NitTray.DriverSetup/NitTray.DriverSetup.manifest') }}
-
+      # installer_<os-arch>.exe at runtime, even under x64 emulation on ARM). Built
+      # with MSBuild + CMake, located via vswhere; needs the "MSVC v143 - ARM64
+      # build tools" component, which the windows-latest image includes. Stages
+      # native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe, which the app
+      # .csproj bundles into every publish — so this MUST run before publish.
       - name: Build native WinUSB installer helper (libwdi, x64 + ARM64)
-        if: steps.helper-cache.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: ./native/NitTray.DriverSetup/build.ps1 -SupportArm64
-
-      - name: Verify native helper is present
         shell: pwsh
         run: |
+          ./native/NitTray.DriverSetup/build.ps1 -SupportArm64
           if (-not (Test-Path native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe)) {
-            throw "native helper missing — cache restore and build both failed to provide it"
+            throw "native helper build did not produce NitTray.DriverSetup.exe"
           }
-
-      # Only persist a freshly built helper (skipped on a cache hit). Placing the
-      # save here rather than at job-post means a failed build never caches a bad
-      # or empty dist folder.
-      - name: Save native helper to cache
-        if: steps.helper-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: native/NitTray.DriverSetup/dist
-          key: ${{ steps.helper-cache.outputs.cache-primary-key }}
 
       - name: Publish x64 (self-contained, single file)
         run: >
