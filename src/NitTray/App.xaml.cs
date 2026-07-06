@@ -70,7 +70,9 @@ public partial class App : Application
                 _ = _viewModel.RefreshAsync();
             }
         };
+#if DEBUG
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
+#endif
         _tray.QuitRequested += (_, _) => RequestShutdown();
 
         // Auto-refresh the display list when Windows signals a moment where the set
@@ -91,13 +93,12 @@ public partial class App : Application
     private static void LogFatal(string source, Exception? ex)
     {
         var message = ex?.ToString() ?? "Unknown error (no exception object).";
-        DiagnosticLog.Write($"FATAL [{source}]: {message}");
+        DiagnosticLog.WriteCritical($"FATAL [{source}]: {message}");
         try
         {
             System.Windows.MessageBox.Show(
                 "NitTray hit an unexpected error and may not work correctly.\n\n" +
-                "Details have been written to the diagnostics log " +
-                "(tray menu → Open diagnostics log…).\n\n" + message,
+                $"Details have been written to:\n{DiagnosticLog.FilePath}\n\n" + message,
                 "NitTray — error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch
@@ -217,6 +218,7 @@ public partial class App : Application
         Shutdown();
     }
 
+#if DEBUG
     private static void OpenDiagnosticsLog()
     {
         try
@@ -240,6 +242,7 @@ public partial class App : Application
             // Best-effort.
         }
     }
+#endif
 
     protected override void OnExit(ExitEventArgs e)
     {

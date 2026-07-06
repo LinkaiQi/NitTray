@@ -137,9 +137,12 @@ public sealed class AppleDisplayService : IDisplayService
             $"WinUSB SET ok: iface={display.UsbInterfaceNumber}, raw={raw} (0x{raw:X8}), " +
             $"bytes=[{ToHex(buffer)}]");
 
+#if DEBUG
         // Verify by reading back. If the readback doesn't match what we wrote,
         // we're either talking to the wrong interface or the device's firmware
-        // is silently rejecting the value — either way we want it in the log.
+        // is silently rejecting the value — either way we want it in the log. This
+        // is a debug-only sanity check: it costs an extra USB round-trip on every
+        // brightness change, so it is compiled out of Release builds.
         try
         {
             var verify = GetFeatureReport(ctx.BrightnessHandle, display);
@@ -157,6 +160,7 @@ public sealed class AppleDisplayService : IDisplayService
         {
             DiagnosticLog.Write($"WinUSB SET ok but verify GET failed: {ex.Message}");
         }
+#endif
     }
 
     // Holds the handles needed to talk to one Apple display's brightness

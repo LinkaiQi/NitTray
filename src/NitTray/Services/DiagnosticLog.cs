@@ -1,9 +1,14 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
 
 namespace NitTray.Services;
 
+// Verbose diagnostic logging. In Release builds the [Conditional("DEBUG")] calls
+// (Reset/Write) are stripped by the compiler — including evaluation of their
+// arguments — so the enumeration/brightness hot paths do no logging work at all.
+// Critical failures still go to the log in every configuration via WriteCritical.
 internal static class DiagnosticLog
 {
     private static readonly object Sync = new();
@@ -13,6 +18,7 @@ internal static class DiagnosticLog
 
     public static string FolderPath => Path.GetDirectoryName(LogPath) ?? AppContext.BaseDirectory;
 
+    [Conditional("DEBUG")]
     public static void Reset(string reason)
     {
         try
@@ -30,7 +36,15 @@ internal static class DiagnosticLog
         }
     }
 
-    public static void Write(string message)
+    [Conditional("DEBUG")]
+    public static void Write(string message) => Append(message);
+
+    // Records a message in every build configuration (Debug and Release). Reserved
+    // for genuinely important events — currently unhandled/fatal errors — so a
+    // Release build still leaves a breadcrumb when something goes badly wrong.
+    public static void WriteCritical(string message) => Append(message);
+
+    private static void Append(string message)
     {
         lock (Sync)
         {
