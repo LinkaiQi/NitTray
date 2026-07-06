@@ -1,6 +1,9 @@
 name: Release
 
-# Builds NitTray and (once Azure Artifact Signing is configured) signs it.
+# Builds NitTray — the .NET tray app plus the native WinUSB installer helper
+# (C + libwdi) — and (once Azure Artifact Signing is configured) signs both, then
+# publishes a zip containing the two binaries.
+#
 # Triggered by pushing a version tag like v0.1.0, or run manually from the Actions
 # tab. Signing stays OFF until you set the repo variable ARTIFACT_SIGNING=true and
 # configure the Azure inputs below — until then the job still publishes UNSIGNED
@@ -27,6 +30,20 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      # Build the elevated WinUSB installer helper (C + libwdi). build.ps1 clones
+      # and patches libwdi, then builds it and the helper with MSBuild + CMake —
+      # located via vswhere, and windows-latest ships VS 2022 with the C++ workload
+      # so no extra setup is needed. It stages
+      # native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe, which the app
+      # .csproj bundles automatically — so this MUST run before the publish step.
+      - name: Build native WinUSB installer helper (libwdi)
+        shell: pwsh
+        run: |
+          ./native/NitTray.DriverSetup/build.ps1
+          if (-not (Test-Path native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe)) {
+            throw "native helper build did not produce NitTray.DriverSetup.exe"
+          }
 
       - name: Publish (self-contained, win-x64)
         run: >
@@ -61,6 +78,18 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
+      # Zip the app + helper together. The tray app looks for
+      # NitTray.DriverSetup.exe next to itself, so the two binaries must ship as a
+      # pair. Runs after signing so the archive contains the signed binaries.
+      - name: Package (zip app + helper)
+        id: package
+        shell: pwsh
+        run: |
+          $name = "NitTray-${{ github.ref_name }}-win-x64"
+          $items = Get-ChildItem publish/win-x64 -Exclude *.pdb
+          Compress-Archive -Path $items.FullName -DestinationPath "$name.zip" -Force
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip=$name.zip"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -71,4 +100,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: publish/win-x64/NitTray.exe
+          files: ${{ steps.package.outputs.zip }}

@@ -127,9 +127,11 @@ artifacts until you finish this one-time Azure setup and flip the flag:
    The action signs the published `.exe`(s) and timestamps via
    `http://timestamp.acs.microsoft.com`.
 
-> Note: the release workflow currently builds and signs the **app**. The native
-> helper (`NitTray.DriverSetup.exe`) and the installer are added to the same
-> job during the packaging phase; the same signing step then covers them too.
+> Note: the release workflow builds **both** the app and the native WinUSB
+> helper (`NitTray.DriverSetup.exe`, via `native/NitTray.DriverSetup/build.ps1`)
+> and the signing step covers both `.exe`s in the publish folder. They are then
+> zipped together (the app launches the helper from beside itself). A dedicated
+> installer is still future work.
 
 ## Verifying signatures
 

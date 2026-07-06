@@ -40,3 +40,10 @@ x86/
 
 # Local config
 appsettings.Local.json
+
+# Publish output
+publish/
+
+# NitTray native helper build outputs (libwdi clone + staged helper exe)
+native/third_party/
+native/NitTray.DriverSetup/dist/
