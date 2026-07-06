@@ -111,7 +111,8 @@
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <ui:TextBlock Text="{Binding DriverSetupProductName}" FontTypography="BodyStrong"/>
                             <TextBox Text="{Binding DriverSetupSerial, Mode=OneWay}"
-                                     Style="{StaticResource SerialTextBox}" Margin="0,2,0,0"/>
+                                     Style="{StaticResource SerialTextBox}" IsTabStop="False"
+                                     Margin="-2,2,0,0"/>
                         </StackPanel>
 
                         <ui:Button Grid.Column="2" Content="Set up display"
@@ -149,7 +150,7 @@
             <!-- Display list -->
             <ScrollViewer Grid.Row="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
                           Focusable="False">
-                <ItemsControl ItemsSource="{Binding Displays}">
+                <ItemsControl ItemsSource="{Binding Displays}" Focusable="False">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:DisplayViewModel}">
                             <ui:Card Margin="0,0,0,12">
@@ -176,7 +177,8 @@
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <ui:TextBlock Text="{Binding ProductName}" FontTypography="BodyStrong"/>
                                             <TextBox Text="{Binding Subtitle, Mode=OneWay}"
-                                                     Style="{StaticResource SerialTextBox}" Margin="0,2,0,0"/>
+                                                     Style="{StaticResource SerialTextBox}" IsTabStop="False"
+                                                     Margin="-2,2,0,0"/>
                                         </StackPanel>
                                         <ui:Button Grid.Column="2" VerticalAlignment="Top" Margin="14,0,0,0"
                                                    Padding="6" Appearance="Secondary"
