@@ -84,7 +84,7 @@
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <ui:TextBlock Text="{Binding DriverSetupProductName}" FontTypography="BodyStrong"/>
-                            <TextBox Text="{Binding DriverSetupSerial}" Style="{x:Null}"
+                            <TextBox Text="{Binding DriverSetupSerial, Mode=OneWay}" Style="{x:Null}"
                                      IsReadOnly="True" IsTabStop="False"
                                      BorderThickness="0" Background="Transparent" Padding="0"
                                      Margin="0,2,0,0" FontFamily="Consolas" FontSize="12"
@@ -153,7 +153,7 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <ui:TextBlock Text="{Binding ProductName}" FontTypography="BodyStrong"/>
-                                            <TextBox Text="{Binding Subtitle}" Style="{x:Null}"
+                                            <TextBox Text="{Binding Subtitle, Mode=OneWay}" Style="{x:Null}"
                                                      IsReadOnly="True" IsTabStop="False"
                                                      BorderThickness="0" Background="Transparent" Padding="0"
                                                      Margin="0,2,0,0" FontFamily="Consolas" FontSize="12"
