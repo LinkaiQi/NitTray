@@ -16,6 +16,32 @@
         ShowInTaskbar="True"
         d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
+    <ui:FluentWindow.Resources>
+        <!-- A caption-style read-only TextBox used for serial numbers so the value
+             is selectable/copyable. The minimal template (just the content host)
+             strips the default TextBox border and inner inset, so the text lines
+             up exactly with the product-name TextBlock above it. -->
+        <Style x:Key="SerialTextBox" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </ui:FluentWindow.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -24,7 +50,7 @@
 
         <ui:TitleBar Grid.Row="0" Title="NitTray">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon.ico"/>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon-32.png"/>
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
@@ -84,12 +110,8 @@
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <ui:TextBlock Text="{Binding DriverSetupProductName}" FontTypography="BodyStrong"/>
-                            <TextBox Text="{Binding DriverSetupSerial, Mode=OneWay}" Style="{x:Null}"
-                                     IsReadOnly="True" IsTabStop="False"
-                                     BorderThickness="0" Background="Transparent" Padding="0"
-                                     Margin="0,2,0,0" FontFamily="Consolas" FontSize="12"
-                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                     ToolTip="Select to copy"/>
+                            <TextBox Text="{Binding DriverSetupSerial, Mode=OneWay}"
+                                     Style="{StaticResource SerialTextBox}" Margin="0,2,0,0"/>
                         </StackPanel>
 
                         <ui:Button Grid.Column="2" Content="Set up display"
@@ -153,12 +175,8 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <ui:TextBlock Text="{Binding ProductName}" FontTypography="BodyStrong"/>
-                                            <TextBox Text="{Binding Subtitle, Mode=OneWay}" Style="{x:Null}"
-                                                     IsReadOnly="True" IsTabStop="False"
-                                                     BorderThickness="0" Background="Transparent" Padding="0"
-                                                     Margin="0,2,0,0" FontFamily="Consolas" FontSize="12"
-                                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                     ToolTip="Select to copy"/>
+                                            <TextBox Text="{Binding Subtitle, Mode=OneWay}"
+                                                     Style="{StaticResource SerialTextBox}" Margin="0,2,0,0"/>
                                         </StackPanel>
                                         <ui:Button Grid.Column="2" VerticalAlignment="Top" Margin="14,0,0,0"
                                                    Padding="6" Appearance="Secondary"

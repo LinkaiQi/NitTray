@@ -32,9 +32,12 @@
   </ItemGroup>
 
   <!-- Brand icon. AppIcon.ico is the .exe icon (ApplicationIcon above) and is also
-       embedded so the window/taskbar and tray can load it via a pack URI. -->
+       embedded so the window/taskbar and tray can load it via a pack URI.
+       AppIcon-32.png is a small, pre-rendered raster used for the title bar so it
+       stays crisp at ~16-32px instead of downscaling the 256px .ico frame. -->
   <ItemGroup>
     <Resource Include="Assets\AppIcon.ico" />
+    <Resource Include="Assets\AppIcon-32.png" />
   </ItemGroup>
 
   <!--
