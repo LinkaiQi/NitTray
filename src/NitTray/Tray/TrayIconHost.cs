@@ -12,9 +12,7 @@ internal sealed class TrayIconHost : IDisposable
     public event EventHandler? ShowRequested;
     public event EventHandler? RefreshRequested;
     public event EventHandler? AboutRequested;
-#if DEBUG
     public event EventHandler? OpenLogRequested;
-#endif
     public event EventHandler? QuitRequested;
 
     public TrayIconHost()
@@ -35,6 +33,10 @@ internal sealed class TrayIconHost : IDisposable
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
         var aboutItem = new WinForms.ToolStripMenuItem("About NitTray");
         aboutItem.Click += (_, _) => AboutRequested?.Invoke(this, EventArgs.Empty);
+        // The diagnostics log lets users capture an enumeration trace and attach it
+        // to a bug report when a display isn't detected — useful in every build.
+        var logItem = new WinForms.ToolStripMenuItem("Open diagnostics log…");
+        logItem.Click += (_, _) => OpenLogRequested?.Invoke(this, EventArgs.Empty);
         var quitItem = new WinForms.ToolStripMenuItem("Quit");
         quitItem.Click += (_, _) => QuitRequested?.Invoke(this, EventArgs.Empty);
 
@@ -42,13 +44,7 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(refreshItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(aboutItem);
-#if DEBUG
-        // The diagnostics log is a developer aid; only expose it in Debug builds.
-        var logItem = new WinForms.ToolStripMenuItem("Open diagnostics log…");
-        logItem.Click += (_, _) => OpenLogRequested?.Invoke(this, EventArgs.Empty);
-        menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(logItem);
-#endif
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 

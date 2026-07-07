@@ -1,14 +1,17 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
 
 namespace NitTray.Services;
 
-// Verbose diagnostic logging. In Release builds the [Conditional("DEBUG")] calls
-// (Reset/Write) are stripped by the compiler — including evaluation of their
-// arguments — so the enumeration/brightness hot paths do no logging work at all.
-// Critical failures still go to the log in every configuration via WriteCritical.
+// Verbose diagnostic logging, written in every build configuration. It captures
+// the display-enumeration trace — every HID/USB device seen and why each was or
+// wasn't chosen as the brightness interface — so a user whose display isn't
+// detected can attach the log (%LOCALAPPDATA%\NitTray\diagnostic.log) to a bug
+// report. Logging stays off the brightness hot path: only enumeration and error
+// paths write, so normal slider use doesn't churn the file. WriteCritical is
+// reserved for fatal errors and is identical to Write today, kept as a distinct
+// name to mark genuinely important events.
 internal static class DiagnosticLog
 {
     private static readonly object Sync = new();
@@ -18,7 +21,6 @@ internal static class DiagnosticLog
 
     public static string FolderPath => Path.GetDirectoryName(LogPath) ?? AppContext.BaseDirectory;
 
-    [Conditional("DEBUG")]
     public static void Reset(string reason)
     {
         try
@@ -36,12 +38,11 @@ internal static class DiagnosticLog
         }
     }
 
-    [Conditional("DEBUG")]
     public static void Write(string message) => Append(message);
 
-    // Records a message in every build configuration (Debug and Release). Reserved
-    // for genuinely important events — currently unhandled/fatal errors — so a
-    // Release build still leaves a breadcrumb when something goes badly wrong.
+    // Records a message in every build configuration, same as Write today. Kept as
+    // a distinct name to mark genuinely important events (currently unhandled/fatal
+    // errors) so their intent is clear at the call site.
     public static void WriteCritical(string message) => Append(message);
 
     private static void Append(string message)

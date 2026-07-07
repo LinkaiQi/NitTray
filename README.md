@@ -36,8 +36,8 @@ one-time Pro Display XDR driver install shows a single UAC prompt.
 
 ## Features
 
-- Lives in the system tray (sun icon). Double-click to show, right-click for
-  Show / Refresh / Quit.
+- Lives in the system tray. Double-click to show; right-click for Show,
+  Refresh, About, diagnostics, or Quit.
 - Window lists every connected Apple display with its current brightness.
 - Drag the slider — brightness updates in real time over USB HID.
 - Closing the main window keeps the app in the tray; pick **Quit** to exit.
@@ -181,19 +181,23 @@ the app from macOS or Linux for CI.
 src/NitTray/
   App.xaml / App.xaml.cs          - WPF app entry, owns tray + window lifecycle
   MainWindow.xaml / .cs           - displays + sliders UI
+  AboutWindow.xaml / .cs          - About & Support window (version, links, donate)
   Tray/TrayIconHost.cs            - WinForms NotifyIcon wrapper
   ViewModels/
     MainViewModel.cs              - observable list of displays + refresh command
     DisplayViewModel.cs           - per-display brightness with debounced writes
+    AboutViewModel.cs             - version + supported-model list for the About window
     RelayCommand.cs               - minimal ICommand
   Services/
     IDisplayService.cs            - abstraction
     AppleDisplayService.cs        - HID + WinUSB enumeration and read/write
+                                    (partial class, split across
+                                    .Enumeration / .ProXdrProbe / .Devices)
     IDriverInstallService.cs      - abstraction for the WinUSB installer
     WinUsbDriverInstallService.cs - launches the elevated helper (UAC)
     DriverInstallResult.cs        - install status + message
     DriverSetupExitCodes.cs       - exit-code contract shared with the helper
-    IconFactory.cs                - generates the sun tray icon at runtime
+    IconFactory.cs                - loads the app's brand icon for the tray (DPI-aware)
     Native/
       HidNative.cs                - hid.dll + HidP_* parser P/Invoke
       SetupApiNative.cs           - setupapi.dll P/Invoke
