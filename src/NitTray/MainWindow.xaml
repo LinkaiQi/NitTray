@@ -265,46 +265,13 @@
                     <ui:TextBlock Text="Can't Detect Your Display?" FontTypography="BodyStrong"/>
                     <ui:TextBlock TextWrapping="Wrap" Margin="0,7,0,0"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="NitTray controls brightness over USB, so your display must have a direct USB data connection to your PC."/>
-                    <ui:TextBlock Text="To get started:" Margin="0,10,0,0"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-
-                    <Grid Margin="0,7,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0"
-                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                            <Run Text="Connect your display directly to your PC using a "/><Run Text="USB-C or Thunderbolt" FontWeight="SemiBold"/><Run Text=" cable."/>
-                        </ui:TextBlock>
-                    </Grid>
-                    <Grid Margin="0,5,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0"
-                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                            <Run Text="Avoid "/><Run Text="HDMI or DisplayPort adapters" FontWeight="SemiBold"/><Run Text=". They carry video only and don't provide the USB interface needs to adjust brightness."/>
-                        </ui:TextBlock>
-                    </Grid>
-                    <Grid Margin="0,5,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0"
-                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                            <Run Text="Make sure you're using a "/><Run Text="USB cable that supports data transfer" FontWeight="SemiBold"/><Run Text=". Some USB-C cables provide power only."/>
-                        </ui:TextBlock>
-                    </Grid>
+                                  Text="NitTray controls brightness over USB. Connect your display directly to your PC using a USB-C or Thunderbolt cable."/>
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,10,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="Avoid HDMI or DisplayPort adapters. They carry video only and don't provide the USB connection needed to adjust brightness."/>
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,10,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="Use a data-capable USB cable. Some USB-C cables provide power only."/>
                 </StackPanel>
             </StackPanel>
 
