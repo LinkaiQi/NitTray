@@ -263,16 +263,33 @@
 
                 <!-- Troubleshooting help -->
                 <StackPanel Width="384" Margin="0,44,0,0">
-                    <ui:TextBlock Text="Can't Detect Your Display?" FontSize="13.5" FontWeight="Bold"
+                    <ui:TextBlock Text="Unable to Detect Your Display?" FontSize="13.5" FontWeight="Bold"
                                   Margin="0,0,0,8"/>
                     <ui:TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"><Run Text="Connect your display directly to your PC using a "/><Run Text="USB-C" FontWeight="SemiBold"/><Run Text=" or "/><Run Text="Thunderbolt" FontWeight="SemiBold"/><Run Text=" cable."/></ui:TextBlock>
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="Avoid HDMI or DisplayPort adapters. They carry video only and don't provide the USB connection needed to adjust brightness."/>
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="Use a data-capable USB cable. Some USB-C cables provide power only."/>
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"><Run Text="NitTray adjusts brightness via USB protocol. Please connect your display directly to your PC using a "/><Run Text="USB-C" FontWeight="SemiBold"/><Run Text=" or "/><Run Text="Thunderbolt" FontWeight="SemiBold"/><Run Text=" cable."/></ui:TextBlock>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0" FontSize="12"
+                                      LineHeight="18" LineStackingStrategy="BlockLineHeight"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"><Run Text="HDMI and DisplayPort adapters are not supported." FontWeight="SemiBold"/><Run Text=" These carry video signal only."/></ui:TextBlock>
+                    </Grid>
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0" FontSize="12"
+                                      LineHeight="18" LineStackingStrategy="BlockLineHeight"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"><Run Text="Use a data-capable USB-C cable." FontWeight="SemiBold"/><Run Text=" (USB 3.1 Gen 2 / 10Gbps or higher). Some USB-C cables are power-only and will not transmit data."/></ui:TextBlock>
+                    </Grid>
                 </StackPanel>
             </StackPanel>
 
