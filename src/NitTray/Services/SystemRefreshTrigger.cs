@@ -1,28 +1,48 @@
+using System.Windows.Interop;
 using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace NitTray.Services;
 
 // Watches Windows for moments when the set of connected displays may have changed
-// while NitTray wasn't looking — the user unlocking their session, the machine
-// waking from sleep, fast-user-switching back to the console, an RDP reconnect, or
-// the monitor arrangement changing — and asks for a display refresh so the list and
-// brightness values stay in sync without the user clicking "Refresh".
+// while NitTray wasn't looking, and asks for a display refresh so the list and
+// brightness values stay in sync without the user clicking "Rescan":
+//   * the user unlocking / logging on / (re)connecting to the session,
+//   * the machine waking from sleep,
+//   * the monitor arrangement changing, and
+//   * USB device nodes appearing/removing (WM_DEVICECHANGE) — this is what fires
+//     when an Apple display's HID/brightness interface finishes enumerating, which
+//     can happen a moment AFTER the monitor itself is added.
 //
-// Windows raises these SystemEvents on a dedicated background thread, and several
-// often fire in a burst (unlocking usually triggers a display-settings change too),
-// so we debounce and marshal the final RefreshRequested back onto the UI thread.
+// Several events often fire in a burst when a display is plugged in (a display-
+// settings change plus a stream of device-node changes as each USB interface
+// enumerates), so we debounce and only rescan once things settle. Because the HID
+// interface can still be a beat away from being openable even after it appears, we
+// also fire a couple of spaced "settle" retries so a late interface is picked up
+// without the user intervening.
 internal sealed class SystemRefreshTrigger : IDisposable
 {
-    // Long enough to coalesce the burst of events a single unlock/resume produces,
-    // short enough to still feel immediate.
+    private const int WmDeviceChange = 0x0219;
+    private const int DbtDevNodesChanged = 0x0007;
+    private const int DbtDeviceArrival = 0x8000;
+    private const int DbtDeviceRemoveComplete = 0x8004;
+
+    // Long enough to coalesce the burst of events a single unlock/resume/plug-in
+    // produces, short enough to still feel immediate.
     private const int DebounceMilliseconds = 750;
+
+    // After the first rescan, retry a couple more times so a display whose HID
+    // interface becomes openable a moment later still shows up on its own.
+    private const int SettleRetryMilliseconds = 2500;
+    private const int MaxSettleRetries = 2;
 
     private readonly Dispatcher _dispatcher;
     private readonly System.Threading.Timer _debounce;
     private readonly object _gate = new();
 
+    private HwndSource? _hwndSource;
     private string _pendingReason = string.Empty;
+    private int _retriesRemaining;
     private bool _disposed;
 
     // Raised on the UI thread when something happened that warrants re-enumerating
@@ -38,6 +58,39 @@ internal sealed class SystemRefreshTrigger : IDisposable
         SystemEvents.SessionSwitch += OnSessionSwitch;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+    }
+
+    // Hooks WM_DEVICECHANGE on the given window so USB device arrivals/removals
+    // (the signal that an Apple display's HID interface has enumerated) trigger a
+    // rescan. Uses the window's HWND — realized here if the window hasn't been shown
+    // yet — which keeps receiving broadcast device-change messages even while the
+    // window is hidden in the tray. Call once, after the window is constructed.
+    public void AttachDeviceNotifications(System.Windows.Window window)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(window).EnsureHandle();
+            _hwndSource = HwndSource.FromHwnd(hwnd);
+            _hwndSource?.AddHook(DeviceChangeHook);
+        }
+        catch
+        {
+            // If message hooking fails for any reason, the SystemEvents-based
+            // triggers above still keep the list reasonably fresh.
+        }
+    }
+
+    private IntPtr DeviceChangeHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmDeviceChange)
+        {
+            var evt = wParam.ToInt64();
+            if (evt == DbtDevNodesChanged || evt == DbtDeviceArrival || evt == DbtDeviceRemoveComplete)
+            {
+                Schedule("USB device change");
+            }
+        }
+        return IntPtr.Zero;
     }
 
     private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
@@ -81,6 +134,8 @@ internal sealed class SystemRefreshTrigger : IDisposable
                 return;
             }
             _pendingReason = reason;
+            // A fresh trigger restarts the whole settle sequence.
+            _retriesRemaining = MaxSettleRetries;
             _debounce.Change(DebounceMilliseconds, System.Threading.Timeout.Infinite);
         }
     }
@@ -95,10 +150,18 @@ internal sealed class SystemRefreshTrigger : IDisposable
                 return;
             }
             reason = _pendingReason;
+
+            // Re-arm one spaced retry until we've exhausted the settle attempts, so
+            // an interface that becomes openable slightly later is still caught.
+            if (_retriesRemaining > 0)
+            {
+                _retriesRemaining--;
+                _debounce.Change(SettleRetryMilliseconds, System.Threading.Timeout.Infinite);
+            }
         }
 
-        // SystemEvents fired us on a background thread; hop to the UI thread so the
-        // handler can safely touch the view model / display collection.
+        // SystemEvents / the message hook fired us off the UI thread (or on it); hop
+        // to the UI thread so the handler can safely touch the view model.
         _dispatcher.InvokeAsync(() => RefreshRequested?.Invoke(this, reason));
     }
 
@@ -118,6 +181,8 @@ internal sealed class SystemRefreshTrigger : IDisposable
         SystemEvents.SessionSwitch -= OnSessionSwitch;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        _hwndSource?.RemoveHook(DeviceChangeHook);
+        _hwndSource = null;
         _debounce.Dispose();
     }
 }
