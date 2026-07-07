@@ -73,9 +73,7 @@ public partial class App : Application
                 _ = _viewModel.RefreshAsync();
             }
         };
-#if DEBUG
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
-#endif
         _tray.QuitRequested += (_, _) => RequestShutdown();
         _tray.AboutRequested += (_, _) => ShowAbout();
 
@@ -272,7 +270,6 @@ public partial class App : Application
         Shutdown();
     }
 
-#if DEBUG
     private static void OpenDiagnosticsLog()
     {
         try
@@ -296,7 +293,6 @@ public partial class App : Application
             // Best-effort.
         }
     }
-#endif
 
     protected override void OnExit(ExitEventArgs e)
     {
