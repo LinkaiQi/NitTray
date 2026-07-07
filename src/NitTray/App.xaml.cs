@@ -79,9 +79,12 @@ public partial class App : Application
 
         // Auto-refresh the display list when Windows signals a moment where the set
         // of connected displays may have changed (unlock, resume from sleep, monitor
-        // arrangement change, etc.) so the user doesn't have to refresh manually.
+        // arrangement change, or a USB device arriving) so the user doesn't have to
+        // rescan manually. The device-change watch is hooked to the main window's
+        // message loop.
         _refreshTrigger = new SystemRefreshTrigger();
         _refreshTrigger.RefreshRequested += OnAutoRefreshRequested;
+        _refreshTrigger.AttachDeviceNotifications(_mainWindow);
 
         // Now that the window exists, listen for later launches and surface the
         // window when one asks us to (its callback runs off the UI thread).
