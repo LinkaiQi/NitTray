@@ -5,9 +5,9 @@ project(NitTray.DriverSetup C)
 # ---------------------------------------------------------------------------
 # NitTray.DriverSetup — elevated WinUSB installer (links libwdi statically).
 #
-# This target can only be built on Windows with MSVC, because libwdi embeds the
-# Microsoft WinUSB co-installer binaries (which require the Windows Driver Kit)
-# and links against Windows-only system libraries.
+# This target can only be built on Windows with MSVC because it links libwdi and
+# Windows-only system libraries. build.ps1 prepares a co-installer-free libwdi
+# build first, so the Windows Driver Kit is not required for the default build.
 #
 # You must point the build at a pre-built libwdi via -DLIBWDI_ROOT=<dir>, where
 # <dir> contains:
@@ -75,5 +75,6 @@ if(MSVC)
     target_link_options(NitTray.DriverSetup PRIVATE "/MANIFEST:NO")
 endif()
 
-# 64-bit only (libwdi's embedded installer matches the host architecture).
+# The helper is normally built as one x64 executable. build.ps1 controls which
+# libwdi installer payloads are embedded for x64-only vs Windows-on-ARM support.
 set_target_properties(NitTray.DriverSetup PROPERTIES OUTPUT_NAME "NitTray.DriverSetup")

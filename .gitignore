@@ -35,11 +35,28 @@ x86/
 .idea/
 *.sln.iml
 
+# VS Code / local editor state
+.vscode/
+
 # macOS
 .DS_Store
 
 # Local config
 appsettings.Local.json
+.env
+.env.*
+!.env.example
+
+# Logs and local diagnostics
+*.log
+
+# Signing/private key material
+*.pfx
+*.p12
+*.cer
+*.pvk
+*.spc
+*.key
 
 # Publish output
 publish/
