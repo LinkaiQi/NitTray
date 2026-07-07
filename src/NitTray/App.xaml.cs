@@ -60,6 +60,8 @@ public partial class App : Application
         // Match the Windows light/dark setting and keep following it while running
         // (also applies the Mica backdrop on the FluentWindow).
         Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+        ApplySubtextContrast();
+        Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (_, _) => ApplySubtextContrast();
         Wpf.Ui.Appearance.SystemThemeWatcher.Watch(_mainWindow);
 
         _tray = new TrayIconHost();
@@ -107,6 +109,27 @@ public partial class App : Application
         {
             // A message box may be impossible this early; the log line is what matters.
         }
+    }
+
+    // Fluent's default secondary/tertiary "subtext" tokens are quite light; in the
+    // light theme they can be hard to read. Darken those two brushes app-wide while
+    // keeping them theme-adaptive — the dark theme keeps light-on-dark values, so it
+    // is unaffected. Re-applied on every theme change because WPF-UI swaps the theme
+    // dictionary underneath us.
+    private void ApplySubtextContrast()
+    {
+        var isDark = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+                     == Wpf.Ui.Appearance.ApplicationTheme.Dark;
+
+        var secondary = isDark
+            ? System.Windows.Media.Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF)
+            : System.Windows.Media.Color.FromArgb(0xC8, 0x00, 0x00, 0x00); // ~78% vs Fluent's ~62%
+        var tertiary = isDark
+            ? System.Windows.Media.Color.FromArgb(0xA8, 0xFF, 0xFF, 0xFF)
+            : System.Windows.Media.Color.FromArgb(0xA8, 0x00, 0x00, 0x00); // ~66% vs Fluent's ~45%
+
+        Resources["TextFillColorSecondaryBrush"] = new System.Windows.Media.SolidColorBrush(secondary);
+        Resources["TextFillColorTertiaryBrush"] = new System.Windows.Media.SolidColorBrush(tertiary);
     }
 
     private void OnAutoRefreshRequested(object? sender, string reason)
