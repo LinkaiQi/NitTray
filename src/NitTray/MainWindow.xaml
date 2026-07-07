@@ -261,12 +261,11 @@
                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
 
                 <!-- Troubleshooting help -->
-                <StackPanel Width="384" Margin="0,20,0,0">
+                <StackPanel Width="384" Margin="0,30,0,0">
                     <ui:TextBlock Text="Can't Detect Your Display?" FontSize="13.5" FontWeight="Bold"
                                   Margin="0,0,0,8"/>
                     <ui:TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="Connect your display directly to your PC using a USB-C or Thunderbolt cable."/>
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"><Run Text="Connect your display directly to your PC using a "/><Run Text="USB-C" FontWeight="SemiBold"/><Run Text=" or "/><Run Text="Thunderbolt" FontWeight="SemiBold"/><Run Text=" cable."/></ui:TextBlock>
                     <ui:TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                   Text="Avoid HDMI or DisplayPort adapters. They carry video only and don't provide the USB connection needed to adjust brightness."/>
@@ -287,7 +286,7 @@
                               FontTypography="Caption"
                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                 <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12">
-                    <Hyperlink Style="{StaticResource FooterLink}" Click="OnAboutClick">About NitTray</Hyperlink>
+                    <Hyperlink Style="{StaticResource FooterLink}" Click="OnAboutClick">About &amp; Support</Hyperlink>
                 </TextBlock>
             </Grid>
         </Grid>
