@@ -41,6 +41,7 @@ The result is reported **only through the process exit code** (no stdout parsing
 | `3`       | Target device not present       | `DeviceNotFound`          |
 | `4`       | `wdi_prepare_driver` failed     | `PrepareFailed`           |
 | `5`       | `wdi_install_driver` failed     | `InstallFailed`           |
+| `6`       | Driver uninstall failed         | `UninstallFailed`         |
 
 > ⚠️ Keep this table in sync with
 > [`src/NitTray/Services/DriverSetupExitCodes.cs`](../../src/NitTray/Services/DriverSetupExitCodes.cs).

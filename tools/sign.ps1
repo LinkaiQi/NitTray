@@ -24,8 +24,8 @@
                           certificate store (e.g. a hardware-token / cloud-HSM OV/EV
                           certificate). Looks in CurrentUser\My then LocalMachine\My.
 
-    Azure Trusted Signing is signed in CI via azure/trusted-signing-action — see
-    docs/SIGNING.md. This script covers local self-signed + PFX/store signing.
+    Azure Artifact Signing is handled in CI via azure/artifact-signing-action —
+    see docs/SIGNING.md. This script covers local self-signed + PFX/store signing.
 
 .PARAMETER Path
     Folder containing the build/publish output to sign. Defaults to .\publish.
@@ -39,7 +39,7 @@
 
 .EXAMPLE
     # Release: sign a published folder with a real certificate file.
-    .\tools\sign.ps1 -PfxPath .\mycert.pfx -PfxPassword 'secret' -Path .\publish
+    .\tools\sign.ps1 -PfxPath .\mycert.pfx -PfxPassword '<password>' -Path .\publish
 
 .EXAMPLE
     # Release: sign with a token/HSM certificate already in the store.

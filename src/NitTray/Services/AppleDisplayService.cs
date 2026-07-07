@@ -222,8 +222,8 @@ public sealed class AppleDisplayService : IDisplayService
                     throw new Win32Exception(err,
                         $"WinUsb_GetAssociatedInterface(idx={display.WinUsbAssociatedInterfaceIndex}) " +
                         $"failed (err={err}). The brightness HID interface (typically iface 2 on " +
-                        "Pro Display XDR) is not bound to WinUSB. Re-run Zadig and install the " +
-                        "WinUSB driver on the *composite* USB device, not a single interface.");
+                        "Pro Display XDR) is not bound to WinUSB. Run NitTray's display setup " +
+                        "again so WinUSB is installed on the composite USB device.");
                 }
                 ctx.OwnsBrightnessHandle = true;
             }
@@ -381,8 +381,8 @@ public sealed class AppleDisplayService : IDisplayService
         // Also enumerate raw USB devices so we can pick up Apple displays whose HID
         // interface failed to bind to hidclass.sys (Code 10 / descriptor mismatch).
         // The Pro Display XDR is the well-known case — its brightness HID interface is
-        // rejected by Windows' generic HID driver, but with WinUSB bound (via Zadig)
-        // we can still send the same SET_REPORT / GET_REPORT control transfers.
+        // rejected by Windows' generic HID driver, but with WinUSB bound by NitTray's
+        // setup helper we can still send the same SET_REPORT / GET_REPORT transfers.
         var winUsbResult = EnumerateUsbAndProbeWinUsb();
         foreach (var d in winUsbResult.Displays)
         {
@@ -1404,7 +1404,7 @@ public sealed class AppleDisplayService : IDisplayService
             handle.Dispose();
             throw new Win32Exception(err,
                 $"Could not open USB device for WinUSB (path: {path}). " +
-                "Did you install the WinUSB driver via Zadig?");
+                "Run NitTray's Set up display action and try again.");
         }
 
         return handle;
