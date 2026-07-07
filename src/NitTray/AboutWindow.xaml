@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="About NitTray"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
-        Width="460" SizeToContent="Height"
+        Width="400" SizeToContent="Height"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ExtendsContentIntoTitleBar="True"
@@ -18,14 +18,44 @@
         d:DataContext="{d:DesignInstance vm:AboutViewModel}">
 
     <ui:FluentWindow.Resources>
-        <!-- A transparent, full-width row used for the resource/support links. -->
-        <Style x:Key="LinkRow" TargetType="ui:Button">
+        <!-- Official Buy Me a Coffee brand button: brand yellow with dark content and
+             rounded corners, rendered natively so it stays crisp at any DPI. -->
+        <Style x:Key="BmcButton" TargetType="Button">
+            <Setter Property="Background" Value="#FFDD00"/>
+            <Setter Property="Foreground" Value="#0D0C22"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="18,9"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FFD400"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#F2C900"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small accent-coloured text link. -->
+        <Style x:Key="TextLink" TargetType="ui:Button">
             <Setter Property="Appearance" Value="Transparent"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Padding" Value="4,2"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
         </Style>
     </ui:FluentWindow.Resources>
 
@@ -42,145 +72,72 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <StackPanel Grid.Row="1" Margin="24,6,24,20">
+        <StackPanel Grid.Row="1" Margin="26,8,26,22">
 
             <!-- App identity -->
-            <StackPanel Orientation="Horizontal">
-                <Image Source="pack://application:,,,/Assets/AppIcon-256.png"
-                       Width="64" Height="64" VerticalAlignment="Top"
-                       RenderOptions.BitmapScalingMode="HighQuality"/>
-                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
-                    <ui:TextBlock Text="{Binding AppName}" FontTypography="TitleLarge"/>
-                    <ui:TextBlock Text="{Binding VersionText}" FontTypography="Body" Margin="0,2,0,0"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    <ui:TextBlock Text="{Binding Tagline}" TextWrapping="Wrap" MaxWidth="300"
-                                  FontTypography="Body" Margin="0,6,0,0" HorizontalAlignment="Left"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                </StackPanel>
-            </StackPanel>
+            <Image Source="pack://application:,,,/Assets/AppIcon-256.png"
+                   Width="72" Height="72" HorizontalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+            <ui:TextBlock Text="{Binding AppName}" FontTypography="TitleLarge"
+                          HorizontalAlignment="Center" Margin="0,12,0,0"/>
+            <ui:TextBlock Text="{Binding VersionText}" FontTypography="Body"
+                          HorizontalAlignment="Center" Margin="0,3,0,0"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            <ui:TextBlock Text="{Binding Tagline}" FontTypography="Body"
+                          HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                          Margin="0,8,0,0"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+            <Border Height="1" Margin="0,20"
+                    Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
 
             <!-- Supported displays -->
-            <ui:TextBlock Text="SUPPORTED DISPLAYS" FontTypography="Caption" Margin="2,22,0,8"
-                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-            <ui:Card Padding="4">
-                <ItemsControl ItemsSource="{Binding SupportedDisplays}" Focusable="False">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="10,7,10,7">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"/>
-                                <Border Grid.Column="1" CornerRadius="4" Padding="7,1"
-                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                        BorderThickness="1"
-                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
-                                    <TextBlock Text="{Binding ProductId}" FontFamily="Consolas" FontSize="12"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ui:Card>
+            <ui:TextBlock Text="Supported Displays" FontTypography="BodyStrong"
+                          HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <ItemsControl ItemsSource="{Binding SupportedDisplays}" Focusable="False"
+                          HorizontalAlignment="Center">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" FontSize="12.5" TextAlignment="Center" Margin="0,2"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
-            <!-- Project & resources -->
-            <ui:TextBlock Text="PROJECT &amp; RESOURCES" FontTypography="Caption" Margin="2,22,0,8"
-                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-            <ui:Card Padding="4">
-                <StackPanel>
-                    <ui:Button Style="{StaticResource LinkRow}" Tag="{Binding RepositoryUrl}" Click="OnLinkClick">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:SymbolIcon Grid.Column="0" Symbol="BranchFork24" FontSize="18" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            <ui:TextBlock Grid.Column="1" Text="GitHub repository" VerticalAlignment="Center"/>
-                            <ui:SymbolIcon Grid.Column="2" Symbol="ArrowUpRight24" FontSize="14"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        </Grid>
-                    </ui:Button>
-                    <ui:Button Style="{StaticResource LinkRow}" Tag="{Binding ReleasesUrl}" Click="OnLinkClick">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:SymbolIcon Grid.Column="0" Symbol="ArrowSync24" FontSize="18" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            <ui:TextBlock Grid.Column="1" Text="Check for updates" VerticalAlignment="Center"/>
-                            <ui:SymbolIcon Grid.Column="2" Symbol="ArrowUpRight24" FontSize="14"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        </Grid>
-                    </ui:Button>
-                    <ui:Button Style="{StaticResource LinkRow}" Tag="{Binding IssuesUrl}" Click="OnLinkClick">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:SymbolIcon Grid.Column="0" Symbol="Bug24" FontSize="18" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            <ui:TextBlock Grid.Column="1" Text="Report an issue" VerticalAlignment="Center"/>
-                            <ui:SymbolIcon Grid.Column="2" Symbol="ArrowUpRight24" FontSize="14"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        </Grid>
-                    </ui:Button>
-                    <ui:Button Style="{StaticResource LinkRow}" Tag="{Binding LicenseUrl}" Click="OnLinkClick">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:SymbolIcon Grid.Column="0" Symbol="Scales24" FontSize="18" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            <ui:TextBlock Grid.Column="1" Text="License — GPL-3.0" VerticalAlignment="Center"/>
-                            <ui:SymbolIcon Grid.Column="2" Symbol="ArrowUpRight24" FontSize="14"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        </Grid>
-                    </ui:Button>
-                    <ui:Button Style="{StaticResource LinkRow}" Tag="{Binding ThirdPartyNoticesUrl}" Click="OnLinkClick">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:SymbolIcon Grid.Column="0" Symbol="DocumentBulletList24" FontSize="18" Margin="0,0,12,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            <ui:TextBlock Grid.Column="1" Text="Third-party notices" VerticalAlignment="Center"/>
-                            <ui:SymbolIcon Grid.Column="2" Symbol="ArrowUpRight24" FontSize="14"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                        </Grid>
-                    </ui:Button>
+            <Border Height="1" Margin="0,20"
+                    Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+
+            <!-- Donate -->
+            <Button Style="{StaticResource BmcButton}" HorizontalAlignment="Center"
+                    Tag="{Binding DonateUrl}" Click="OnLinkClick">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="DrinkCoffee24" FontSize="18" Foreground="#0D0C22"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="Buy me a coffee" VerticalAlignment="Center"/>
                 </StackPanel>
-            </ui:Card>
+            </Button>
 
-            <!-- Support -->
-            <ui:TextBlock Text="SUPPORT DEVELOPMENT" FontTypography="Caption" Margin="2,22,0,8"
+            <!-- Links -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                <ui:Button Style="{StaticResource TextLink}" Content="GitHub"
+                           Tag="{Binding RepositoryUrl}" Click="OnLinkClick"/>
+                <TextBlock Text="·" VerticalAlignment="Center" Margin="6,0"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                <ui:Button Style="{StaticResource TextLink}" Content="Check for Updates"
+                           Tag="{Binding ReleasesUrl}" Click="OnLinkClick"/>
+            </StackPanel>
+            <ui:TextBlock Text="{Binding OpenSourceText}" FontTypography="Caption"
+                          HorizontalAlignment="Center" Margin="0,8,0,0"
                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-            <ui:Button Appearance="Primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                       Padding="0,10" Content="Buy me a coffee" Cursor="Hand"
-                       Tag="{Binding DonateUrl}" Click="OnLinkClick">
-                <ui:Button.Icon>
-                    <ui:SymbolIcon Symbol="DrinkCoffee24"/>
-                </ui:Button.Icon>
-            </ui:Button>
 
             <!-- Legal -->
-            <ui:TextBlock Text="{Binding LegalText}" TextWrapping="Wrap" FontTypography="Caption" Margin="0,20,0,0"
+            <ui:TextBlock Text="{Binding LegalText}" FontTypography="Caption" TextWrapping="Wrap"
+                          TextAlignment="Center" MaxWidth="320" HorizontalAlignment="Center" Margin="0,20,0,0"
                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
 
             <!-- Footer -->
-            <ui:TextBlock Text="{Binding FooterText}" FontTypography="Caption" HorizontalAlignment="Center"
-                          Margin="0,14,0,0"
+            <ui:TextBlock Text="{Binding FooterText}" FontTypography="Caption"
+                          HorizontalAlignment="Center" Margin="0,14,0,0"
                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
         </StackPanel>
     </Grid>
