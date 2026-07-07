@@ -83,15 +83,13 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <ui:TextBlock Text="Displays" FontTypography="Title"/>
                     <ui:TextBlock Text="Adjust brightness for supported Apple displays."
-                                  FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,0"/>
+                                  FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,6,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"
-                                     Visibility="{Binding LoadingVisibility}"/>
                     <ui:Button Content="Rescan" Command="{Binding RefreshCommand}"
                                ToolTip="Scan for connected Apple displays">
                         <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="ArrowClockwise24"/>
+                            <ui:SymbolIcon Symbol="ArrowSync24" FontSize="20"/>
                         </ui:Button.Icon>
                     </ui:Button>
                 </StackPanel>
@@ -162,7 +160,7 @@
             </ui:Card>
 
             <!-- Display list -->
-            <ScrollViewer Grid.Row="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+            <ScrollViewer Grid.Row="2" Margin="0,22,0,0" VerticalScrollBarVisibility="Auto"
                           Focusable="False">
                 <ItemsControl ItemsSource="{Binding Displays}" Focusable="False">
                     <ItemsControl.ItemTemplate>

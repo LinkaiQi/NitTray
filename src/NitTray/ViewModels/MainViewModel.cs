@@ -52,7 +52,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             _isLoading = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(EmptyVisibility));
-            OnPropertyChanged(nameof(LoadingVisibility));
             _refreshCommand.RaiseCanExecuteChanged();
             _setUpDriverCommand.RaiseCanExecuteChanged();
         }
@@ -123,10 +122,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         : Visibility.Collapsed;
 
     public Visibility InstallingVisibility => IsInstallingDriver
-        ? Visibility.Visible
-        : Visibility.Collapsed;
-
-    public Visibility LoadingVisibility => IsLoading
         ? Visibility.Visible
         : Visibility.Collapsed;
 
