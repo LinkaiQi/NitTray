@@ -262,14 +262,14 @@
 
                 <!-- Troubleshooting help -->
                 <StackPanel Width="400" Margin="0,20,0,0">
-                    <ui:TextBlock Text="Can't Detect Your Display?" FontTypography="BodyStrong"/>
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,7,0,0"
+                    <ui:TextBlock Text="Can't Detect Your Display?" FontTypography="Caption" FontWeight="SemiBold"/>
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,7,0,0" FontTypography="Caption"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="NitTray controls brightness over USB. Connect your display directly to your PC using a USB-C or Thunderbolt cable."/>
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,10,0,0"
+                                  Text="Connect your display directly to your PC using a USB-C or Thunderbolt cable."/>
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontTypography="Caption"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                   Text="Avoid HDMI or DisplayPort adapters. They carry video only and don't provide the USB connection needed to adjust brightness."/>
-                    <ui:TextBlock TextWrapping="Wrap" Margin="0,10,0,0"
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontTypography="Caption"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                   Text="Use a data-capable USB cable. Some USB-C cables provide power only."/>
                 </StackPanel>
