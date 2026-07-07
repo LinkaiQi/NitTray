@@ -290,7 +290,7 @@
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                         <ui:TextBlock Grid.Column="1" TextWrapping="Wrap"
                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                            <Run Text="Avoid "/><Run Text="HDMI or DisplayPort adapters" FontWeight="SemiBold"/><Run Text="—they carry video only and don't provide the USB data connection NitTray requires."/>
+                            <Run Text="Avoid "/><Run Text="HDMI or DisplayPort adapters" FontWeight="SemiBold"/><Run Text=". They carry video only and don't provide the USB interface needs to adjust brightness."/>
                         </ui:TextBlock>
                     </Grid>
                     <Grid Margin="0,5,0,0">
