@@ -10,8 +10,9 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
     }
 
-    // Opens the About window (also reachable from the tray menu).
-    private void OnAboutButtonClick(object sender, RoutedEventArgs e)
+    // Opens the About window from the footer "About NitTray" link (also reachable
+    // from the tray menu).
+    private void OnAboutClick(object sender, RoutedEventArgs e)
     {
         (System.Windows.Application.Current as App)?.ShowAbout();
     }

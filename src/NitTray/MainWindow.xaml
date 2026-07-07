@@ -40,6 +40,18 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Footer "About NitTray" link: accent text, underline on hover only. -->
+        <Style x:Key="FooterLink" TargetType="Hyperlink">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+            <Setter Property="TextDecorations" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="TextDecorations" Value="Underline"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </ui:FluentWindow.Resources>
 
     <Grid>
@@ -76,12 +88,6 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"
                                      Visibility="{Binding LoadingVisibility}"/>
-                    <ui:Button Appearance="Transparent" Padding="8" Margin="0,0,8,0"
-                               ToolTip="About NitTray" Click="OnAboutButtonClick">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="Info24"/>
-                        </ui:Button.Icon>
-                    </ui:Button>
                     <ui:Button Content="Refresh" Command="{Binding RefreshCommand}">
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="ArrowClockwise24"/>
@@ -248,21 +254,74 @@
 
             <!-- Empty state -->
             <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        MaxWidth="320" Visibility="{Binding EmptyVisibility}">
+                        Visibility="{Binding EmptyVisibility}">
                 <ui:SymbolIcon Symbol="Desktop24" FontSize="40" HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                 <ui:TextBlock Text="No Apple display detected" FontTypography="BodyStrong"
                               HorizontalAlignment="Center" Margin="0,10,0,0"/>
-                <ui:TextBlock TextAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                              FontTypography="Caption" Margin="0,4,0,0"
-                              Text="Connect a Studio Display or Pro Display XDR over USB-C / Thunderbolt, then click Refresh."/>
+
+                <!-- Troubleshooting help -->
+                <StackPanel Width="400" Margin="0,20,0,0">
+                    <ui:TextBlock Text="Can't Detect Your Display?" FontTypography="BodyStrong"/>
+                    <ui:TextBlock TextWrapping="Wrap" Margin="0,7,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="NitTray controls brightness over USB, so your display must have a direct USB data connection to your PC."/>
+                    <ui:TextBlock Text="To get started:" Margin="0,10,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                    <Grid Margin="0,7,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <Run Text="Connect your display directly to your PC using a "/><Run Text="USB-C or Thunderbolt" FontWeight="SemiBold"/><Run Text=" cable."/>
+                        </ui:TextBlock>
+                    </Grid>
+                    <Grid Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <Run Text="Avoid "/><Run Text="HDMI or DisplayPort adapters" FontWeight="SemiBold"/><Run Text="—they carry video only and don't provide the USB data connection NitTray requires."/>
+                        </ui:TextBlock>
+                    </Grid>
+                    <Grid Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="•" Margin="2,0,8,0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                        <ui:TextBlock Grid.Column="1" TextWrapping="Wrap"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <Run Text="Make sure you're using a "/><Run Text="USB cable that supports data transfer" FontWeight="SemiBold"/><Run Text=". Some USB-C cables provide power only."/>
+                        </ui:TextBlock>
+                    </Grid>
+                </StackPanel>
             </StackPanel>
 
             <!-- Footer -->
-            <ui:TextBlock Grid.Row="3" Margin="0,12,0,0" HorizontalAlignment="Right"
-                          Text="Closing keeps NitTray in the system tray."
-                          FontTypography="Caption"
-                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+            <Grid Grid.Row="3" Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Column="0" VerticalAlignment="Center"
+                              Text="Closing keeps NitTray in the system tray."
+                              FontTypography="Caption"
+                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12">
+                    <Hyperlink Style="{StaticResource FooterLink}" Click="OnAboutClick">About NitTray</Hyperlink>
+                </TextBlock>
+            </Grid>
         </Grid>
     </Grid>
 </ui:FluentWindow>
