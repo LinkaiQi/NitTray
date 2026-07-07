@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="NitTray"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
-        Width="580" Height="640" MinWidth="480" MinHeight="460"
+        Width="480" Height="640" MinWidth="480" MinHeight="460"
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
@@ -261,7 +261,7 @@
                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
 
                 <!-- Troubleshooting help -->
-                <StackPanel Width="384" Margin="0,30,0,0">
+                <StackPanel Width="384" Margin="0,44,0,0">
                     <ui:TextBlock Text="Can't Detect Your Display?" FontSize="13.5" FontWeight="Bold"
                                   Margin="0,0,0,8"/>
                     <ui:TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18" LineStackingStrategy="BlockLineHeight"
