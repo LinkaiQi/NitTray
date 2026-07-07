@@ -186,7 +186,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Refresh failed: {ex.Message}";
+            StatusMessage = $"Rescan failed: {ex.Message}";
         }
         finally
         {
