@@ -29,7 +29,7 @@ internal sealed class TrayIconHost : IDisposable
         };
         var showItem = new WinForms.ToolStripMenuItem("Show NitTray");
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
-        var refreshItem = new WinForms.ToolStripMenuItem("Refresh displays");
+        var refreshItem = new WinForms.ToolStripMenuItem("Rescan displays");
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
         var aboutItem = new WinForms.ToolStripMenuItem("About NitTray");
         aboutItem.Click += (_, _) => AboutRequested?.Invoke(this, EventArgs.Empty);

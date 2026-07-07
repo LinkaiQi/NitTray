@@ -37,7 +37,7 @@ one-time Pro Display XDR driver install shows a single UAC prompt.
 ## Features
 
 - Lives in the system tray. Double-click to show; right-click for Show,
-  Refresh, About, diagnostics, or Quit.
+  Rescan, About, diagnostics, or Quit.
 - Window lists every connected Apple display with its current brightness.
 - Drag the slider — brightness updates in real time over USB HID.
 - Closing the main window keeps the app in the tray; pick **Quit** to exit.
