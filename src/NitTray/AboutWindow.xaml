@@ -24,9 +24,9 @@
             <Setter Property="Background" Value="#FFDD00"/>
             <Setter Property="Foreground" Value="#0D0C22"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="18,9"/>
+            <Setter Property="Padding" Value="13,7"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -49,13 +49,16 @@
             </Setter>
         </Style>
 
-        <!-- Small accent-coloured text link. -->
-        <Style x:Key="TextLink" TargetType="ui:Button">
-            <Setter Property="Appearance" Value="Transparent"/>
-            <Setter Property="Padding" Value="4,2"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <!-- Small accent-coloured inline text link that underlines on hover. -->
+        <Style x:Key="TextLink" TargetType="Hyperlink">
             <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+            <Setter Property="TextDecorations" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="TextDecorations" Value="Underline"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </ui:FluentWindow.Resources>
 
@@ -75,13 +78,15 @@
         <StackPanel Grid.Row="1" Margin="26,8,26,22">
 
             <!-- App identity -->
-            <Image Source="pack://application:,,,/Assets/AppIcon-256.png"
-                   Width="72" Height="72" HorizontalAlignment="Center"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
-            <ui:TextBlock Text="{Binding AppName}" FontTypography="TitleLarge"
-                          HorizontalAlignment="Center" Margin="0,12,0,0"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Image Source="pack://application:,,,/Assets/AppIcon-256.png"
+                       Width="40" Height="40" VerticalAlignment="Center"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <ui:TextBlock Text="{Binding AppName}" FontTypography="Subtitle"
+                              VerticalAlignment="Center" Margin="11,0,0,0"/>
+            </StackPanel>
             <ui:TextBlock Text="{Binding VersionText}" FontTypography="Body"
-                          HorizontalAlignment="Center" Margin="0,3,0,0"
+                          HorizontalAlignment="Center" Margin="0,10,0,0"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             <ui:TextBlock Text="{Binding Tagline}" FontTypography="Body"
                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
@@ -111,21 +116,16 @@
             <Button Style="{StaticResource BmcButton}" HorizontalAlignment="Center"
                     Tag="{Binding DonateUrl}" Click="OnLinkClick">
                 <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Symbol="DrinkCoffee24" FontSize="18" Foreground="#0D0C22"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ui:SymbolIcon Symbol="DrinkCoffee24" FontSize="16" Foreground="#0D0C22"
+                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <TextBlock Text="Buy me a coffee" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
 
             <!-- Links -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
-                <ui:Button Style="{StaticResource TextLink}" Content="GitHub"
-                           Tag="{Binding RepositoryUrl}" Click="OnLinkClick"/>
-                <TextBlock Text="·" VerticalAlignment="Center" Margin="6,0"
-                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                <ui:Button Style="{StaticResource TextLink}" Content="Check for Updates"
-                           Tag="{Binding ReleasesUrl}" Click="OnLinkClick"/>
-            </StackPanel>
+            <TextBlock HorizontalAlignment="Center" TextAlignment="Center" FontSize="13" Margin="0,14,0,0">
+                <Hyperlink Style="{StaticResource TextLink}" Tag="{Binding RepositoryUrl}" Click="OnLinkClick">GitHub</Hyperlink><Run Text="     ·     " Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Hyperlink Style="{StaticResource TextLink}" Tag="{Binding ReleasesUrl}" Click="OnLinkClick">Check for Updates</Hyperlink>
+            </TextBlock>
             <ui:TextBlock Text="{Binding OpenSourceText}" FontTypography="Caption"
                           HorizontalAlignment="Center" Margin="0,8,0,0"
                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>

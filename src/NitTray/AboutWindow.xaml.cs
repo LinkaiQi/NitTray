@@ -13,11 +13,15 @@ public partial class AboutWindow : FluentWindow
         DataContext = new AboutViewModel();
     }
 
-    // Every link row and the donate button carry their destination URL in Tag; open
-    // it in the user's default browser.
+    // Every link and the donate button carries its destination URL in Tag; open it
+    // in the user's default browser. Handles both FrameworkElement (Button) and
+    // FrameworkContentElement (inline Hyperlink) senders.
     private void OnLinkClick(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: string url } && !string.IsNullOrWhiteSpace(url))
+        var tag = (sender as FrameworkElement)?.Tag
+                  ?? (sender as FrameworkContentElement)?.Tag;
+
+        if (tag is string url && !string.IsNullOrWhiteSpace(url))
         {
             OpenUrl(url);
         }
