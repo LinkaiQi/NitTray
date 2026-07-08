@@ -38,13 +38,13 @@ jobs:
       # with MSBuild + CMake, located via vswhere; needs the "MSVC v143 - ARM64
       # build tools" component, which the windows-2022 image includes (windows-latest
       # has migrated to VS 18 and no longer ships the v143 ARM64 toolset). Stages
-      # src/native/dist/NitTray.DriverSetup.exe, which the app
+      # src/driver/dist/NitTray.DriverSetup.exe, which the app
       # .csproj bundles into every publish — so this MUST run before publish.
       - name: Build native WinUSB installer helper (libwdi, x64 + ARM64)
         shell: pwsh
         run: |
-          ./src/native/build.ps1 -SupportArm64
-          if (-not (Test-Path src/native/dist/NitTray.DriverSetup.exe)) {
+          ./src/driver/build.ps1 -SupportArm64
+          if (-not (Test-Path src/driver/dist/NitTray.DriverSetup.exe)) {
             throw "native helper build did not produce NitTray.DriverSetup.exe"
           }
 

@@ -3,7 +3,7 @@
     Builds NitTray.DriverSetup.exe (the elevated WinUSB installer helper).
 
 .DESCRIPTION
-    1. Clones libwdi (pinned tag) into src/native/third_party/libwdi if absent.
+    1. Clones libwdi (pinned tag) into src/driver/third_party/libwdi if absent.
     2. Patches libwdi to build co-installer-free (see NOTES). By default it also
        trims libwdi to x64-only so no WDK and no ARM64 tools are needed; pass
        -SupportArm64 to additionally embed the ARM64 installer (see "ARM64 support").

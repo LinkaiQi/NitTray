@@ -13,7 +13,7 @@ It builds on the following open-source components, with thanks:
 libwdi is statically linked into the helper executable. In accordance with the
 LGPL-3.0, the corresponding source is available at the project link above, and
 the build steps that produce the helper are documented in
-`src/native/`.
+`src/driver/`.
 
 ## WPF-UI
 
