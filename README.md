@@ -142,7 +142,7 @@ once, then never again — see [Pro Display XDR setup](#pro-display-xdr-setup-wi
 ```powershell
 # from the repo root, on Windows
 dotnet build -c Release
-dotnet run --project src/client
+dotnet run --project src/app
 ```
 
 > **Pro Display XDR support** also needs the native WinUSB installer helper
@@ -160,14 +160,14 @@ dotnet run --project src/client
 Or publish a single-folder framework-dependent build:
 
 ```powershell
-dotnet publish src/client -c Release -r win-x64 --self-contained false -o publish
+dotnet publish src/app -c Release -r win-x64 --self-contained false -o publish
 .\publish\NitTray.exe
 ```
 
 For a fully self-contained build (no .NET runtime needed on the target):
 
 ```powershell
-dotnet publish src/client -c Release -r win-x64 --self-contained true `
+dotnet publish src/app -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
   -o publish-standalone
 ```
@@ -178,7 +178,7 @@ the app from macOS or Linux for CI.
 ## Project layout
 
 ```
-src/client/
+src/app/
   App.xaml / App.xaml.cs          - WPF app entry, owns tray + window lifecycle
   MainWindow.xaml / .cs           - displays + sliders UI
   AboutWindow.xaml / .cs          - About & Support window (version, links, donate)
@@ -256,7 +256,7 @@ src/driver/                   - elevated WinUSB installer (C + libwdi),
   2. If a blue **"Windows protected your PC"** dialog appears, click
      **More info → Run anyway**.
   3. Prefer launching the copy you **built locally** on that same PC — e.g.
-     `dotnet run --project src/client` or the `bin\Release\net10.0-windows\`
+     `dotnet run --project src/app` or the `bin\Release\net10.0-windows\`
      output. Locally produced files have no Mark of the Web and usually don't trip
      the warning.
   4. If **Smart App Control** is what's blocking it (Windows Security → *App &

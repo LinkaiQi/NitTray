@@ -44,7 +44,7 @@ The result is reported **only through the process exit code** (no stdout parsing
 | `6`       | Driver uninstall failed         | `UninstallFailed`         |
 
 > ⚠️ Keep this table in sync with
-> [`src/client/Services/DriverSetupExitCodes.cs`](../client/Services/DriverSetupExitCodes.cs).
+> [`src/app/Services/DriverSetupExitCodes.cs`](../app/Services/DriverSetupExitCodes.cs).
 
 Detailed progress is appended to `%LOCALAPPDATA%\NitTray\driver-setup.log`.
 
@@ -90,7 +90,7 @@ cd src\driver
 4. Stage `libwdi.h` + `libwdi.lib`.
 5. Configure + build this helper with CMake (toolset `v143`).
 6. Copy `NitTray.DriverSetup.exe` next to the NitTray app output
-   (`src/client/bin/Release/net10.0-windows`) so the tray app finds it.
+   (`src/app/bin/Release/net10.0-windows`) so the tray app finds it.
 
 Override defaults if needed:
 
