@@ -14,7 +14,7 @@
     <Company>NitTray</Company>
     <Copyright>Copyright © 2026 NitTray</Copyright>
     <Description>Control Apple display brightness from Windows.</Description>
-    <Version>0.1.0</Version>
+    <Version>0.0.0-local</Version>
     <RepositoryUrl>https://github.com/LinkaiQi/NitTray</RepositoryUrl>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <Nullable>enable</Nullable>

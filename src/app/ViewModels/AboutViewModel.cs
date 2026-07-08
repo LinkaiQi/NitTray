@@ -51,6 +51,6 @@ public sealed class AboutViewModel
             return plus >= 0 ? informational[..plus] : informational;
         }
 
-        return assembly.GetName().Version?.ToString(3) ?? "0.1.0";
+        return assembly.GetName().Version?.ToString(3) ?? "0.0.0-local";
     }
 }
