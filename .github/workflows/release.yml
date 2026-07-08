@@ -50,7 +50,7 @@ jobs:
 
       - name: Publish x64 (self-contained, single file)
         run: >
-          dotnet publish src/client -c Release -r win-x64
+          dotnet publish src/app -c Release -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
@@ -58,7 +58,7 @@ jobs:
 
       - name: Publish ARM64 (self-contained, single file)
         run: >
-          dotnet publish src/client -c Release -r win-arm64
+          dotnet publish src/app -c Release -r win-arm64
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true

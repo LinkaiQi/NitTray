@@ -43,7 +43,7 @@
 
 .PARAMETER AppOutputDir
     Where to copy the built helper. Defaults to the NitTray Release output
-    (..\client\bin\<Config>\net10.0-windows).
+    (..\app\bin\<Config>\net10.0-windows).
 
 .NOTES
     *** By default, no WDK and no ARM64 build tools are required. ***
@@ -445,7 +445,7 @@ Copy-Item $exe.FullName (Join-Path $distDir "NitTray.DriverSetup.exe") -Force
 Write-Host "==> Staged helper to $distDir" -ForegroundColor Green
 
 if ([string]::IsNullOrWhiteSpace($AppOutputDir)) {
-    $AppOutputDir = Join-Path $scriptDir "..\client\bin\$Config\net10.0-windows"
+    $AppOutputDir = Join-Path $scriptDir "..\app\bin\$Config\net10.0-windows"
 }
 if (Test-Path $AppOutputDir) {
     Copy-Item $exe.FullName (Join-Path $AppOutputDir "NitTray.DriverSetup.exe") -Force
