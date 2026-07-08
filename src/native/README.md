@@ -44,7 +44,7 @@ The result is reported **only through the process exit code** (no stdout parsing
 | `6`       | Driver uninstall failed         | `UninstallFailed`         |
 
 > ⚠️ Keep this table in sync with
-> [`src/NitTray/Services/DriverSetupExitCodes.cs`](../../src/NitTray/Services/DriverSetupExitCodes.cs).
+> [`src/client/Services/DriverSetupExitCodes.cs`](../client/Services/DriverSetupExitCodes.cs).
 
 Detailed progress is appended to `%LOCALAPPDATA%\NitTray\driver-setup.log`.
 
@@ -77,7 +77,7 @@ required.** (To also target Windows on ARM, see [Windows on ARM](#windows-on-arm
 From a **Developer PowerShell for VS** (2022 or 2026):
 
 ```powershell
-cd native\NitTray.DriverSetup
+cd src\native
 ./build.ps1
 ```
 
@@ -90,7 +90,7 @@ cd native\NitTray.DriverSetup
 4. Stage `libwdi.h` + `libwdi.lib`.
 5. Configure + build this helper with CMake (toolset `v143`).
 6. Copy `NitTray.DriverSetup.exe` next to the NitTray app output
-   (`src/NitTray/bin/Release/net10.0-windows`) so the tray app finds it.
+   (`src/client/bin/Release/net10.0-windows`) so the tray app finds it.
 
 Override defaults if needed:
 

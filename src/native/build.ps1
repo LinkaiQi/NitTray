@@ -3,7 +3,7 @@
     Builds NitTray.DriverSetup.exe (the elevated WinUSB installer helper).
 
 .DESCRIPTION
-    1. Clones libwdi (pinned tag) into native/third_party/libwdi if absent.
+    1. Clones libwdi (pinned tag) into src/native/third_party/libwdi if absent.
     2. Patches libwdi to build co-installer-free (see NOTES). By default it also
        trims libwdi to x64-only so no WDK and no ARM64 tools are needed; pass
        -SupportArm64 to additionally embed the ARM64 installer (see "ARM64 support").
@@ -43,7 +43,7 @@
 
 .PARAMETER AppOutputDir
     Where to copy the built helper. Defaults to the NitTray Release output
-    (..\..\src\NitTray\bin\<Config>\net10.0-windows).
+    (..\client\bin\<Config>\net10.0-windows).
 
 .NOTES
     *** By default, no WDK and no ARM64 build tools are required. ***
@@ -445,7 +445,7 @@ Copy-Item $exe.FullName (Join-Path $distDir "NitTray.DriverSetup.exe") -Force
 Write-Host "==> Staged helper to $distDir" -ForegroundColor Green
 
 if ([string]::IsNullOrWhiteSpace($AppOutputDir)) {
-    $AppOutputDir = Join-Path $scriptDir "..\..\src\NitTray\bin\$Config\net10.0-windows"
+    $AppOutputDir = Join-Path $scriptDir "..\client\bin\$Config\net10.0-windows"
 }
 if (Test-Path $AppOutputDir) {
     Copy-Item $exe.FullName (Join-Path $AppOutputDir "NitTray.DriverSetup.exe") -Force
