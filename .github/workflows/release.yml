@@ -119,7 +119,7 @@ jobs:
               "/DMyAppVersion=$version" `
               "/DMyArch=$arch" `
               "/DSourceDir=$($PWD.Path)\publish\win-$arch" `
-              "/DOutputBase=NitTray-$tag-setup-$arch" `
+              "/DOutputBase=NitTray-$tag-installer-$arch" `
               installer\NitTray.iss
             if ($LASTEXITCODE -ne 0) { throw "ISCC failed for $arch" }
           }
@@ -145,8 +145,9 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           foreach ($rid in 'win-x64', 'win-arm64') {
+            $arch = $rid -replace '^win-', ''
             $items = Get-ChildItem "publish/$rid" -Exclude *.pdb
-            Compress-Archive -Path $items.FullName -DestinationPath "NitTray-$tag-$rid.zip" -Force
+            Compress-Archive -Path $items.FullName -DestinationPath "NitTray-$tag-portable-$arch.zip" -Force
           }
 
       - name: Upload build artifacts
@@ -162,7 +163,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            installer/output/NitTray-${{ github.ref_name }}-setup-x64.exe
-            installer/output/NitTray-${{ github.ref_name }}-setup-arm64.exe
-            NitTray-${{ github.ref_name }}-win-x64.zip
-            NitTray-${{ github.ref_name }}-win-arm64.zip
+            installer/output/NitTray-${{ github.ref_name }}-installer-x64.exe
+            installer/output/NitTray-${{ github.ref_name }}-installer-arm64.exe
+            NitTray-${{ github.ref_name }}-portable-x64.zip
+            NitTray-${{ github.ref_name }}-portable-arm64.zip

@@ -24,10 +24,10 @@ Grab the latest [release](https://github.com/LinkaiQi/NitTray/releases) and pick
 the build that matches your PC — **x64** for most Windows PCs, **arm64** for
 Windows on ARM (Snapdragon X, Surface Pro X, etc.):
 
-- **Installer (recommended)** — `NitTray-<version>-setup-<arch>.exe`. Installs
+- **Installer (recommended)** — `NitTray-<version>-installer-<arch>.exe`. Installs
   per-user (no admin needed), adds a Start Menu shortcut, an optional "start when
   I sign in" checkbox, and an uninstaller.
-- **Portable zip** — `NitTray-<version>-win-<arch>.zip`. Extract and run
+- **Portable zip** — `NitTray-<version>-portable-<arch>.zip`. Extract and run
   `NitTray.exe`; keep `NitTray.DriverSetup.exe` next to it (the Pro Display XDR
   driver setup needs it).
 
