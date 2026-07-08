@@ -177,12 +177,9 @@ public sealed partial class AppleDisplayService
 
             var (productId, productNameFromPid) = ParseIdsFromPath(path);
 
-            // Prefer our curated marketing name for recognised Apple PIDs. The
-            // per-interface HID product string is unreliable as a display name —
-            // e.g. the Studio Display's brightness interface (MI_07) reports the
-            // generic internal label "HID Relay" rather than "Studio Display (2nd Generation)".
-            // Only fall back to the HID string for unknown displays, and never
-            // surface that internal label.
+            // Prefer our curated name for known PIDs; the per-interface HID product
+            // string is unreliable (the Studio Display's MI_07 reports "HID Relay").
+            // Fall back to the HID string only for unknown displays.
             var hidProductName = ReadHidString(handle, HidNative.HidD_GetProductString);
             if (!string.IsNullOrWhiteSpace(hidProductName)
                 && hidProductName!.Trim().Equals("HID Relay", StringComparison.OrdinalIgnoreCase))
@@ -290,9 +287,8 @@ public sealed partial class AppleDisplayService
 
     private static string? GetDevicePath(IntPtr devInfoSet, ref SetupApiNative.SP_DEVICE_INTERFACE_DATA ifaceData)
     {
-        // Same detail query as GetDevicePathWithInfo; it also fills a SP_DEVINFO_DATA
-        // this caller doesn't need, so pass a correctly-sized throwaway and keep a
-        // single implementation.
+        // Same detail query as GetDevicePathWithInfo; pass a throwaway SP_DEVINFO_DATA
+        // this caller doesn't need.
         var devInfoData = new SetupApiNative.SP_DEVINFO_DATA
         {
             cbSize = Marshal.SizeOf<SetupApiNative.SP_DEVINFO_DATA>(),

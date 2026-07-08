@@ -10,16 +10,12 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
     }
 
-    // Opens the About window from the footer "About NitTray" link (also reachable
-    // from the tray menu).
     private void OnAboutClick(object sender, RoutedEventArgs e)
     {
         (System.Windows.Application.Current as App)?.ShowAbout();
     }
 
-    // Opens the per-display ⋯ overflow menu on left-click (Fluent "more options"
-    // pattern). The button carries the MoreHorizontal glyph and no chevron, so this
-    // pure-UI handler just shows its attached ContextMenu below the button.
+    // Show the per-display ⋯ overflow ContextMenu below the button on left-click.
     private void OnOverflowMenuButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement element &&

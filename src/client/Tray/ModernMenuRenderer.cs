@@ -6,11 +6,9 @@ using WinForms = System.Windows.Forms;
 
 namespace NitTray.Tray;
 
-// Gives the WinForms tray context menu a Windows 11 "Fluent" look that the stock
-// renderers can't: a flat themed background, a soft rounded highlight on the
-// hovered item (instead of the classic full-width bar), and thin inset
-// separators. Rounded window corners + the drop shadow come from DWM (see
-// MenuTheme.EnableRoundedCorners), which no-ops gracefully on Windows 10.
+// Gives the WinForms tray menu a Windows 11 Fluent look: flat themed background,
+// rounded hover highlight, and thin inset separators. Rounded corners + shadow
+// come from DWM (see MenuTheme.EnableRoundedCorners), a no-op on Windows 10.
 internal sealed class ModernMenuRenderer : WinForms.ToolStripProfessionalRenderer
 {
     private const int SelectionInsetX = 4;
@@ -57,10 +55,8 @@ internal sealed class ModernMenuRenderer : WinForms.ToolStripProfessionalRendere
     {
         e.TextColor = e.Item.Enabled ? _palette.Text : _palette.TextDisabled;
 
-        // Take full control of text placement: a fixed left inset (the dropdown menu
-        // honors neither an item's Padding.Left nor a reliably centered default text
-        // rectangle) and vertical centering across the whole item height, so the text
-        // sits centered inside the rounded hover highlight.
+        // Place text ourselves: fixed left inset + vertical centering across the full
+        // item height, so it sits centered in the rounded hover highlight.
         e.TextRectangle = new Rectangle(
             TextLeftInset,
             0,
@@ -168,8 +164,7 @@ internal static class MenuTheme
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
-    // True when Windows apps are set to the light theme. Mirrors the surface the
-    // Win11 menus themselves follow (Personalize\AppsUseLightTheme).
+    // True when Windows apps use the dark theme (Personalize\AppsUseLightTheme == 0).
     public static bool IsDark()
     {
         try
@@ -184,8 +179,7 @@ internal static class MenuTheme
         }
     }
 
-    // Rounds the menu's popup window (Windows 11+). On Windows 10 the attribute is
-    // unknown and the call simply fails and is ignored.
+    // Round the popup window's corners (Windows 11+); no-op on Windows 10.
     public static void EnableRoundedCorners(IntPtr hwnd)
     {
         try

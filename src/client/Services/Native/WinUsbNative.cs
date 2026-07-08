@@ -74,13 +74,9 @@ internal static class WinUsbNative
         out uint lengthTransferred,
         IntPtr overlapped);
 
-    // Composite-device navigation. WinUsb_Initialize returns the handle for the
-    // *first* interface (typically interface 0). To talk to any other interface
-    // of a composite USB device, ask for its handle by the *associated index*:
-    //   associatedIndex = 0 -> handle for the 2nd interface (interface 1)
-    //   associatedIndex = 1 -> handle for the 3rd interface (interface 2)
-    //   ...
-    // Returns ERROR_NO_MORE_ITEMS when there are no more associated interfaces.
+    // Get a composite device's other interfaces by associated index (0 -> interface 1,
+    // 1 -> interface 2, …); WinUsb_Initialize itself returns the first. Returns
+    // ERROR_NO_MORE_ITEMS past the last interface.
     [DllImport("winusb.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool WinUsb_GetAssociatedInterface(
@@ -88,10 +84,8 @@ internal static class WinUsbNative
         byte associatedInterfaceIndex,
         out IntPtr associatedInterfaceHandle);
 
-    // Reads the USB interface descriptor for a given alternate setting on the
-    // interface this handle owns. We use alternate setting 0 (the default) and
-    // only care about bInterfaceNumber so we can stamp the right wIndex into
-    // HID class control transfers.
+    // Reads the interface descriptor (alternate setting 0). We only need
+    // bInterfaceNumber, to stamp as wIndex on HID class control transfers.
     [DllImport("winusb.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool WinUsb_QueryInterfaceSettings(

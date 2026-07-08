@@ -13,12 +13,9 @@ namespace NitTray.Services;
 // report descriptor to locate the brightness usage.
 public sealed partial class AppleDisplayService
 {
-    // Fallback presence scan: enumerate EVERY present USB node by hardware-id
-    // (driver-independent) and look for the Pro Display XDR. This is the same
-    // technique the native uninstall uses, and it sees the display even when it
-    // is bound to Windows' failed in-box HID driver -- the yellow-bang / Code 10
-    // state in which the GUID_DEVINTERFACE_USB_DEVICE enumeration above does not
-    // surface it at all.
+    // Fallback: enumerate every present USB node by hardware-id (driver-independent)
+    // to find a Pro Display XDR stuck on the failed in-box HID driver (Code 10),
+    // which the device-interface enumeration above can't see.
     private static PendingDriverSetup? ProbeProXdrPresenceByHardwareId()
     {
         var devInfoSet = SetupApiNative.SetupDiGetClassDevs(
@@ -150,12 +147,9 @@ public sealed partial class AppleDisplayService
                 return (null, true);
             }
 
-            // Pro Display XDR exposes 5 HID interfaces. The brightness control
-            // lives on one specific interface (typically bInterfaceNumber == 2),
-            // not on whichever one WinUsb_Initialize gives us by default. Walk
-            // the composite device via WinUsb_GetAssociatedInterface so we get a
-            // handle for every interface, then identify the brightness one by
-            // its report descriptor.
+            // Brightness lives on a specific interface (typically bInterfaceNumber 2),
+            // not the default one WinUsb_Initialize returns. Walk every interface via
+            // WinUsb_GetAssociatedInterface and match by report descriptor below.
             var interfaces = new List<(byte IfaceNum, IntPtr Handle, sbyte AssocIdx)>();
 
             if (WinUsbNative.WinUsb_QueryInterfaceSettings(primaryWinUsb, 0, out var primaryDesc))
@@ -201,10 +195,8 @@ public sealed partial class AppleDisplayService
                     $"    iface bInterfaceNumber={n}, associatedIdx={(a < 0 ? "primary" : a.ToString())}");
             }
 
-            // For each interface, fetch and dump its HID report descriptor.
-            // Identify the brightness one by the canonical VESA Monitor
-            // Brightness pair (Usage Page 0x0082, Usage 0x0010) that the Pro
-            // Display XDR advertises — see ProDisplayXdr.Model.Brightness.
+            // Match the brightness interface by the VESA Monitor Brightness usage
+            // (Usage Page 0x0082, Usage 0x0010) in its HID report descriptor.
             foreach (var (ifaceNum, ifaceHandle, assocIdx) in interfaces)
             {
                 DiagnosticLog.Write(
@@ -229,8 +221,6 @@ public sealed partial class AppleDisplayService
                     continue;
                 }
 
-                // Found the brightness interface. Read the current brightness
-                // value to confirm and surface it in the log.
                 var probe = new byte[ProXdr.FeatureReportByteLength];
                 probe[0] = ProXdr.ReportId;
                 var setup = new WinUsbNative.WINUSB_SETUP_PACKET
@@ -317,10 +307,8 @@ public sealed partial class AppleDisplayService
         return string.IsNullOrWhiteSpace(candidate) ? null : candidate;
     }
 
-    // Fetch the full HID report descriptor for a single interface via a
-    // standard USB GET_DESCRIPTOR(Report) control transfer. Also dumps every
-    // step into the diagnostic log so we can decode the layout later if
-    // brightness detection fails.
+    // Fetch an interface's HID report descriptor via GET_DESCRIPTOR(Report),
+    // logging each step for later decoding.
     private static byte[]? FetchReportDescriptor(IntPtr winUsbForIface, byte interfaceNumber)
     {
         // Step 1: read the 9-byte HID class descriptor so we know how long

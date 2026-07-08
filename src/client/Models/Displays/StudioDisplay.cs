@@ -1,11 +1,7 @@
 namespace NitTray.Models.Displays;
 
-// Studio Display (1st generation) — USB PID 0x1114.
-//
-// Its brightness control is a standards-compliant HID interface (MI_07), so
-// Windows' in-box HID driver binds automatically and we read the brightness
-// range live from the HID report descriptor. No explicit BrightnessProtocol
-// is needed.
+// Studio Display (1st generation) — USB PID 0x1114. Standards-compliant HID
+// interface, so Windows binds it automatically and we probe brightness at runtime.
 public static class StudioDisplay
 {
     public static readonly DisplayModel Model = new(

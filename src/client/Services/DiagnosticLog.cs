@@ -4,14 +4,9 @@ using System.Text;
 
 namespace NitTray.Services;
 
-// Verbose diagnostic logging, written in every build configuration. It captures
-// the display-enumeration trace — every HID/USB device seen and why each was or
-// wasn't chosen as the brightness interface — so a user whose display isn't
-// detected can attach the log (%LOCALAPPDATA%\NitTray\diagnostic.log) to a bug
-// report. Logging stays off the brightness hot path: only enumeration and error
-// paths write, so normal slider use doesn't churn the file. WriteCritical is
-// reserved for fatal errors and is identical to Write today, kept as a distinct
-// name to mark genuinely important events.
+// Verbose display-enumeration log (%LOCALAPPDATA%\NitTray\diagnostic.log), written
+// in every build for bug reports. Only enumeration and error paths write, so it
+// stays off the brightness hot path. WriteCritical marks fatal events.
 internal static class DiagnosticLog
 {
     private static readonly object Sync = new();
@@ -40,9 +35,6 @@ internal static class DiagnosticLog
 
     public static void Write(string message) => Append(message);
 
-    // Records a message in every build configuration, same as Write today. Kept as
-    // a distinct name to mark genuinely important events (currently unhandled/fatal
-    // errors) so their intent is clear at the call site.
     public static void WriteCritical(string message) => Append(message);
 
     private static void Append(string message)
