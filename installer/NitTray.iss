@@ -11,7 +11,7 @@
 ;   /DOutputBase=NitTray-<tag>-installer-x64
 
 #define MyAppName "NitTray"
-#define MyAppPublisher "Linkai Qi"
+#define MyAppPublisher "NitTray"
 #define MyAppURL "https://github.com/LinkaiQi/NitTray"
 #define MyAppExeName "NitTray.exe"
 

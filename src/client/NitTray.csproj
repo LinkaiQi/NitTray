@@ -9,9 +9,9 @@
          Authenticode tooling, and (later) the in-app About box. Keep Company/Authors
          aligned with the code-signing certificate subject once you have one. -->
     <Product>NitTray</Product>
-    <Authors>Linkai Qi</Authors>
-    <Company>Linkai Qi</Company>
-    <Copyright>Copyright © 2026 Linkai Qi</Copyright>
+    <Authors>NitTray</Authors>
+    <Company>NitTray</Company>
+    <Copyright>Copyright © 2026 NitTray</Copyright>
     <Description>Control Apple display brightness from Windows.</Description>
     <Version>0.1.0</Version>
     <RepositoryUrl>https://github.com/LinkaiQi/NitTray</RepositoryUrl>
