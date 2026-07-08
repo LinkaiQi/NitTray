@@ -21,14 +21,19 @@ internal sealed class TrayIconHost : IDisposable
 
         var menu = new WinForms.ContextMenuStrip
         {
-            // Flat, native menu look (removes the old gray gradient) with no left
-            // icon gutter — a light touch instead of the WinForms default.
-            RenderMode = WinForms.ToolStripRenderMode.System,
+            // Windows 11 Fluent look: rounded hover highlight + themed colours from
+            // ModernMenuRenderer, no left icon gutter, and rounded window corners
+            // (applied via DWM once the popup handle exists).
+            Renderer = new ModernMenuRenderer(MenuTheme.IsDark()),
             ShowImageMargin = false,
-            BackColor = System.Drawing.Color.White,
+            ShowCheckMargin = false,
         };
+        menu.HandleCreated += (_, _) => MenuTheme.EnableRoundedCorners(menu.Handle);
+
         var showItem = new WinForms.ToolStripMenuItem("Show NitTray");
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
+        // The default (double-click) action, shown bold like the Windows 11 menus.
+        showItem.Font = new Font(showItem.Font, FontStyle.Bold);
         var refreshItem = new WinForms.ToolStripMenuItem("Rescan displays");
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
         var aboutItem = new WinForms.ToolStripMenuItem("About NitTray");
@@ -48,12 +53,13 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 
-        // A little extra breathing room around each clickable option.
+        // Comfortable Windows 11 item spacing (taller rows, text inset from the
+        // rounded highlight).
         foreach (WinForms.ToolStripItem item in menu.Items)
         {
             if (item is WinForms.ToolStripMenuItem)
             {
-                item.Padding = new WinForms.Padding(4);
+                item.Padding = new WinForms.Padding(10, 6, 24, 6);
             }
         }
 
