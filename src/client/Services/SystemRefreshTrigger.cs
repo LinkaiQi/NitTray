@@ -45,8 +45,8 @@ internal sealed class SystemRefreshTrigger : IDisposable
     private int _retriesRemaining;
     private bool _disposed;
 
-    // Raised on the UI thread when something happened that warrants re-enumerating
-    // displays. The string is a short human-readable reason, suitable for the log.
+    // Raised on the UI thread when displays should be re-enumerated; the string is
+    // a log-friendly reason.
     public event EventHandler<string>? RefreshRequested;
 
     public SystemRefreshTrigger()
@@ -95,8 +95,7 @@ internal sealed class SystemRefreshTrigger : IDisposable
 
     private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
     {
-        // Only "the user is (re)engaging with this session" transitions matter;
-        // locking / logging off / disconnecting are moments we can safely ignore.
+        // Only session (re)engagement transitions matter; ignore lock/logoff/disconnect.
         switch (e.Reason)
         {
             case SessionSwitchReason.SessionUnlock:
@@ -134,7 +133,6 @@ internal sealed class SystemRefreshTrigger : IDisposable
                 return;
             }
             _pendingReason = reason;
-            // A fresh trigger restarts the whole settle sequence.
             _retriesRemaining = MaxSettleRetries;
             _debounce.Change(DebounceMilliseconds, System.Threading.Timeout.Infinite);
         }
@@ -151,8 +149,7 @@ internal sealed class SystemRefreshTrigger : IDisposable
             }
             reason = _pendingReason;
 
-            // Re-arm one spaced retry until we've exhausted the settle attempts, so
-            // an interface that becomes openable slightly later is still caught.
+            // Re-arm a spaced retry until the settle attempts are exhausted.
             if (_retriesRemaining > 0)
             {
                 _retriesRemaining--;

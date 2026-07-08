@@ -13,8 +13,7 @@ namespace NitTray.Services;
 // icon, rather than being blocked by a copy running in someone else's session.
 internal sealed class SingleInstance : IDisposable
 {
-    // A fixed unique suffix keeps these names from colliding with any other app's
-    // sync objects. Local\ scopes them to the current session.
+    // GUID suffix avoids collisions with other apps; Local\ scopes to the session.
     private const string MutexName = @"Local\NitTray.SingleInstance.Mutex.b7a3c2e1-9f4d-4e6a-8c15-2a7e5d9b1f30";
     private const string ActivateEventName = @"Local\NitTray.SingleInstance.Activate.b7a3c2e1-9f4d-4e6a-8c15-2a7e5d9b1f30";
 
@@ -48,8 +47,8 @@ internal sealed class SingleInstance : IDisposable
             executeOnlyOnce: false);
     }
 
-    // Second instance only: ask the already-running instance to surface its window.
-    // Returns false if the running instance couldn't be signalled.
+    // Ask the already-running instance to surface its window; false if it couldn't
+    // be signalled.
     public bool SignalExistingInstance()
     {
         try
@@ -60,8 +59,7 @@ internal sealed class SingleInstance : IDisposable
         }
         catch (WaitHandleCannotBeOpenedException)
         {
-            // The first instance owns the mutex but hasn't created the event yet
-            // (a brief startup race). Nothing to signal.
+            // Startup race: the first instance holds the mutex but hasn't created the event yet.
             return false;
         }
     }

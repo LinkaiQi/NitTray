@@ -24,9 +24,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Never let an unexpected error (e.g. a XAML load failure) silently kill the
-        // app at launch — log the full exception and surface it so it can be
-        // diagnosed instead of the window just failing to appear.
+        // Log unhandled startup exceptions (e.g. a XAML load failure) instead of
+        // silently dying at launch.
         DispatcherUnhandledException += (_, args) =>
         {
             LogFatal("Dispatcher", args.Exception);
@@ -35,8 +34,7 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             LogFatal("AppDomain", args.ExceptionObject as Exception);
 
-        // Enforce one instance per session. If a copy is already running, ask it to
-        // surface its window and exit before creating any windows or a tray icon.
+        // One instance per session: if already running, surface it and exit.
         _singleInstance = new SingleInstance();
         if (!_singleInstance.IsFirstInstance)
         {
@@ -57,8 +55,7 @@ public partial class App : Application
         _mainWindow = new MainWindow { DataContext = _viewModel };
         _mainWindow.Closing += OnMainWindowClosing;
 
-        // Match the Windows light/dark setting and keep following it while running
-        // (also applies the Mica backdrop on the FluentWindow).
+        // Follow the Windows light/dark setting (also applies the Mica backdrop).
         Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
         ApplySubtextContrast();
         Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (_, _) => ApplySubtextContrast();
@@ -167,8 +164,8 @@ public partial class App : Application
         _mainWindow.Focus();
     }
 
-    // Opens (or re-focuses) the About window. Reachable from the header ⓘ button and
-    // the tray "About NitTray" item. A single reused instance avoids duplicates.
+    // Opens or re-focuses the single About window (from the footer link and the
+    // tray "About NitTray" item).
     public void ShowAbout()
     {
         if (_aboutWindow is null)
@@ -176,8 +173,7 @@ public partial class App : Application
             _aboutWindow = new AboutWindow();
             _aboutWindow.Closed += (_, _) => _aboutWindow = null;
 
-            // Center on the main window when it's visible; otherwise (opened from the
-            // tray while hidden) center on screen so it doesn't land in a corner.
+            // Center on the main window if visible, else on screen.
             if (_mainWindow is not null && _mainWindow.IsVisible)
             {
                 _aboutWindow.Owner = _mainWindow;

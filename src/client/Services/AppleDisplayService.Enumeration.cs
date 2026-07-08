@@ -103,16 +103,13 @@ public sealed partial class AppleDisplayService
             $"HID enumeration done. Total HID devices: {totalSeen}, Apple-vendor: {appleSeen}, " +
             $"raw matches: {found.Count}");
 
-        // Also enumerate raw USB devices so we can pick up Apple displays whose HID
-        // interface failed to bind to hidclass.sys (Code 10 / descriptor mismatch).
-        // The Pro Display XDR is the well-known case — its brightness HID interface is
-        // rejected by Windows' generic HID driver, but with WinUSB bound by NitTray's
-        // setup helper we can still send the same SET_REPORT / GET_REPORT transfers.
+        // Also enumerate raw USB devices to catch displays whose HID interface was
+        // rejected by hidclass.sys (Code 10) — the Pro Display XDR, which we drive
+        // over WinUSB instead once NitTray's helper has bound it.
         var winUsbResult = EnumerateUsbAndProbeWinUsb();
         foreach (var d in winUsbResult.Displays)
         {
-            // Skip if we already found this physical display via HID (avoid double entries
-            // when both transports happen to work — unlikely, but be safe).
+            // Skip if already found via HID (avoid duplicate entries).
             if (found.Any(f =>
                     (f.SerialNumber is not null && f.SerialNumber == d.SerialNumber)
                     || (f.ProductId != 0 && f.ProductId == d.ProductId
@@ -123,7 +120,6 @@ public sealed partial class AppleDisplayService
             found.Add(d);
         }
 
-        // A display only needs driver setup if it isn't already controllable.
         foreach (var p in winUsbResult.PendingSetups)
         {
             if (found.Any(f =>
@@ -135,11 +131,8 @@ public sealed partial class AppleDisplayService
             pendingSetups.Add(p);
         }
 
-        // Last-resort presence check for the Pro Display XDR. If the device-
-        // interface enumeration never saw it (it's stuck on Windows' in-box HID
-        // driver -> yellow-bang / Code 10, which suppresses the USB device
-        // interface) yet the hardware is physically on the bus, surface it as a
-        // pending setup so the user still gets the one-click "Set up display".
+        // Last-resort check for a Pro Display XDR stuck on the in-box HID driver
+        // (Code 10), which hides it from the USB device-interface enumeration above.
         if (!winUsbResult.SawProXdr
             && !found.Any(f => f.ProductId == ProDisplayXdrPid)
             && !pendingSetups.Any(p => p.ProductId == ProDisplayXdrPid))

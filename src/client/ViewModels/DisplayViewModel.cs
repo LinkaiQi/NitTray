@@ -150,7 +150,7 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
 
     private async Task RunWriteLoopAsync()
     {
-        // Coalesce rapid slider changes: only ever write the most recent pending value.
+        // Coalesce rapid slider changes to the most recent pending value.
         while (_pendingPercent is int next)
         {
             _pendingPercent = null;

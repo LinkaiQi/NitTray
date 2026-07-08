@@ -105,10 +105,8 @@ public sealed partial class AppleDisplayService : IDisplayService
     {
         using var ctx = OpenWinUsbBrightnessInterface(display);
 
-        // Read the current Feature report so we can preserve any other fields
-        // (e.g. on Pro XDR, bytes 5-6 carry a separate volatile uint16 that
-        // we don't want to clobber). Fall back to a zero buffer if the read
-        // fails so we can still attempt the SET.
+        // Read the current report first to preserve other fields (e.g. Pro XDR's
+        // volatile uint16 at bytes 5-6); fall back to zero if the read fails.
         byte[] buffer;
         try
         {
@@ -138,20 +136,16 @@ public sealed partial class AppleDisplayService : IDisplayService
                 $"on iface={display.UsbInterfaceNumber}, raw={raw}.");
         }
 #if DEBUG
-        // Success of a brightness write is on the slider hot path, so keep this
-        // per-change confirmation out of Release logs (the failure above still
-        // throws and is surfaced). Enumeration diagnostics remain on in Release.
+        // On the slider hot path, so keep this success log out of Release builds
+        // (failures above still throw and are surfaced).
         DiagnosticLog.Write(
             $"WinUSB SET ok: iface={display.UsbInterfaceNumber}, raw={raw} (0x{raw:X8}), " +
             $"bytes=[{ToHex(buffer)}]");
 #endif
 
 #if DEBUG
-        // Verify by reading back. If the readback doesn't match what we wrote,
-        // we're either talking to the wrong interface or the device's firmware
-        // is silently rejecting the value — either way we want it in the log. This
-        // is a debug-only sanity check: it costs an extra USB round-trip on every
-        // brightness change, so it is compiled out of Release builds.
+        // Debug-only sanity check: read back and log a mismatch (wrong interface or
+        // a silent firmware reject). Costs an extra USB round-trip, so Debug-only.
         try
         {
             var verify = GetFeatureReport(ctx.BrightnessHandle, display);
@@ -172,13 +166,9 @@ public sealed partial class AppleDisplayService : IDisplayService
 #endif
     }
 
-    // Holds the handles needed to talk to one Apple display's brightness
-    // interface. PrimaryHandle is the WinUsb handle from WinUsb_Initialize
-    // (always for the first/default interface of the composite device).
-    // BrightnessHandle is the handle for the interface that carries the
-    // brightness Feature reports — usually obtained via
-    // WinUsb_GetAssociatedInterface unless brightness happens to live on the
-    // default interface. Dispose releases everything, in the right order.
+    // Holds the WinUSB handles for one display: PrimaryHandle from WinUsb_Initialize
+    // and BrightnessHandle for the interface carrying the brightness reports
+    // (via WinUsb_GetAssociatedInterface unless it lives on the primary).
     private sealed class WinUsbContext : IDisposable
     {
         public HidDeviceSafeHandle? FileHandle;

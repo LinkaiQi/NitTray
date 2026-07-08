@@ -2,9 +2,7 @@ using System.Reflection;
 
 namespace NitTray.ViewModels;
 
-// Backing data for the About window: the app version (read from assembly metadata
-// so it tracks the csproj <Version>), the curated supported-display list, the
-// resource/donation links, the open-source note, and the Apple trademark disclaimer.
+// Backing data for the About window: version, supported displays, links, and legal text.
 public sealed class AboutViewModel
 {
     public string AppName => "NitTray";
@@ -40,8 +38,7 @@ public sealed class AboutViewModel
         VersionText = $"Version {ReadVersion()}";
     }
 
-    // Prefer the informational version ("0.1.0") over the padded assembly version
-    // ("0.1.0.0"); strip any "+<build metadata>" suffix if present.
+    // Use the informational version, stripping any "+<build metadata>" suffix.
     private static string ReadVersion()
     {
         var assembly = Assembly.GetExecutingAssembly();

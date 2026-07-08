@@ -221,8 +221,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             case DriverInstallStatus.Success:
                 StatusMessage = result.Message;
-                // Re-enumerate: the display should now bind via WinUSB and the
-                // banner clears itself when it is no longer pending.
+                // Re-enumerate; the display now binds via WinUSB and the banner self-clears.
                 await RefreshAsync().ConfigureAwait(true);
                 break;
 
@@ -279,8 +278,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             case DriverInstallStatus.Success:
                 StatusMessage = result.Message;
                 DriverUninstallSucceeded?.Invoke(this, result.Message);
-                // Re-enumerate: the display is now driverless again, so it returns
-                // to the "needs setup" state and the install flow can be retested.
+                // Re-enumerate; the display is driverless again and returns to "needs setup".
                 await RefreshAsync().ConfigureAwait(true);
                 break;
 
