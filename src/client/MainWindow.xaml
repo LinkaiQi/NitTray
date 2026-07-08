@@ -254,7 +254,7 @@
             <!-- Empty state -->
             <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
                         Visibility="{Binding EmptyVisibility}">
-                <ui:SymbolIcon Symbol="Desktop24" FontSize="36" HorizontalAlignment="Center"
+                <ui:SymbolIcon Symbol="Desktop24" FontSize="48" HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                 <ui:TextBlock Text="No Apple display detected" FontTypography="BodyStrong"
                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
