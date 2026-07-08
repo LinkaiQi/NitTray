@@ -279,9 +279,8 @@ public sealed partial class AppleDisplayService
             }
 
             DiagnosticLog.Write(
-                "  WinUSB probe: WinUSB is bound but none of the interfaces exposed the Pro XDR " +
-                "brightness usage. WinUSB must own the *composite* device (the parent node " +
-                "without an MI_NN suffix). Reinstalling via \"Set up display\" targets that node.");
+                "  WinUSB probe: bound, but no interface exposed the Pro XDR brightness usage " +
+                "(WinUSB must own the composite parent node, not an MI_NN child).");
             return (null, false);
         }
         catch (Exception ex)
