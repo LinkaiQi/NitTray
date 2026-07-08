@@ -57,11 +57,9 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
     // performs the elevated uninstall.
     public ICommand UninstallDriverCommand { get; }
 
-    // Identity line under the product name. Serial (when the display reports one) is
-    // the only reliable way to tell two same-model displays apart.
-    public string Subtitle => string.IsNullOrWhiteSpace(_info.SerialNumber)
-        ? "USB-C"
-        : $"Serial {_info.SerialNumber.ToUpperInvariant()}";
+    // Identity line under the product name. See DisplayIdentity for why some
+    // displays show "Serial …" and others "USB ID …".
+    public string Subtitle => DisplayIdentity.Format(_info.SerialNumber);
 
     public bool HasError => !string.IsNullOrEmpty(_statusText);
 

@@ -107,9 +107,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     // connected display card (name as the heading, serial on the line beneath).
     public string DriverSetupProductName => _pendingSetup?.ProductName ?? string.Empty;
 
-    public string DriverSetupSerial => string.IsNullOrWhiteSpace(_pendingSetup?.SerialNumber)
-        ? "USB-C"
-        : $"Serial {_pendingSetup!.SerialNumber!.ToUpperInvariant()}";
+    public string DriverSetupSerial => DisplayIdentity.Format(_pendingSetup?.SerialNumber);
 
     public Visibility DriverSetupVisibility => _pendingSetup is not null
         ? Visibility.Visible
