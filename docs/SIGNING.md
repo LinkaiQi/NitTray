@@ -1,12 +1,16 @@
 # Code signing NitTray
 
-NitTray is currently **unsigned**, so when users download it Windows
-SmartScreen / Smart App Control warns that it "can't confirm the publisher," and
-some antivirus engines are extra suspicious because the app installs a USB
-(WinUSB) driver. Signing every released binary — and timestamping each signature
-— is the single most important step before distributing it on the web.
+NitTray is **unsigned** until the one-time Azure setup below is completed, so
+downloaded builds make Windows SmartScreen / Smart App Control warn that they
+"can't confirm the publisher," and some antivirus engines are extra suspicious
+because the app installs a USB (WinUSB) driver. Signing every released binary —
+and timestamping each signature — is the single most important step before
+distributing it on the web.
 
-## What must be signed
+NitTray signs its releases with **Azure Artifact Signing** (formerly Trusted
+Signing) directly from the GitHub Actions release workflow.
+
+## What gets signed
 
 A NitTray release contains four Authenticode targets:
 
@@ -20,63 +24,6 @@ A NitTray release contains four Authenticode targets:
 > The WinUSB **driver package** that the helper installs is a *separate*,
 > self-signed package that libwdi generates and trusts on the user's machine at
 > install time (already implemented). That is unrelated to signing the app itself.
-
-## Certificate options
-
-| Option | Cost | Identity | Hardware token / HSM | SmartScreen at launch | CI-friendly | Public trust |
-| ------ | ---- | -------- | -------------------- | --------------------- | ----------- | ------------ |
-| **Azure Artifact Signing** (formerly Trusted Signing) | ~$10/mo | Individual **or** org (identity validated) | No (Azure-managed) | Clears quickly | Yes (official Action) | Yes |
-| **EV certificate** | $300–700+/yr | Org (business entity) | Yes | **Instant** | Hard (token) / cloud-HSM only | Yes |
-| **OV / IV certificate** (e.g. Certum, Sectigo, SSL.com) | ~$70–400/yr | Org (OV) or individual (IV) | Yes (since 2023) | Builds over downloads | Cloud-HSM only | Yes |
-| **Self-signed** (`tools/sign.ps1 -SelfSigned`) | Free | n/a | No | n/a | n/a | **No — local only** |
-
-### Recommendation
-- **Azure Artifact Signing** (formerly Trusted Signing) is the best modern value:
-  ~$10/month, no hardware
-  token, integrates cleanly with GitHub Actions, and individuals are eligible
-  (verify current requirements for your country when you sign up). Trust clears
-  faster than a plain OV cert because Microsoft validates your identity.
-- Choose an **EV certificate** only if you have a registered business and want
-  *zero* SmartScreen warning from the very first download (and can live with the
-  hardware-token / cloud-HSM workflow).
-- A **Certum / SSL.com individual (IV)** certificate is a budget alternative, but
-  reputation still ramps over downloads and you need their cloud-HSM signing.
-- **Self-signed** is only a stopgap for *your* PC (below).
-
-> Even with a valid OV/IV signature, brand-new apps can still show a
-> "not commonly downloaded" notice until SmartScreen reputation accrues. Only EV
-> (and largely Trusted Signing) avoid that.
-
-## Sign locally right now (stopgap)
-
-This removes the "unknown publisher" warning on **your** machine across rebuilds.
-It does **not** help anyone else — do not ship self-signed builds.
-
-```powershell
-# Build, then sign the output folder with a local self-signed cert:
-dotnet build -c Release
-.\tools\sign.ps1 -SelfSigned -Path .\src\NitTray\bin\Release\net10.0-windows
-```
-
-`sign.ps1` creates the certificate once, trusts it in your CurrentUser stores, and
-reuses it afterwards. Verify with:
-
-```powershell
-Get-AuthenticodeSignature .\src\NitTray\bin\Release\net10.0-windows\NitTray.dll | Format-List
-```
-
-## Sign a release with a real certificate
-
-```powershell
-# From an exported PFX/P12 file (e.g. a Certum IV cert):
-.\tools\sign.ps1 -PfxPath .\nittray.pfx -PfxPassword '<password>' -Path .\publish
-
-# Or from a token/HSM cert already installed in the Windows store:
-.\tools\sign.ps1 -Thumbprint <THUMBPRINT> -Path .\publish
-```
-
-Both paths timestamp via `http://timestamp.digicert.com` (override with
-`-TimestampUrl`).
 
 ## Sign in CI with Azure Artifact Signing
 
