@@ -8,7 +8,7 @@
 ;   /DMyAppVersion=0.1.0
 ;   /DMyArch=x64            (or arm64)
 ;   /DSourceDir=<abs path to publish\win-x64>
-;   /DOutputBase=NitTray-<tag>-setup-x64
+;   /DOutputBase=NitTray-<tag>-installer-x64
 
 #define MyAppName "NitTray"
 #define MyAppPublisher "Linkai Qi"
@@ -26,7 +26,7 @@
   #define SourceDir "..\publish\win-x64"
 #endif
 #ifndef OutputBase
-  #define OutputBase "NitTray-setup-" + MyArch
+  #define OutputBase "NitTray-installer-" + MyArch
 #endif
 
 [Setup]

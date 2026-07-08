@@ -79,9 +79,9 @@ artifacts until you finish this one-time Azure setup and flip the flag:
 > is a single x64 binary that installs the correct driver on both architectures
 > (it runs under x64 emulation on Windows on ARM); it is bundled into each
 > per-arch publish and signed alongside the app. Each architecture then ships two
-> ways: an **Inno Setup installer** (`NitTray-<tag>-setup-<arch>.exe`, built from
+> ways: an **Inno Setup installer** (`NitTray-<tag>-installer-<arch>.exe`, built from
 > `installer/NitTray.iss` and signed after the app binaries) and a **portable
-> zip** (`NitTray-<tag>-win-<arch>.zip`). The signing steps cover the app exes,
+> zip** (`NitTray-<tag>-portable-<arch>.zip`). The signing steps cover the app exes,
 > the bundled helper, and the installer.
 
 ## Verifying signatures
