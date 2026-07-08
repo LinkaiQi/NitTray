@@ -5,9 +5,10 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>NitTray</RootNamespace>
     <AssemblyName>NitTray</AssemblyName>
-    <!-- Product + version metadata, stamped into the binaries and read by Windows,
-         Authenticode tooling, and (later) the in-app About box. Keep Company/Authors
-         aligned with the code-signing certificate subject once you have one. -->
+    <!-- Product + version metadata stamped into the binaries and read by Windows,
+         Authenticode tooling, and the in-app About box. <Version> here is the
+         local/dev default; release builds override it with -p:Version derived from
+         the git tag (see .github/workflows/release.yml). -->
     <Product>NitTray</Product>
     <Authors>NitTray</Authors>
     <Company>NitTray</Company>

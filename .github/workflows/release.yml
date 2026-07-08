@@ -31,6 +31,23 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Derive the version from the release tag so it flows into the binaries and the
+      # in-app About box. APP_VERSION keeps any prerelease suffix (v1.2.3-rc1 ->
+      # 1.2.3-rc1) for the assembly; the installer needs a strict numeric x.y.z, so
+      # INSTALLER_VERSION is the numeric part only. Non-tag runs (workflow_dispatch)
+      # fall back to 0.0.0.
+      - name: Determine version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $appVersion = ($tag -replace '^v', '')
+          if ($appVersion -notmatch '^\d+\.\d+') { $appVersion = '0.0.0' }
+          $numeric = ($appVersion -split '-', 2)[0]
+          if ($numeric -notmatch '^\d+(\.\d+){1,3}$') { $numeric = '0.0.0' }
+          "APP_VERSION=$appVersion"    | Out-File $env:GITHUB_ENV -Append
+          "INSTALLER_VERSION=$numeric" | Out-File $env:GITHUB_ENV -Append
+          Write-Host "APP_VERSION=$appVersion  INSTALLER_VERSION=$numeric"
+
       # Build the elevated WinUSB installer helper (C + libwdi) once. -SupportArm64
       # additionally embeds the ARM64 installer payload, so the single x64 helper
       # installs the correct driver on BOTH x64 and ARM64 (libwdi selects
@@ -54,6 +71,7 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:Version=${{ env.APP_VERSION }}
           -o publish/win-x64
 
       - name: Publish ARM64 (self-contained, single file)
@@ -62,6 +80,7 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:Version=${{ env.APP_VERSION }}
           -o publish/win-arm64
 
       # --- Azure Artifact Signing (formerly Trusted Signing) -------------------
@@ -112,8 +131,7 @@ jobs:
           choco install innosetup --no-progress -y
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           $tag = "${{ github.ref_name }}"
-          $version = ($tag -replace '^v', '')
-          if ($version -notmatch '^\d+(\.\d+){1,3}$') { $version = '0.0.0' }
+          $version = "${{ env.INSTALLER_VERSION }}"
           foreach ($arch in 'x64', 'arm64') {
             & $iscc `
               "/DMyAppVersion=$version" `
