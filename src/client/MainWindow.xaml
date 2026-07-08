@@ -89,7 +89,7 @@
                     <ui:Button Content="Rescan" Command="{Binding RefreshCommand}"
                                ToolTip="Scan for connected Apple displays">
                         <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="ArrowSync24" FontSize="20"/>
+                            <ui:SymbolIcon Symbol="ArrowClockwise24" FontSize="20"/>
                         </ui:Button.Icon>
                     </ui:Button>
                 </StackPanel>
