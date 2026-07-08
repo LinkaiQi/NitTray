@@ -11,16 +11,16 @@
   <g transform="translate(128,128) scale(1.2) translate(-128,-128)">
   <!-- Monitor, large and centered, main background element -->
   <g filter="url(#softShadow)">
-    <rect x="21" y="53" width="214" height="150" rx="24" fill="#2D64AF"/>
+    <rect x="21" y="43" width="214" height="170" rx="24" fill="#2D64AF"/>
 
     <!-- Brightness slider on the screen -->
-    <rect x="51" y="90" width="152" height="22" rx="11" fill="#FFFFFF" fill-opacity="0.25"/>
-    <rect x="51" y="90" width="76" height="22" rx="11" fill="#E3F2FD"/>
-    <circle cx="127" cy="101" r="20" fill="#FFFFFF"/>
+    <rect x="51" y="84" width="152" height="22" rx="11" fill="#FFFFFF" fill-opacity="0.25"/>
+    <rect x="51" y="84" width="76" height="22" rx="11" fill="#E3F2FD"/>
+    <circle cx="127" cy="95" r="20" fill="#FFFFFF"/>
   </g>
 
   <!-- White monitor silhouette badge, tucked into the bottom-right corner -->
-  <g transform="translate(32,47) translate(128,128) scale(0.6) translate(-128,-128)" filter="url(#badgeShadow)">
+  <g transform="translate(32,55) translate(128,128) scale(0.66) translate(-128,-128)" filter="url(#badgeShadow)">
     <!-- Screen, wider and taller -->
     <rect x="53" y="58" width="150" height="100" rx="14" fill="#00BCF2"/>
     <!-- Stand, rounded trapezoid -->
