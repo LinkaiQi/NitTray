@@ -169,18 +169,7 @@ public sealed partial class AppleDisplayService
         }
         if (result.Count == 0 && pendingSetups.Count == 0)
         {
-            DiagnosticLog.Write("");
-            DiagnosticLog.Write("Hint: open Device Manager, choose View -> Devices by container.");
-            DiagnosticLog.Write("If your Apple display does not appear there at all, the USB / HID");
-            DiagnosticLog.Write("control channel is not reaching this PC. Try a different cable, plug");
-            DiagnosticLog.Write("directly into the PC (not through a hub), and confirm the cable is");
-            DiagnosticLog.Write("USB-C / Thunderbolt (not DisplayPort-only).");
-            DiagnosticLog.Write("");
-            DiagnosticLog.Write("If your Pro Display XDR appears in Device Manager with a yellow");
-            DiagnosticLog.Write("warning (Code 10), Windows' built-in HID driver doesn't understand");
-            DiagnosticLog.Write("its descriptor and WinUSB is not bound yet. NitTray can install");
-            DiagnosticLog.Write("the WinUSB driver for you — when the display is detected it shows a");
-            DiagnosticLog.Write("\"Set up display\" button that performs a one-time, in-app install.");
+            DiagnosticLog.Write("No Apple display detected and none pending WinUSB setup.");
         }
         return new DisplayEnumerationResult(result, pendingSetups);
     }
@@ -278,8 +267,7 @@ public sealed partial class AppleDisplayService
                 else if (driverNotBound)
                 {
                     DiagnosticLog.Write(
-                        "  -> Pro Display XDR detected on the USB bus but WinUSB is not bound. " +
-                        "NitTray can install it (use the \"Set up display\" button).");
+                        "  -> Pro Display XDR detected on the USB bus but WinUSB is not bound (pending setup).");
                     pending.Add(new PendingDriverSetup(
                         VendorId: AppleVendorId,
                         ProductId: ProDisplayXdrPid,
