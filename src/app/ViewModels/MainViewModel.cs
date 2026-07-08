@@ -159,14 +159,33 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             foreach (var info in result.Displays)
             {
+                // The display was just enumerated, but right after a plug-in its
+                // control interface can need a beat before it answers a read — so
+                // retry a few times before falling back to a neutral default, and
+                // log the outcome so a wrong-looking slider can be diagnosed.
                 int initialPercent = 50;
-                try
+                bool readOk = false;
+                for (int attempt = 1; attempt <= 3 && !readOk; attempt++)
                 {
-                    initialPercent = await _service.ReadBrightnessPercentAsync(info).ConfigureAwait(true);
+                    try
+                    {
+                        initialPercent = await _service.ReadBrightnessPercentAsync(info).ConfigureAwait(true);
+                        readOk = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        DiagnosticLog.Write(
+                            $"Brightness read attempt {attempt} failed for {info.ProductName}: {ex.Message}");
+                        if (attempt < 3)
+                        {
+                            await Task.Delay(250).ConfigureAwait(true);
+                        }
+                    }
                 }
-                catch
+                if (!readOk)
                 {
-                    // Tolerate read failure; user can still drive the slider.
+                    DiagnosticLog.Write(
+                        $"Brightness read gave up for {info.ProductName}; showing default {initialPercent}%.");
                 }
 
                 Displays.Add(new DisplayViewModel(

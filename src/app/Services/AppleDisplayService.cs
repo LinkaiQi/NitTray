@@ -31,7 +31,12 @@ public sealed partial class AppleDisplayService : IDisplayService
     public Task<int> ReadBrightnessPercentAsync(ConnectedDisplay display, CancellationToken cancellationToken = default)
         => Task.Run(() =>
         {
-            return RawToPercent(display, ReadRawBrightness(display));
+            var raw = ReadRawBrightness(display);
+            var percent = RawToPercent(display, raw);
+            DiagnosticLog.Write(
+                $"Brightness read: {display.ProductName} raw={raw} " +
+                $"range={display.MinRawBrightness}..{display.MaxRawBrightness} -> {percent}%");
+            return percent;
         }, cancellationToken);
 
     public Task SetBrightnessPercentAsync(ConnectedDisplay display, int percent, CancellationToken cancellationToken = default)
