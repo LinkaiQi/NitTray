@@ -32,15 +32,13 @@ internal sealed class TrayIconHost : IDisposable
 
         var showItem = new WinForms.ToolStripMenuItem("Show NitTray");
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
-        // The default (double-click) action, shown bold like the Windows 11 menus.
-        showItem.Font = new Font(showItem.Font, FontStyle.Bold);
-        var refreshItem = new WinForms.ToolStripMenuItem("Rescan displays");
+        var refreshItem = new WinForms.ToolStripMenuItem("Rescan Display");
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
         var aboutItem = new WinForms.ToolStripMenuItem("About NitTray");
         aboutItem.Click += (_, _) => AboutRequested?.Invoke(this, EventArgs.Empty);
         // The diagnostics log lets users capture an enumeration trace and attach it
         // to a bug report when a display isn't detected — useful in every build.
-        var logItem = new WinForms.ToolStripMenuItem("Open diagnostics log…");
+        var logItem = new WinForms.ToolStripMenuItem("Open Diagnostics Log");
         logItem.Click += (_, _) => OpenLogRequested?.Invoke(this, EventArgs.Empty);
         var quitItem = new WinForms.ToolStripMenuItem("Quit");
         quitItem.Click += (_, _) => QuitRequested?.Invoke(this, EventArgs.Empty);
@@ -53,13 +51,13 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 
-        // Comfortable Windows 11 item spacing (taller rows, text inset from the
-        // rounded highlight).
+        // Comfortable Windows 11 item spacing: taller rows and text inset from the
+        // left like the shell's own tray menus.
         foreach (WinForms.ToolStripItem item in menu.Items)
         {
             if (item is WinForms.ToolStripMenuItem)
             {
-                item.Padding = new WinForms.Padding(10, 6, 24, 6);
+                item.Padding = new WinForms.Padding(20, 6, 24, 6);
             }
         }
 
