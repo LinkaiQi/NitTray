@@ -147,7 +147,7 @@ dotnet run --project src/client
 
 > **Pro Display XDR support** also needs the native WinUSB installer helper
 > (`NitTray.DriverSetup.exe`). It is built separately — run
-> `src/native/build.ps1` on Windows (Visual Studio 2022 or
+> `src/driver/build.ps1` on Windows (Visual Studio 2022 or
 > 2026 with the *Desktop development with C++* workload + the **v143 x64**
 > toolset; **no WDK or ARM64 tools needed**). The single x64 helper this produces
 > runs on x64 Windows; for a **Windows on ARM** release, add the *MSVC v143 - ARM64
@@ -155,7 +155,7 @@ dotnet run --project src/client
 > that serves both x64 and ARM64 (no per-architecture bundling). The build copies
 > the helper next to the app so the **Set up display** button can find it. The
 > Studio Display family works without this helper. See
-> [`src/native/README.md`](src/native/README.md).
+> [`src/driver/README.md`](src/driver/README.md).
 
 Or publish a single-folder framework-dependent build:
 
@@ -218,7 +218,7 @@ src/client/
       StudioDisplay2ndGen.cs      - 0x1118
       ProDisplayXdr.cs            - 0x9243 (WinUSB)
 
-src/native/                   - elevated WinUSB installer (C + libwdi),
+src/driver/                   - elevated WinUSB installer (C + libwdi),
                                     built separately on Windows (see its README)
 ```
 
@@ -295,7 +295,7 @@ is well-formed and Windows binds it correctly out of the box.
 
 > **Note:** the helper is a native (C + libwdi) component compiled separately on
 > Windows; see
-> [`src/native/README.md`](src/native/README.md).
+> [`src/driver/README.md`](src/driver/README.md).
 > If `NitTray.DriverSetup.exe` isn't bundled next to the app, the **Set up
 > display** button reports that the helper is missing.
 

@@ -77,7 +77,7 @@ required.** (To also target Windows on ARM, see [Windows on ARM](#windows-on-arm
 From a **Developer PowerShell for VS** (2022 or 2026):
 
 ```powershell
-cd src\native
+cd src\driver
 ./build.ps1
 ```
 

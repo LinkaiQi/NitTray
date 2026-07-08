@@ -2,7 +2,7 @@ namespace NitTray.Services;
 
 // Exit-code contract shared with the native NitTray.DriverSetup.exe helper.
 //
-// IMPORTANT: keep these values in sync with src/native/main.c.
+// IMPORTANT: keep these values in sync with src/driver/main.c.
 // The helper communicates its result purely through its process exit code; any
 // human-readable detail is appended to driver-setup.log next to the app log.
 public static class DriverSetupExitCodes
