@@ -30,7 +30,7 @@ internal sealed class TrayIconHost : IDisposable
         };
         menu.HandleCreated += (_, _) => MenuTheme.EnableRoundedCorners(menu.Handle);
 
-        var showItem = new WinForms.ToolStripMenuItem("Show NitTray");
+        var showItem = new WinForms.ToolStripMenuItem("Open NitTray");
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
         var refreshItem = new WinForms.ToolStripMenuItem("Rescan Display");
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
