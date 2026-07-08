@@ -57,16 +57,19 @@ internal sealed class ModernMenuRenderer : WinForms.ToolStripProfessionalRendere
     {
         e.TextColor = e.Item.Enabled ? _palette.Text : _palette.TextDisabled;
 
-        // Nudge the text to a fixed left inset (the item's own Padding.Left is not
-        // honored by the dropdown-menu layout).
-        var rect = e.TextRectangle;
-        if (rect.X < TextLeftInset)
-        {
-            int delta = TextLeftInset - rect.X;
-            rect.X += delta;
-            rect.Width -= delta;
-            e.TextRectangle = rect;
-        }
+        // Take full control of text placement: a fixed left inset (the dropdown menu
+        // honors neither an item's Padding.Left nor a reliably centered default text
+        // rectangle) and vertical centering across the whole item height, so the text
+        // sits centered inside the rounded hover highlight.
+        e.TextRectangle = new Rectangle(
+            TextLeftInset,
+            0,
+            Math.Max(0, e.Item.Width - TextLeftInset),
+            e.Item.Height);
+        e.TextFormat = WinForms.TextFormatFlags.Left
+                     | WinForms.TextFormatFlags.VerticalCenter
+                     | WinForms.TextFormatFlags.SingleLine
+                     | WinForms.TextFormatFlags.NoPrefix;
 
         base.OnRenderItemText(e);
     }
