@@ -51,13 +51,13 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(quitItem);
 
-        // Comfortable Windows 11 item spacing: taller rows and text inset from the
-        // left like the shell's own tray menus.
+        // Reserve horizontal room so the renderer's text inset never clips; the
+        // vertical padding gives Windows 11-style taller rows.
         foreach (WinForms.ToolStripItem item in menu.Items)
         {
             if (item is WinForms.ToolStripMenuItem)
             {
-                item.Padding = new WinForms.Padding(20, 6, 24, 6);
+                item.Padding = new WinForms.Padding(18, 6, 18, 6);
             }
         }
 

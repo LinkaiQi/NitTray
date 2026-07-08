@@ -17,6 +17,9 @@ internal sealed class ModernMenuRenderer : WinForms.ToolStripProfessionalRendere
     private const int SelectionInsetY = 2;
     private const int SelectionRadius = 5;
     private const int SeparatorInset = 12;
+    // ToolStripDropDownMenu ignores an item's left Padding for text placement, so we
+    // indent the text ourselves to get the Windows 11 shell-menu look.
+    private const int TextLeftInset = 18;
 
     private readonly Palette _palette;
 
@@ -53,6 +56,18 @@ internal sealed class ModernMenuRenderer : WinForms.ToolStripProfessionalRendere
     protected override void OnRenderItemText(WinForms.ToolStripItemTextRenderEventArgs e)
     {
         e.TextColor = e.Item.Enabled ? _palette.Text : _palette.TextDisabled;
+
+        // Nudge the text to a fixed left inset (the item's own Padding.Left is not
+        // honored by the dropdown-menu layout).
+        var rect = e.TextRectangle;
+        if (rect.X < TextLeftInset)
+        {
+            int delta = TextLeftInset - rect.X;
+            rect.X += delta;
+            rect.Width -= delta;
+            e.TextRectangle = rect;
+        }
+
         base.OnRenderItemText(e);
     }
 
