@@ -142,12 +142,12 @@ once, then never again — see [Pro Display XDR setup](#pro-display-xdr-setup-wi
 ```powershell
 # from the repo root, on Windows
 dotnet build -c Release
-dotnet run --project src/NitTray
+dotnet run --project src/client
 ```
 
 > **Pro Display XDR support** also needs the native WinUSB installer helper
 > (`NitTray.DriverSetup.exe`). It is built separately — run
-> `native/NitTray.DriverSetup/build.ps1` on Windows (Visual Studio 2022 or
+> `src/native/build.ps1` on Windows (Visual Studio 2022 or
 > 2026 with the *Desktop development with C++* workload + the **v143 x64**
 > toolset; **no WDK or ARM64 tools needed**). The single x64 helper this produces
 > runs on x64 Windows; for a **Windows on ARM** release, add the *MSVC v143 - ARM64
@@ -155,19 +155,19 @@ dotnet run --project src/NitTray
 > that serves both x64 and ARM64 (no per-architecture bundling). The build copies
 > the helper next to the app so the **Set up display** button can find it. The
 > Studio Display family works without this helper. See
-> [`native/NitTray.DriverSetup/README.md`](native/NitTray.DriverSetup/README.md).
+> [`src/native/README.md`](src/native/README.md).
 
 Or publish a single-folder framework-dependent build:
 
 ```powershell
-dotnet publish src/NitTray -c Release -r win-x64 --self-contained false -o publish
+dotnet publish src/client -c Release -r win-x64 --self-contained false -o publish
 .\publish\NitTray.exe
 ```
 
 For a fully self-contained build (no .NET runtime needed on the target):
 
 ```powershell
-dotnet publish src/NitTray -c Release -r win-x64 --self-contained true `
+dotnet publish src/client -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
   -o publish-standalone
 ```
@@ -178,7 +178,7 @@ the app from macOS or Linux for CI.
 ## Project layout
 
 ```
-src/NitTray/
+src/client/
   App.xaml / App.xaml.cs          - WPF app entry, owns tray + window lifecycle
   MainWindow.xaml / .cs           - displays + sliders UI
   AboutWindow.xaml / .cs          - About & Support window (version, links, donate)
@@ -218,7 +218,7 @@ src/NitTray/
       StudioDisplay2ndGen.cs      - 0x1118
       ProDisplayXdr.cs            - 0x9243 (WinUSB)
 
-native/NitTray.DriverSetup/   - elevated WinUSB installer (C + libwdi),
+src/native/                   - elevated WinUSB installer (C + libwdi),
                                     built separately on Windows (see its README)
 ```
 
@@ -256,7 +256,7 @@ native/NitTray.DriverSetup/   - elevated WinUSB installer (C + libwdi),
   2. If a blue **"Windows protected your PC"** dialog appears, click
      **More info → Run anyway**.
   3. Prefer launching the copy you **built locally** on that same PC — e.g.
-     `dotnet run --project src/NitTray` or the `bin\Release\net10.0-windows\`
+     `dotnet run --project src/client` or the `bin\Release\net10.0-windows\`
      output. Locally produced files have no Mark of the Web and usually don't trip
      the warning.
   4. If **Smart App Control** is what's blocking it (Windows Security → *App &
@@ -295,7 +295,7 @@ is well-formed and Windows binds it correctly out of the box.
 
 > **Note:** the helper is a native (C + libwdi) component compiled separately on
 > Windows; see
-> [`native/NitTray.DriverSetup/README.md`](native/NitTray.DriverSetup/README.md).
+> [`src/native/README.md`](src/native/README.md).
 > If `NitTray.DriverSetup.exe` isn't bundled next to the app, the **Set up
 > display** button reports that the helper is missing.
 

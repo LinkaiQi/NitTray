@@ -62,8 +62,8 @@ appsettings.Local.json
 publish/
 
 # NitTray native helper build outputs (libwdi clone + staged helper exe)
-native/third_party/
-native/NitTray.DriverSetup/dist/
+src/native/third_party/
+src/native/dist/
 
 # Installer build output
 installer/output/

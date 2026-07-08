@@ -38,19 +38,19 @@ jobs:
       # with MSBuild + CMake, located via vswhere; needs the "MSVC v143 - ARM64
       # build tools" component, which the windows-2022 image includes (windows-latest
       # has migrated to VS 18 and no longer ships the v143 ARM64 toolset). Stages
-      # native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe, which the app
+      # src/native/dist/NitTray.DriverSetup.exe, which the app
       # .csproj bundles into every publish — so this MUST run before publish.
       - name: Build native WinUSB installer helper (libwdi, x64 + ARM64)
         shell: pwsh
         run: |
-          ./native/NitTray.DriverSetup/build.ps1 -SupportArm64
-          if (-not (Test-Path native/NitTray.DriverSetup/dist/NitTray.DriverSetup.exe)) {
+          ./src/native/build.ps1 -SupportArm64
+          if (-not (Test-Path src/native/dist/NitTray.DriverSetup.exe)) {
             throw "native helper build did not produce NitTray.DriverSetup.exe"
           }
 
       - name: Publish x64 (self-contained, single file)
         run: >
-          dotnet publish src/NitTray -c Release -r win-x64
+          dotnet publish src/client -c Release -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
@@ -58,7 +58,7 @@ jobs:
 
       - name: Publish ARM64 (self-contained, single file)
         run: >
-          dotnet publish src/NitTray -c Release -r win-arm64
+          dotnet publish src/client -c Release -r win-arm64
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true

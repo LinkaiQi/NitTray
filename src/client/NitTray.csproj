@@ -45,15 +45,15 @@
   <!--
     Bundle the elevated WinUSB installer helper when it has been built.
 
-    The native helper (native/NitTray.DriverSetup) is compiled separately on
-    Windows by native/NitTray.DriverSetup/build.ps1, which stages the result
+    The native helper (src/native) is compiled separately on
+    Windows by src/native/build.ps1, which stages the result
     into that project's dist/ folder. When present, copy it next to the app (and
     into publish output) so WinUsbDriverInstallService can launch it. The Exists
     condition keeps the app build green when the helper hasn't been built yet
     (e.g. on macOS/Linux or before running build.ps1).
   -->
-  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\..\native\NitTray.DriverSetup\dist\NitTray.DriverSetup.exe')">
-    <None Include="$(MSBuildProjectDirectory)\..\..\native\NitTray.DriverSetup\dist\NitTray.DriverSetup.exe">
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\native\dist\NitTray.DriverSetup.exe')">
+    <None Include="$(MSBuildProjectDirectory)\..\native\dist\NitTray.DriverSetup.exe">
       <Link>NitTray.DriverSetup.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

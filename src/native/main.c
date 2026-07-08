@@ -40,7 +40,7 @@
 #include <time.h>
 #include "libwdi.h"
 
-/* Exit-code contract shared with src/NitTray/Services/DriverSetupExitCodes.cs */
+/* Exit-code contract shared with src/client/Services/DriverSetupExitCodes.cs */
 #define EXIT_OK_SUCCESS       0
 #define EXIT_GENERIC_ERROR    1
 #define EXIT_BAD_ARGUMENTS    2
