@@ -20,11 +20,11 @@
 
 ---
 
-NitTray is a small, free, open-source Windows app that lets you control the
-brightness of your **Apple Studio Display** or **Pro Display XDR** — no Mac
-required. Plug the display into your Windows PC, drag a slider, done. It lives
-quietly in your system tray and talks to the display over the same USB channel
-macOS uses, so there's no extra hardware and no monthly anything.
+NitTray is a free, open-source Windows app for adjusting the brightness of
+Apple's **Studio Display** and **Pro Display XDR** without a Mac. It runs from
+the system tray and communicates with the display directly over USB — the same
+control channel macOS uses — so no additional hardware or subscriptions are
+required.
 
 ## Supported displays
 
@@ -32,8 +32,7 @@ macOS uses, so there's no extra hardware and no monthly anything.
 - Apple **Studio Display XDR**
 - Apple **Pro Display XDR**
 
-Connect the display to your PC with a **USB-C or Thunderbolt** cable (the same
-one that carries the picture).
+Connect the display to your PC with a **USB-C or Thunderbolt** cable.
 
 ## Download
 
@@ -44,7 +43,7 @@ Windows on ARM (Snapdragon X, Surface Pro X, and similar):
 
 | File | Best for |
 |------|----------|
-| **`NitTray-<version>-installer-<arch>.exe`** | Most people. Installs per-user (no admin), adds a Start Menu shortcut and an optional "start when I sign in" option, and can uninstall cleanly. |
+| **`NitTray-<version>-installer-<arch>.exe`** | Recommended for most users. Installs per-user (no admin required), adds a Start Menu shortcut and an optional "start at sign-in" option, and uninstalls cleanly. |
 | `NitTray-<version>-portable-<arch>.zip` | No install — just unzip and run `NitTray.exe` (keep `NitTray.DriverSetup.exe` next to it). |
 
 > NitTray isn't code-signed yet, so Windows SmartScreen may show a
@@ -59,8 +58,8 @@ Windows on ARM (Snapdragon X, Surface Pro X, and similar):
 - 🌗 **Light & dark themes** that follow your Windows setting.
 - 🧰 **One-click Pro Display XDR setup** — the XDR needs a one-time driver;
   NitTray installs it for you with a single approval prompt.
-- 🪶 **Lightweight & tray-based** — closes to the tray and stays out of your way.
-- 🆓 **Free and open source** (GPLv3) — no ads, no tracking, no account.
+- 🪶 **Lightweight and unobtrusive** — minimizes to the system tray.
+- 🆓 **Free and open source** (GPLv3) — no ads, no tracking, no accounts.
 
 ## How it works
 
@@ -68,17 +67,17 @@ Apple displays don't support the usual monitor controls (DDC/CI). Instead they
 accept brightness commands over a USB HID channel — the same one macOS uses
 internally. NitTray speaks that protocol directly, with **no admin rights needed**
 for everyday brightness control and no kernel drivers. The Pro Display XDR is the
-one exception: Windows can't talk to it out of the box, so NitTray does a
-one-time WinUSB driver setup for you (a single approval prompt).
+one exception: Windows cannot access it natively, so NitTray performs a one-time
+WinUSB driver setup on your behalf (a single approval prompt).
 
-Curious about the details — the USB protocol, HID reports, and how displays are
-detected? See the [**technical design doc**](src/app/README.md).
+For implementation details — the USB protocol, HID reports, and display
+detection — see the [**technical design doc**](src/app/README.md).
 
-## Support the project
+## Support
 
-If NitTray saves you a trip to the Mac, you can
-[**buy me a coffee** ☕](https://buymeacoffee.com/nittray). Totally optional, much
-appreciated.
+NitTray is free and developed in my spare time. If you find it useful, you can
+support its continued development with a small donation —
+[**Buy me a coffee ☕**](https://buymeacoffee.com/nittray).
 
 ## Building from source
 
