@@ -1,5 +1,9 @@
 name: Release
 
+# Names each run "Release v1.2.3" (or "Release <branch>" for a manual run) instead
+# of defaulting to the triggering commit's message.
+run-name: Release ${{ github.ref_name }}
+
 # Builds NitTray for both x64 and ARM64 — the .NET tray app plus the native
 # WinUSB installer helper (C + libwdi) — and (once Azure Artifact Signing is
 # configured) signs everything, then publishes a per-architecture zip.
@@ -130,14 +134,13 @@ jobs:
         run: |
           choco install innosetup --no-progress -y
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          $tag = "${{ github.ref_name }}"
           $version = "${{ env.INSTALLER_VERSION }}"
           foreach ($arch in 'x64', 'arm64') {
             & $iscc `
               "/DMyAppVersion=$version" `
               "/DMyArch=$arch" `
               "/DSourceDir=$($PWD.Path)\publish\win-$arch" `
-              "/DOutputBase=NitTray-$tag-installer-$arch" `
+              "/DOutputBase=NitTray-installer-$arch" `
               installer\NitTray.iss
             if ($LASTEXITCODE -ne 0) { throw "ISCC failed for $arch" }
           }
@@ -161,11 +164,10 @@ jobs:
       - name: Package portable zips (per architecture)
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}"
           foreach ($rid in 'win-x64', 'win-arm64') {
             $arch = $rid -replace '^win-', ''
             $items = Get-ChildItem "publish/$rid" -Exclude *.pdb
-            Compress-Archive -Path $items.FullName -DestinationPath "NitTray-$tag-portable-$arch.zip" -Force
+            Compress-Archive -Path $items.FullName -DestinationPath "NitTray-portable-$arch.zip" -Force
           }
 
       - name: Upload build artifacts
@@ -181,7 +183,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            installer/output/NitTray-${{ github.ref_name }}-installer-x64.exe
-            installer/output/NitTray-${{ github.ref_name }}-installer-arm64.exe
-            NitTray-${{ github.ref_name }}-portable-x64.zip
-            NitTray-${{ github.ref_name }}-portable-arm64.zip
+            installer/output/NitTray-installer-x64.exe
+            installer/output/NitTray-installer-arm64.exe
+            NitTray-portable-x64.zip
+            NitTray-portable-arm64.zip

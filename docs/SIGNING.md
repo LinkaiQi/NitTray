@@ -1,11 +1,11 @@
 # Code signing NitTray
 
-NitTray is **unsigned** until the one-time Azure setup below is completed, so
-downloaded builds make Windows SmartScreen / Smart App Control warn that they
-"can't confirm the publisher," and some antivirus engines are extra suspicious
-because the app installs a USB (WinUSB) driver. Signing every released binary —
-and timestamping each signature — is the single most important step before
-distributing it on the web.
+Signing every released binary — and timestamping each signature — is the single
+most important step before distributing software on the web. Without it, Windows
+SmartScreen / Smart App Control warn that they "can't confirm the publisher," and
+some antivirus engines are extra suspicious because the app installs a USB
+(WinUSB) driver. NitTray's releases are signed; this document records the
+one-time Azure setup that makes that happen.
 
 NitTray signs its releases with **Azure Artifact Signing** (formerly Trusted
 Signing) directly from the GitHub Actions release workflow.
