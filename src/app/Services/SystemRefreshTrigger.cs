@@ -43,11 +43,14 @@ internal sealed class SystemRefreshTrigger : IDisposable
     private HwndSource? _hwndSource;
     private string _pendingReason = string.Empty;
     private int _retriesRemaining;
+    private int _generation;
     private bool _disposed;
 
-    // Raised on the UI thread when displays should be re-enumerated; the string is
-    // a log-friendly reason.
-    public event EventHandler<string>? RefreshRequested;
+    // Invoked on the UI thread to re-enumerate displays. Returns true when the scan
+    // "settled" — a display was found and read, or a pending driver-setup surfaced —
+    // which lets the trigger skip any remaining settle retries. The string argument
+    // is a log-friendly reason for the refresh.
+    public Func<string, Task<bool>>? Refresh { get; set; }
 
     public SystemRefreshTrigger()
     {
@@ -134,6 +137,7 @@ internal sealed class SystemRefreshTrigger : IDisposable
             }
             _pendingReason = reason;
             _retriesRemaining = MaxSettleRetries;
+            _generation++;
             _debounce.Change(DebounceMilliseconds, System.Threading.Timeout.Infinite);
         }
     }
@@ -141,6 +145,7 @@ internal sealed class SystemRefreshTrigger : IDisposable
     private void OnDebounceElapsed(object? state)
     {
         string reason;
+        int generation;
         lock (_gate)
         {
             if (_disposed)
@@ -148,6 +153,7 @@ internal sealed class SystemRefreshTrigger : IDisposable
                 return;
             }
             reason = _pendingReason;
+            generation = _generation;
 
             // Re-arm a spaced retry until the settle attempts are exhausted.
             if (_retriesRemaining > 0)
@@ -158,8 +164,38 @@ internal sealed class SystemRefreshTrigger : IDisposable
         }
 
         // SystemEvents / the message hook fired us off the UI thread (or on it); hop
-        // to the UI thread so the handler can safely touch the view model.
-        _dispatcher.InvokeAsync(() => RefreshRequested?.Invoke(this, reason));
+        // to the UI thread so the handler can safely touch the view model. If the
+        // scan comes back "settled", drop the remaining settle retries — the display
+        // is already showing, so re-scanning again would just be wasted work.
+        _dispatcher.InvokeAsync(async () =>
+        {
+            var refresh = Refresh;
+            if (refresh is null)
+            {
+                return;
+            }
+
+            if (await refresh(reason).ConfigureAwait(true))
+            {
+                CancelSettleRetries(generation);
+            }
+        });
+    }
+
+    // Stop the spaced settle retries for a given schedule generation. Ignored when a
+    // newer device change has since been scheduled, so a late "settled" report from
+    // an earlier scan can't cancel the retries of a fresh rescan sequence.
+    private void CancelSettleRetries(int generation)
+    {
+        lock (_gate)
+        {
+            if (_disposed || generation != _generation)
+            {
+                return;
+            }
+            _retriesRemaining = 0;
+            _debounce.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+        }
     }
 
     public void Dispose()

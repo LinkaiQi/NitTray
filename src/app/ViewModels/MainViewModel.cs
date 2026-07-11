@@ -141,11 +141,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Displays.CollectionChanged += (_, _) => OnPropertyChanged(nameof(EmptyVisibility));
     }
 
-    public async Task RefreshAsync()
+    public async Task<bool> RefreshAsync()
     {
         if (IsLoading || IsInstallingDriver)
         {
-            return;
+            return false;
         }
 
         IsLoading = true;
@@ -156,6 +156,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             var result = await _service.EnumerateAsync().ConfigureAwait(true);
 
             Displays.Clear();
+
+            bool anyReadFailed = false;
 
             foreach (var info in result.Displays)
             {
@@ -184,6 +186,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 }
                 if (!readOk)
                 {
+                    anyReadFailed = true;
                     DiagnosticLog.Write(
                         $"Brightness read gave up for {info.ProductName}; showing default {initialPercent}%.");
                 }
@@ -195,10 +198,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
             UpdatePendingSetup(result.PendingDriverSetups);
 
             StatusMessage = BuildStatusMessage(result.Displays.Count);
+
+            // "Settled" = we surfaced something actionable (a readable display or a
+            // pending driver-setup card) with no transient read failures. When true,
+            // the refresh trigger can stop its spaced settle retries — they only
+            // exist to catch a display whose control interface answers a beat late.
+            return !anyReadFailed
+                && (result.Displays.Count > 0 || result.PendingDriverSetups.Count > 0);
         }
         catch (Exception ex)
         {
             StatusMessage = $"Rescan failed: {ex.Message}";
+            return false;
         }
         finally
         {

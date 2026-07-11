@@ -80,7 +80,7 @@ public partial class App : Application
         // rescan manually. The device-change watch is hooked to the main window's
         // message loop.
         _refreshTrigger = new SystemRefreshTrigger();
-        _refreshTrigger.RefreshRequested += OnAutoRefreshRequested;
+        _refreshTrigger.Refresh = OnAutoRefreshRequestedAsync;
         _refreshTrigger.AttachDeviceNotifications(_mainWindow);
 
         // Now that the window exists, listen for later launches and surface the
@@ -130,15 +130,15 @@ public partial class App : Application
         Resources["TextFillColorTertiaryBrush"] = new System.Windows.Media.SolidColorBrush(tertiary);
     }
 
-    private void OnAutoRefreshRequested(object? sender, string reason)
+    private async Task<bool> OnAutoRefreshRequestedAsync(string reason)
     {
         if (_viewModel is null)
         {
-            return;
+            return false;
         }
 
         DiagnosticLog.Write($"Auto-refresh triggered: {reason}.");
-        _ = _viewModel.RefreshAsync();
+        return await _viewModel.RefreshAsync().ConfigureAwait(true);
     }
 
     private void ShowMainWindow()
@@ -297,7 +297,7 @@ public partial class App : Application
     {
         if (_refreshTrigger is not null)
         {
-            _refreshTrigger.RefreshRequested -= OnAutoRefreshRequested;
+            _refreshTrigger.Refresh = null;
             _refreshTrigger.Dispose();
         }
 
