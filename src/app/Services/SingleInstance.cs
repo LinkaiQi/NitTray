@@ -2,15 +2,11 @@ using System.Threading;
 
 namespace NitTray.Services;
 
-// Guarantees only one NitTray runs per Windows session and lets a would-be second
-// instance hand focus back to the one already running.
-//
-// The first instance to start owns a named mutex and listens on a named event.
-// When another copy is launched it finds the mutex already taken, signals the
-// event (asking the running instance to surface its window), and exits. The names
-// live in the per-session ("Local\") namespace on purpose: with fast user
-// switching, each logged-in user still gets their own single instance and tray
-// icon, rather than being blocked by a copy running in someone else's session.
+// Guarantees one NitTray per Windows session and lets a second instance hand focus
+// back to the running one. The first instance owns a named mutex and listens on a
+// named event; a later copy finds the mutex taken, signals the event (surface the
+// window), and exits. Names use the per-session "Local\" namespace so fast user
+// switching gives each user their own instance and tray icon.
 internal sealed class SingleInstance : IDisposable
 {
     // GUID suffix avoids collisions with other apps; Local\ scopes to the session.
@@ -30,9 +26,8 @@ internal sealed class SingleInstance : IDisposable
         _mutex = new Mutex(initiallyOwned: true, MutexName, out _isFirstInstance);
     }
 
-    // First instance only: start listening for activation requests from later
-    // instances. onActivate fires on a thread-pool thread each time another copy is
-    // launched, so the handler must marshal to the UI thread itself.
+    // First instance only: listen for activation requests from later instances.
+    // onActivate fires on a thread-pool thread, so it must marshal to the UI thread.
     public void ListenForActivation(Action onActivate)
     {
         ArgumentNullException.ThrowIfNull(onActivate);

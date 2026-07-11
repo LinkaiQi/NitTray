@@ -32,9 +32,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     // (a hard failure or a missing helper). The App layer shows a message box.
     public event EventHandler<string>? DriverSetupFailed;
 
-    // Raised when the user picks "Uninstall driver" from a display's ⋯ menu. Each
-    // DisplayViewModel triggers this via a callback; the App layer shows a per-display
-    // confirmation prompt and, on confirm, calls UninstallDriverAsync.
+    // Raised when the user picks "Uninstall driver" from a display's ⋯ menu; the App
+    // layer confirms and calls UninstallDriverAsync.
     public event EventHandler<DisplayViewModel>? DriverUninstallRequested;
 
     // Raised after a successful driver uninstall so the App layer can confirm it.
@@ -200,9 +199,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             StatusMessage = BuildStatusMessage(result.Displays.Count);
 
             // "Settled" = we surfaced something actionable (a readable display or a
-            // pending driver-setup card) with no transient read failures. When true,
-            // the refresh trigger can stop its spaced settle retries — they only
-            // exist to catch a display whose control interface answers a beat late.
+            // pending-setup card) with no read failures, so the trigger can stop its
+            // settle retries.
             return !anyReadFailed
                 && (result.Displays.Count > 0 || result.PendingDriverSetups.Count > 0);
         }

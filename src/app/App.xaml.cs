@@ -74,17 +74,14 @@ public partial class App : Application
         _tray.QuitRequested += (_, _) => RequestShutdown();
         _tray.AboutRequested += (_, _) => ShowAbout();
 
-        // Auto-refresh the display list when Windows signals a moment where the set
-        // of connected displays may have changed (unlock, resume from sleep, monitor
-        // arrangement change, or a USB device arriving) so the user doesn't have to
-        // rescan manually. The device-change watch is hooked to the main window's
-        // message loop.
+        // Auto-refresh when Windows signals the display set may have changed; the
+        // device-change watch is hooked to the main window's message loop.
         _refreshTrigger = new SystemRefreshTrigger();
         _refreshTrigger.Refresh = OnAutoRefreshRequestedAsync;
         _refreshTrigger.AttachDeviceNotifications(_mainWindow);
 
-        // Now that the window exists, listen for later launches and surface the
-        // window when one asks us to (its callback runs off the UI thread).
+        // Surface the window when a later launch asks us to (callback runs off the
+        // UI thread).
         _singleInstance.ListenForActivation(
             () => Dispatcher.InvokeAsync(ShowMainWindow));
 
@@ -109,11 +106,9 @@ public partial class App : Application
         }
     }
 
-    // Fluent's default secondary/tertiary "subtext" tokens are quite light; in the
-    // light theme they can be hard to read. Darken those two brushes app-wide while
-    // keeping them theme-adaptive — the dark theme keeps light-on-dark values, so it
-    // is unaffected. Re-applied on every theme change because WPF-UI swaps the theme
-    // dictionary underneath us.
+    // Fluent's default subtext tokens are hard to read in the light theme; darken the
+    // secondary/tertiary brushes there (dark theme is unaffected). Re-applied on every
+    // theme change because WPF-UI swaps the theme dictionary underneath us.
     private void ApplySubtextContrast()
     {
         var isDark = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()

@@ -43,24 +43,16 @@
     <Resource Include="Assets\AppIcon-256.png" />
   </ItemGroup>
 
-  <!--
-    Bundle the elevated WinUSB installer helper when it has been built.
-
-    The native helper (src/driver) is compiled separately on
-    Windows by src/driver/build.ps1, which stages the result
-    into that project's dist/ folder. When present, copy it next to the app (and
-    into publish output) so WinUsbDriverInstallService can launch it. The Exists
-    condition keeps the app build green when the helper hasn't been built yet
-    (e.g. on macOS/Linux or before running build.ps1).
-  -->
+  <!-- Bundle the elevated WinUSB installer helper when it has been built.
+       src/driver/build.ps1 (Windows-only) stages it into src/driver/dist/; the
+       Exists condition keeps the app build green when it hasn't been built yet
+       (e.g. on macOS/Linux). -->
   <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\driver\dist\NitTray.DriverSetup.exe')">
     <None Include="$(MSBuildProjectDirectory)\..\driver\dist\NitTray.DriverSetup.exe">
       <Link>NitTray.DriverSetup.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <!-- Keep the helper as a loose file beside the single-file NitTray.exe instead
-           of embedding it in the self-extract bundle. WinUsbDriverInstallService
-           launches it from AppContext.BaseDirectory (the app folder), so it must sit
-           next to the exe, not inside the bundle. -->
+      <!-- Keep the helper beside NitTray.exe (loose), not embedded in the single-file
+           bundle: the app launches it from AppContext.BaseDirectory. -->
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
   </ItemGroup>

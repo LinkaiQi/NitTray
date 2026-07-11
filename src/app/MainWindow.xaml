@@ -17,10 +17,8 @@
         d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
     <ui:FluentWindow.Resources>
-        <!-- A caption-style read-only TextBox used for serial numbers so the value
-             is selectable/copyable. The minimal template (just the content host)
-             strips the default TextBox border and inner inset, so the text lines
-             up exactly with the product-name TextBlock above it. -->
+        <!-- Read-only caption TextBox for serials so the value is selectable. The
+             minimal template strips the border/inset so it aligns with the name above. -->
         <Style x:Key="SerialTextBox" TargetType="TextBox">
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="IsTabStop" Value="False"/>

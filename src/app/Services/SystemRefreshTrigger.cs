@@ -4,22 +4,11 @@ using Microsoft.Win32;
 
 namespace NitTray.Services;
 
-// Watches Windows for moments when the set of connected displays may have changed
-// while NitTray wasn't looking, and asks for a display refresh so the list and
-// brightness values stay in sync without the user clicking "Rescan":
-//   * the user unlocking / logging on / (re)connecting to the session,
-//   * the machine waking from sleep,
-//   * the monitor arrangement changing, and
-//   * USB device nodes appearing/removing (WM_DEVICECHANGE) — this is what fires
-//     when an Apple display's HID/brightness interface finishes enumerating, which
-//     can happen a moment AFTER the monitor itself is added.
-//
-// Several events often fire in a burst when a display is plugged in (a display-
-// settings change plus a stream of device-node changes as each USB interface
-// enumerates), so we debounce and only rescan once things settle. Because the HID
-// interface can still be a beat away from being openable even after it appears, we
-// also fire a couple of spaced "settle" retries so a late interface is picked up
-// without the user intervening.
+// Watches Windows for moments when the connected-display set may have changed
+// (session unlock/logon/connect, wake from sleep, monitor-arrangement change, and
+// USB device-node changes) and asks for a rescan. A plug-in produces a burst of
+// these events, so we debounce; and because a display's HID interface can become
+// openable a beat after it appears, we fire a couple of spaced "settle" retries.
 internal sealed class SystemRefreshTrigger : IDisposable
 {
     private const int WmDeviceChange = 0x0219;
@@ -27,8 +16,7 @@ internal sealed class SystemRefreshTrigger : IDisposable
     private const int DbtDeviceArrival = 0x8000;
     private const int DbtDeviceRemoveComplete = 0x8004;
 
-    // Long enough to coalesce the burst of events a single unlock/resume/plug-in
-    // produces, short enough to still feel immediate.
+    // Coalesce the event burst from one unlock/resume/plug-in, yet still feel prompt.
     private const int DebounceMilliseconds = 750;
 
     // After the first rescan, retry a couple more times so a display whose HID
@@ -46,10 +34,8 @@ internal sealed class SystemRefreshTrigger : IDisposable
     private int _generation;
     private bool _disposed;
 
-    // Invoked on the UI thread to re-enumerate displays. Returns true when the scan
-    // "settled" — a display was found and read, or a pending driver-setup surfaced —
-    // which lets the trigger skip any remaining settle retries. The string argument
-    // is a log-friendly reason for the refresh.
+    // Re-enumerates displays on the UI thread; returns true when the scan "settled"
+    // so the trigger can skip remaining retries. Arg is a log-friendly reason.
     public Func<string, Task<bool>>? Refresh { get; set; }
 
     public SystemRefreshTrigger()
@@ -63,11 +49,9 @@ internal sealed class SystemRefreshTrigger : IDisposable
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
     }
 
-    // Hooks WM_DEVICECHANGE on the given window so USB device arrivals/removals
-    // (the signal that an Apple display's HID interface has enumerated) trigger a
-    // rescan. Uses the window's HWND — realized here if the window hasn't been shown
-    // yet — which keeps receiving broadcast device-change messages even while the
-    // window is hidden in the tray. Call once, after the window is constructed.
+    // Hooks WM_DEVICECHANGE on the window so USB arrivals/removals trigger a rescan.
+    // Realizes the HWND if needed and keeps working while the window is hidden in the
+    // tray. Call once, after the window is constructed.
     public void AttachDeviceNotifications(System.Windows.Window window)
     {
         try
@@ -163,10 +147,8 @@ internal sealed class SystemRefreshTrigger : IDisposable
             }
         }
 
-        // SystemEvents / the message hook fired us off the UI thread (or on it); hop
-        // to the UI thread so the handler can safely touch the view model. If the
-        // scan comes back "settled", drop the remaining settle retries — the display
-        // is already showing, so re-scanning again would just be wasted work.
+        // Hop to the UI thread to run the refresh. If it settled, drop the remaining
+        // settle retries — the display is already showing.
         _dispatcher.InvokeAsync(async () =>
         {
             var refresh = Refresh;
@@ -182,9 +164,8 @@ internal sealed class SystemRefreshTrigger : IDisposable
         });
     }
 
-    // Stop the spaced settle retries for a given schedule generation. Ignored when a
-    // newer device change has since been scheduled, so a late "settled" report from
-    // an earlier scan can't cancel the retries of a fresh rescan sequence.
+    // Stop the settle retries for this schedule generation, unless a newer device
+    // change has since been scheduled (its generation won't match).
     private void CancelSettleRetries(int generation)
     {
         lock (_gate)
@@ -209,8 +190,8 @@ internal sealed class SystemRefreshTrigger : IDisposable
             _disposed = true;
         }
 
-        // SystemEvents holds static references to these handlers, so failing to
-        // detach would leak this instance for the life of the process.
+        // SystemEvents holds these handlers statically; detach or we leak for the
+        // life of the process.
         SystemEvents.SessionSwitch -= OnSessionSwitch;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;

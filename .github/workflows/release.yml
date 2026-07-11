@@ -52,15 +52,11 @@ jobs:
           "INSTALLER_VERSION=$numeric" | Out-File $env:GITHUB_ENV -Append
           Write-Host "APP_VERSION=$appVersion  INSTALLER_VERSION=$numeric"
 
-      # Build the elevated WinUSB installer helper (C + libwdi) once. -SupportArm64
-      # additionally embeds the ARM64 installer payload, so the single x64 helper
-      # installs the correct driver on BOTH x64 and ARM64 (libwdi selects
-      # installer_<os-arch>.exe at runtime, even under x64 emulation on ARM). Built
-      # with MSBuild + CMake, located via vswhere; needs the "MSVC v143 - ARM64
-      # build tools" component, which the windows-2022 image includes (windows-latest
-      # has migrated to VS 18 and no longer ships the v143 ARM64 toolset). Stages
-      # src/driver/dist/NitTray.DriverSetup.exe, which the app
-      # .csproj bundles into every publish — so this MUST run before publish.
+      # Build the elevated WinUSB helper (C + libwdi) once. -SupportArm64 embeds the
+      # ARM64 payload too, so the single x64 helper installs the right driver on both
+      # arches. Needs the "MSVC v143 - ARM64 build tools" (on the windows-2022 image).
+      # Stages src/driver/dist/NitTray.DriverSetup.exe, which the csproj bundles into
+      # every publish — so this MUST run before publish.
       - name: Build native WinUSB installer helper (libwdi, x64 + ARM64)
         shell: pwsh
         run: |
@@ -87,12 +83,9 @@ jobs:
           -p:Version=${{ env.APP_VERSION }}
           -o publish/win-arm64
 
-      # Guarantee the elevated helper sits *beside* NitTray.exe in each publish folder
-      # (the app launches it from AppContext.BaseDirectory, i.e. its own folder). The
-      # csproj already copies it there via ExcludeFromSingleFile, but this step is a
-      # hard backstop: it copies the helper in if it's somehow missing and FAILS the
-      # release if it still isn't there. Runs before signing (so the helper is signed
-      # too) and before the installer/zip steps that package publish/<rid>.
+      # Backstop: ensure the helper is beside NitTray.exe in each publish folder (the
+      # csproj already does this via ExcludeFromSingleFile). Copies it in if missing
+      # and fails the release otherwise. Runs before signing and packaging.
       - name: Ensure driver helper is packaged beside the app
         shell: pwsh
         run: |

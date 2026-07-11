@@ -13,8 +13,7 @@ public sealed record BrightnessProtocol(
     // Raw brightness range reported by the device.
     uint MinRaw,
     uint MaxRaw,
-    // (UsagePage, Usage) pair that identifies the brightness control inside the
-    // raw HID report descriptor, used to pick the correct interface on a
-    // multi-interface composite device.
+    // (UsagePage, Usage) that identifies the brightness control in the HID report
+    // descriptor, used to pick the right interface on a composite device.
     ushort UsagePage,
     ushort Usage);

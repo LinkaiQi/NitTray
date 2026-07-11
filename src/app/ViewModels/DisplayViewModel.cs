@@ -45,16 +45,14 @@ public sealed class DisplayViewModel : INotifyPropertyChanged
     // driver NitTray installed and can therefore be reverted to the in-box driver.
     public bool IsWinUsb => _info.Transport == DisplayTransport.WinUsb;
 
-    // The ⋯ overflow menu only carries the "Uninstall driver" action, so it is shown
-    // for WinUSB displays only; Studio Displays use the in-box HID driver (nothing to
-    // remove) and get no menu.
+    // The ⋯ menu only carries "Uninstall driver", so it shows for WinUSB displays
+    // only; Studio Displays use the in-box driver and get no menu.
     public Visibility OverflowMenuVisibility => IsWinUsb
         ? Visibility.Visible
         : Visibility.Collapsed;
 
-    // Invoked from the ⋯ overflow menu. Routes back to the MainViewModel via the
-    // callback supplied at construction, which shows the confirmation prompt and
-    // performs the elevated uninstall.
+    // Routes back to MainViewModel (via the construction callback), which confirms
+    // and performs the elevated uninstall.
     public ICommand UninstallDriverCommand { get; }
 
     // Identity line under the product name. See DisplayIdentity for why some

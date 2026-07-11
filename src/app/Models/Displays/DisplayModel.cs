@@ -13,8 +13,7 @@ public sealed record DisplayModel(
     // True when Windows' in-box HID driver rejects the brightness interface and
     // NitTray must install the WinUSB function driver first (the Pro Display XDR).
     bool RequiresWinUsbDriver,
-    // Explicit brightness feature-report protocol. null means "discover it at
-    // runtime from the HID report descriptor" — the Studio Display family exposes
-    // a well-formed descriptor, so we read its report id and range live. Models
-    // reached over WinUSB must specify it because we bypass the Windows HID parser.
+    // Explicit brightness report layout. null = discover it at runtime from the HID
+    // descriptor (Studio Display family); WinUSB models must specify it because we
+    // bypass the Windows HID parser.
     BrightnessProtocol? Brightness = null);

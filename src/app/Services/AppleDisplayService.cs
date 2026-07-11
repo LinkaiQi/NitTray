@@ -8,19 +8,16 @@ using NitTray.Services.Native;
 
 namespace NitTray.Services;
 
-// Reads and writes Apple display brightness over USB. The service is split
-// across several files (all `partial class AppleDisplayService`) by concern.
-// This file holds the IDisplayService entry points and the brightness
-// read/write paths for both HID and WinUSB transports.
+// Reads and writes Apple display brightness over USB. Split across several
+// `partial class AppleDisplayService` files; this one holds the IDisplayService
+// entry points and the HID/WinUSB brightness read/write paths.
 public sealed partial class AppleDisplayService : IDisplayService
 {
     private const ushort AppleVendorId = DisplayCatalog.AppleVendorId;
     private const int ErrorNoMoreItems = 259;
 
-    // The Pro Display XDR is the one model whose brightness travels over WinUSB.
-    // Its identity and feature-report layout live in the catalog
-    // (Models/Displays/ProDisplayXdr.cs); we pull them out once here so the WinUSB
-    // read/write/probe paths can reference them by their protocol field names.
+    // Pro Display XDR is the one model driven over WinUSB; pull its catalog
+    // identity and report layout out once for the WinUSB read/write/probe paths.
     private static readonly DisplayModel ProXdrModel = ProDisplayXdr.Model;
     private static readonly ushort ProDisplayXdrPid = ProXdrModel.ProductId;
     private static readonly BrightnessProtocol ProXdr = ProXdrModel.Brightness!;

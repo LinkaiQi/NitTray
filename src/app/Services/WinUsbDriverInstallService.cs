@@ -5,14 +5,10 @@ using NitTray.Models;
 
 namespace NitTray.Services;
 
-// Launches the elevated native helper (NitTray.DriverSetup.exe) that uses
-// libwdi to install WinUSB onto the composite Apple display. The helper must run
-// as Administrator (its manifest requests it), so we start it with the "runas"
-// shell verb which raises a single UAC prompt.
-//
-// The helper installs WinUSB on the *whole* composite device (the parent node,
-// no MI_ suffix). That is what lets the app open one WinUSB handle and walk every
-// interface via WinUsb_GetAssociatedInterface to reach the brightness interface.
+// Launches the elevated native helper (NitTray.DriverSetup.exe) that uses libwdi to
+// install WinUSB onto the whole composite Apple display (parent node, no MI_ suffix)
+// — which lets the app open one WinUSB handle and walk every interface to reach the
+// brightness one. Started with the "runas" verb for the single UAC prompt.
 public sealed class WinUsbDriverInstallService : IDriverInstallService
 {
     private const string HelperFileName = "NitTray.DriverSetup.exe";
