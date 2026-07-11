@@ -34,7 +34,7 @@ Connect the display to your PC with a **USB-C or Thunderbolt** cable.
 
 Download the [latest release](https://github.com/LinkaiQi/NitTray/releases/latest):
 
-| Your PC | Download |
+| Architecture | Download |
 |---------|----------|
 | **x64** — for most Windows PCs | [![Download the x64 installer][badge-x64]][inst-x64] |
 | **Arm64** — for Windows on ARM<br>(Snapdragon X, Surface Pro X, and similar) | [![Download the Arm64 installer][badge-arm64]][inst-arm64] |
@@ -44,6 +44,7 @@ Download the [latest release](https://github.com/LinkaiQi/NitTray/releases/lates
 [inst-x64]: https://github.com/LinkaiQi/NitTray/releases/latest/download/NitTray-installer-x64.exe
 [inst-arm64]: https://github.com/LinkaiQi/NitTray/releases/latest/download/NitTray-installer-arm64.exe
 
+> [!NOTE]
 > NitTray is code-signed. However, because it is a new application and has not yet
 > established a Microsoft SmartScreen reputation, Windows may display a
 > *"Windows protected your PC"* message the first time you launch it. Select

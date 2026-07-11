@@ -2,7 +2,7 @@ namespace NitTray.ViewModels;
 
 // Formats the identity line shown beneath a display's name. Some Apple displays
 // expose a real marketing serial over USB, others only an internal USB identifier,
-// so we inspect the value's shape and label it "Serial …" or "USB ID …" accordingly.
+// so we inspect the value's shape and label it "Serial: …" or "USB ID: …" accordingly.
 internal static class DisplayIdentity
 {
     public static string Format(string? serial)
@@ -14,8 +14,8 @@ internal static class DisplayIdentity
 
         var value = serial.Trim().ToUpperInvariant();
         return IsLikelyMarketingSerial(value)
-            ? $"Serial {value}"
-            : $"USB ID {value}";
+            ? $"Serial: {value}"
+            : $"USB ID: {value}";
     }
 
     // A real marketing serial is compact and strictly alphanumeric; anything with a
