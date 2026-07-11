@@ -133,7 +133,7 @@
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="14,0,0,0" Visibility="{Binding InstallingVisibility}">
-                            <ui:ProgressRing Width="22" Height="22" IsIndeterminate="True" Margin="0,0,10,0"/>
+                            <ui:ProgressRing Width="22" Height="22" IsIndeterminate="{Binding IsInstallingDriver}" Margin="0,0,10,0"/>
                             <ui:TextBlock FontTypography="Caption"
                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center">Setting up the driver…<LineBreak/>This may take a few minutes</ui:TextBlock>
                         </StackPanel>
