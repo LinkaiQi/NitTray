@@ -57,4 +57,20 @@
     </None>
   </ItemGroup>
 
+  <!-- Ship the app's GPLv3 license and the third-party notices (MIT WPF-UI/.NET,
+       LGPL libwdi) beside the exe, so both the portable zip and the installer carry
+       them. ExcludeFromSingleFile keeps them as loose, readable files. -->
+  <ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)\..\..\LICENSE">
+      <Link>LICENSE.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
+    <None Include="$(MSBuildProjectDirectory)\..\..\docs\THIRD-PARTY-NOTICES.md">
+      <Link>THIRD-PARTY-NOTICES.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
+  </ItemGroup>
+
 </Project>
