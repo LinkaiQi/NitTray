@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="src/app/Assets/AppIcon-256.png" width="88" alt="NitTray icon">
+<img src="src/app/Assets/AppIcon-128-trimmed.png" width="80" alt="NitTray icon">
 
 # NitTray
 
