@@ -57,6 +57,11 @@
     <None Include="$(MSBuildProjectDirectory)\..\driver\dist\NitTray.DriverSetup.exe">
       <Link>NitTray.DriverSetup.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <!-- Keep the helper as a loose file beside the single-file NitTray.exe instead
+           of embedding it in the self-extract bundle. WinUsbDriverInstallService
+           launches it from AppContext.BaseDirectory (the app folder), so it must sit
+           next to the exe, not inside the bundle. -->
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
   </ItemGroup>
 

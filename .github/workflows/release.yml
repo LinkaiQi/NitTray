@@ -87,6 +87,27 @@ jobs:
           -p:Version=${{ env.APP_VERSION }}
           -o publish/win-arm64
 
+      # Guarantee the elevated helper sits *beside* NitTray.exe in each publish folder
+      # (the app launches it from AppContext.BaseDirectory, i.e. its own folder). The
+      # csproj already copies it there via ExcludeFromSingleFile, but this step is a
+      # hard backstop: it copies the helper in if it's somehow missing and FAILS the
+      # release if it still isn't there. Runs before signing (so the helper is signed
+      # too) and before the installer/zip steps that package publish/<rid>.
+      - name: Ensure driver helper is packaged beside the app
+        shell: pwsh
+        run: |
+          foreach ($rid in 'win-x64', 'win-arm64') {
+            $dest = "publish/$rid/NitTray.DriverSetup.exe"
+            if (-not (Test-Path $dest)) {
+              Copy-Item src/driver/dist/NitTray.DriverSetup.exe $dest -Force
+              Write-Host "Copied helper into publish/$rid"
+            }
+            if (-not (Test-Path $dest)) {
+              throw "NitTray.DriverSetup.exe missing from publish/$rid"
+            }
+            Write-Host "OK: $dest"
+          }
+
       # --- Azure Artifact Signing (formerly Trusted Signing) -------------------
       # Enable by setting repo variable ARTIFACT_SIGNING=true plus the account/
       # profile variables and OIDC secrets (docs/SIGNING.md). DefaultAzureCredential
@@ -164,10 +185,17 @@ jobs:
       - name: Package portable zips (per architecture)
         shell: pwsh
         run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
           foreach ($rid in 'win-x64', 'win-arm64') {
             $arch = $rid -replace '^win-', ''
             $items = Get-ChildItem "publish/$rid" -Exclude *.pdb
-            Compress-Archive -Path $items.FullName -DestinationPath "NitTray-portable-$arch.zip" -Force
+            $zip = "NitTray-portable-$arch.zip"
+            Compress-Archive -Path $items.FullName -DestinationPath $zip -Force
+            $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip))
+            $hasHelper = $archive.Entries.Name -contains 'NitTray.DriverSetup.exe'
+            $archive.Dispose()
+            if (-not $hasHelper) { throw "$zip is missing NitTray.DriverSetup.exe" }
+            Write-Host "OK: $zip contains NitTray.DriverSetup.exe"
           }
 
       - name: Upload build artifacts
