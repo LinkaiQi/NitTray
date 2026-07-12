@@ -11,7 +11,7 @@ run-name: Release ${{ github.ref_name }}
 # Triggered by pushing a version tag like v0.1.0, or run manually from the Actions
 # tab. Signing stays OFF until you set the repo variable ARTIFACT_SIGNING=true and
 # configure the Azure inputs below — until then the job still publishes UNSIGNED
-# artifacts so the workflow stays green. See docs/SIGNING.md.
+# artifacts so the workflow stays green.
 
 on:
   push:
@@ -103,7 +103,7 @@ jobs:
 
       # --- Azure Artifact Signing (formerly Trusted Signing) -------------------
       # Enable by setting repo variable ARTIFACT_SIGNING=true plus the account/
-      # profile variables and OIDC secrets (docs/SIGNING.md). DefaultAzureCredential
+      # profile variables and OIDC secrets. DefaultAzureCredential
       # picks up the azure/login session below.
       - name: Azure login (OIDC)
         if: vars.ARTIFACT_SIGNING == 'true'

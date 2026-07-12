@@ -11,9 +11,9 @@
 [![Latest release](https://img.shields.io/github/v/release/LinkaiQi/NitTray?sort=semver&label=latest%20release)](https://github.com/LinkaiQi/NitTray/releases/latest)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 
-<img src="docs/screenshots/light-theme.png" alt="NitTray in light theme" width="360">
+<img src="docs/public/screenshots/light-theme.png" alt="NitTray in light theme" width="360">
 &nbsp;&nbsp;
-<img src="docs/screenshots/dark-theme.png" alt="NitTray in dark theme" width="360">
+<img src="docs/public/screenshots/dark-theme.png" alt="NitTray in dark theme" width="360">
 
 </div>
 
@@ -50,20 +50,21 @@ Download the [latest release](https://github.com/LinkaiQi/NitTray/releases/lates
 > *"Windows protected your PC"* message the first time you launch it. Select
 > **More info**, then **Run anyway**.
 
-## License & Support
+## Build from Source
 
-**Build:** The [**technical documentation**](src/app/README.md) provides an overview of
-NitTray's USB/HID protocol and display detection process, along with instructions
-for building the application from source.
+The [`src/app/README.md`](src/app/README.md) explains NitTray's USB/HID communication, display detection process, and how to build the application from source.
 
-**License:** see [LICENSE](LICENSE). NitTray bundles
-[libwdi](https://github.com/pbatard/libwdi) (LGPLv3/GPLv3) for the Pro Display XDR
-driver setup. Bundled third-party components are listed in
-[THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
+## License
 
-**Support:** NitTray is free and developed in my spare time. If you find it useful, you can
-support its continued development with a small donation:
-[**Buy me a coffee ☕**](https://buymeacoffee.com/nittray).
+NitTray is licensed under the terms described in [LICENSE](LICENSE).
+
+For Pro Display XDR driver setup, NitTray includes [libwdi](https://github.com/pbatard/libwdi), which is licensed under LGPLv3/GPLv3. Additional bundled components and their licenses are listed in [`docs/THIRD-PARTY-NOTICES.md`](docs/THIRD-PARTY-NOTICES.md).
+
+## Support
+
+NitTray is free and developed in my spare time. If you find it useful, please consider supporting its continued development:
+
+[**Buy me a coffee ☕**](https://buymeacoffee.com/nittray)
 
 ## Trademarks
 
