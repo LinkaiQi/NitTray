@@ -66,7 +66,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
-    <None Include="$(MSBuildProjectDirectory)\..\..\docs\THIRD-PARTY-NOTICES.md">
+    <None Include="$(MSBuildProjectDirectory)\..\..\THIRD-PARTY-NOTICES.md">
       <Link>THIRD-PARTY-NOTICES.md</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

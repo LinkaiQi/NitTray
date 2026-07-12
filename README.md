@@ -11,9 +11,9 @@
 [![Latest release](https://img.shields.io/github/v/release/LinkaiQi/NitTray?sort=semver&label=latest%20release&color=2e7d32)](https://github.com/LinkaiQi/NitTray/releases/latest)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 
-<img src="docs/public/screenshots/light-theme.png" alt="NitTray in light theme" width="360">
+<img src="public/screenshots/light-theme.png" alt="NitTray in light theme" width="360">
 &nbsp;&nbsp;
-<img src="docs/public/screenshots/dark-theme.png" alt="NitTray in dark theme" width="360">
+<img src="public/screenshots/dark-theme.png" alt="NitTray in dark theme" width="360">
 
 </div>
 
@@ -58,7 +58,7 @@ The [`src/app/README.md`](src/app/README.md) explains NitTray's USB/HID communic
 
 NitTray is licensed under the terms described in [LICENSE](LICENSE).
 
-For Pro Display XDR driver setup, NitTray includes [libwdi](https://github.com/pbatard/libwdi), which is licensed under LGPLv3/GPLv3. Additional bundled components and their licenses are listed in [`docs/THIRD-PARTY-NOTICES.md`](docs/THIRD-PARTY-NOTICES.md).
+For Pro Display XDR driver setup, NitTray includes [libwdi](https://github.com/pbatard/libwdi), which is licensed under LGPLv3/GPLv3. Additional bundled components and their licenses are listed in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ## Support
 

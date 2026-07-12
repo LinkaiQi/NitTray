@@ -1,7 +1,7 @@
-# Deploy the GitHub Pages landing site (docs/public) to GitHub Pages.
+# Deploy the GitHub Pages landing site (public/) to GitHub Pages.
 #
 # GitHub Pages' branch/folder picker only supports "/" or "/docs", but the site
-# lives in docs/public — so we publish it with the Pages Actions pipeline, which
+# lives in public/ — so we publish it with the Pages Actions pipeline, which
 # can upload any folder as the site root. In the repo's Settings → Pages, set
 # "Build and deployment" → Source to "GitHub Actions" (once, after making the
 # repo public) and this workflow takes over.
@@ -11,7 +11,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/public/**'
+      - 'public/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -42,7 +42,7 @@ jobs:
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: docs/public
+          path: public
 
       - name: Deploy to GitHub Pages
         id: deployment
