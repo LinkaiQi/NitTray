@@ -8,7 +8,7 @@
 
 [![Download for Windows](https://img.shields.io/badge/⬇%20Download-Windows%2010%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#download)
 
-[![Latest release](https://img.shields.io/github/v/release/LinkaiQi/NitTray?sort=semver&label=latest%20release)](https://github.com/LinkaiQi/NitTray/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/LinkaiQi/NitTray?sort=semver&label=latest%20release&color=2e7d32)](https://github.com/LinkaiQi/NitTray/releases/latest)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 
 <img src="docs/public/screenshots/light-theme.png" alt="NitTray in light theme" width="360">

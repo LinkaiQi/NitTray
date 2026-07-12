@@ -1,0 +1,49 @@
+# Deploy the GitHub Pages landing site (docs/public) to GitHub Pages.
+#
+# GitHub Pages' branch/folder picker only supports "/" or "/docs", but the site
+# lives in docs/public — so we publish it with the Pages Actions pipeline, which
+# can upload any folder as the site root. In the repo's Settings → Pages, set
+# "Build and deployment" → Source to "GitHub Actions" (once, after making the
+# repo public) and this workflow takes over.
+name: Deploy GitHub Page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/public/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+# Least-privilege token plus the OIDC/pages perms the deploy needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time; don't cancel an in-progress publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
