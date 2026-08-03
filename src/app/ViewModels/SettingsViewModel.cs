@@ -150,8 +150,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         if (!binding.IsValid)
         {
             SetStatus(
-                "Add Ctrl, Alt, Shift or the Windows key — a shortcut without a modifier " +
-                "would capture that key everywhere.",
+                "Use Ctrl, Alt or the Windows key in the shortcut — Shift on its own, " +
+                "or no modifier at all, would capture that key everywhere.",
                 Wpf.Ui.Controls.InfoBarSeverity.Warning);
             return;
         }

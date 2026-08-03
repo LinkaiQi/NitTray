@@ -56,7 +56,10 @@ public partial class SettingsWindow : FluentWindow
         var modifiers = HotKeyModifiers.None;
         var pressed = Keyboard.Modifiers;
 
-        if (pressed.HasFlag(ModifierKeys.Windows))
+        // Keyboard.Modifiers only reports Alt/Ctrl/Shift — WPF never sets
+        // ModifierKeys.Windows — so the Win key has to be probed directly. Without
+        // this, Win+Ctrl+Up would be silently recorded as plain Ctrl+Up.
+        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
         {
             modifiers |= HotKeyModifiers.Win;
         }

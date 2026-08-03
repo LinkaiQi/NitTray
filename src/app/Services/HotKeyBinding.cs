@@ -27,9 +27,13 @@ public sealed record HotKeyBinding(HotKeyModifiers Modifiers, Key Key)
     public static readonly HotKeyBinding DefaultBrightnessDown =
         new(HotKeyModifiers.Win | HotKeyModifiers.Control, Key.Down);
 
-    // A bare key would swallow that key system-wide, so a modifier is required.
+    // Shift on its own is not enough: Shift+<key> is a typing and text-selection chord
+    // in every application, and a global registration would swallow it system-wide.
+    private const HotKeyModifiers RequiredModifiers =
+        HotKeyModifiers.Control | HotKeyModifiers.Alt | HotKeyModifiers.Win;
+
     public bool IsValid =>
-        Modifiers != HotKeyModifiers.None && !IsModifierKey(Key) && VirtualKey != 0;
+        (Modifiers & RequiredModifiers) != 0 && !IsModifierKey(Key) && VirtualKey != 0;
 
     public uint VirtualKey => (uint)KeyInterop.VirtualKeyFromKey(Key);
 

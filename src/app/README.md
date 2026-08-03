@@ -147,8 +147,13 @@ the vertical pair is free. Combinations that were ruled out:
 | `Win + Plus/Minus` | Magnifier zoom |
 | `Win + letter`, `Win + Alt + letter` | Reserved by Windows / Xbox Game Bar |
 
-If you rebind, prefer a combination with at least two modifiers; NitTray refuses
-modifier-less shortcuts because they would swallow that key system-wide.
+If you rebind, prefer a combination with at least two modifiers. NitTray requires
+`Ctrl`, `Alt` or `Win` to be part of the shortcut — a bare key, or `Shift` plus a
+key, would swallow ordinary typing and text selection system-wide.
+
+Note that WPF's `Keyboard.Modifiers` never reports the Windows key, so the
+recorder probes `Key.LWin`/`Key.RWin` directly; using `ModifierKeys.Windows` would
+silently record `Win + Ctrl + Up` as plain `Ctrl + Up`.
 
 ## Building
 
