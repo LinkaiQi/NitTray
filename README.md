@@ -30,6 +30,20 @@ Apple's **Studio Display** and **Pro Display XDR** without a Mac.
 
 Connect the display to your PC with a **USB-C or Thunderbolt** cable.
 
+## Keyboard Shortcuts
+
+NitTray can change brightness from any app with a global shortcut. Shortcuts are
+**off until you enable them** in **tray icon → Settings**:
+
+| Action | Default |
+|--------|---------|
+| Increase brightness by 1% | <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>↑</kbd> |
+| Decrease brightness by 1% | <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>↓</kbd> |
+
+Hold a key to keep stepping, and a small overlay shows the new level. Both
+combinations are configurable — if the one you pick is already taken by another
+app, NitTray says so instead of failing quietly.
+
 ## Download
 
 Download the [latest release](https://github.com/LinkaiQi/NitTray/releases/latest):

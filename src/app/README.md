@@ -95,6 +95,61 @@ Apple-vendor interface, and the initial brightness read (raw value, range, and
 resulting percentage). Attaching it to a GitHub issue is usually enough to
 identify a new display variant.
 
+## Global brightness shortcuts
+
+NitTray registers two system-wide shortcuts that step every connected display by
+1%. They are opt-in (**tray → Settings**) and stored in
+`%LOCALAPPDATA%\NitTray\settings.json` beside the diagnostic log:
+
+```json
+{
+  "BrightnessHotKeysEnabled": true,
+  "BrightnessUpHotKey": "Win+Ctrl+Up",
+  "BrightnessDownHotKey": "Win+Ctrl+Down"
+}
+```
+
+### How it works
+
+`RegisterHotKey` binds the combinations to the main window's HWND — the same
+window that already receives `WM_DEVICECHANGE`, so the shortcuts keep working
+while the window is hidden in the tray. `WM_HOTKEY` is dispatched through an
+`HwndSource` hook, exactly like the device-change watch.
+
+- **`MOD_NOREPEAT` is deliberately not set**, so holding a key ramps brightness.
+  `DisplayViewModel` already coalesces rapid writes to the most recent value, so
+  the device never sees a backlog of feature reports.
+- **Registration failures are surfaced, not swallowed.** `RegisterHotKey`
+  returning `ERROR_HOTKEY_ALREADY_REGISTERED` (1409) becomes an inline warning
+  naming the combination; anything else is logged with its Win32 error.
+- **Recording a shortcut suspends the live ones.** Windows delivers a registered
+  combination as `WM_HOTKEY`, so it would never arrive at the settings window as a
+  key press — the registrations are released while the user types and restored
+  afterwards.
+- **The overlay is required, not decorative.** With the window in the tray there
+  is no other feedback, so a click-through, never-activated window
+  (`WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT`) reports the new
+  level on the primary monitor and fades out.
+
+### Choosing defaults
+
+`Win + Ctrl + Up` / `Win + Ctrl + Down` are the defaults because Windows leaves
+them unassigned — `Win + Ctrl + Left/Right` are the virtual-desktop switches, but
+the vertical pair is free. Combinations that were ruled out:
+
+| Combination | Already means |
+|-------------|---------------|
+| `Win + ↑/↓` | Maximize / minimize |
+| `Win + Shift + ↑/↓` | Stretch vertically / restore |
+| `Win + Alt + ↑/↓` | Snap to top / bottom half (Windows 11 22H2+) |
+| `Ctrl + Alt + arrows` | Intel Graphics screen rotation |
+| `Ctrl + Shift + arrows` | Text selection in practically every editor |
+| `Win + Plus/Minus` | Magnifier zoom |
+| `Win + letter`, `Win + Alt + letter` | Reserved by Windows / Xbox Game Bar |
+
+If you rebind, prefer a combination with at least two modifiers; NitTray refuses
+modifier-less shortcuts because they would swallow that key system-wide.
+
 ## Building
 
 ```powershell
@@ -150,6 +205,12 @@ The version shown in the About window is read from the assembly's
 - **The slider snaps to whole percentages.** This is intentional. The raw range is
   device-specific (for example `400–60000` or `400–50000`) and is rounded to an
   integer percentage.
+- **A brightness shortcut does nothing.** Windows does not deliver global
+  shortcuts to ordinary applications while a window running as administrator (or
+  an exclusive-fullscreen game) has focus; NitTray runs `asInvoker`, so this is
+  expected. If a shortcut never works, open **tray → Settings** — a combination
+  another application already owns is reported there, and the diagnostic log
+  records every registration attempt.
 - **"Windows protected your PC" on first launch.** NitTray is code-signed (Azure
   Trusted Signing), but a new application has not yet established a Microsoft
   SmartScreen reputation, and downloaded files also carry the *Mark of the Web*,

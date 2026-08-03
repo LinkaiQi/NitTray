@@ -300,7 +300,7 @@
                               FontTypography="Caption"
                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                 <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12">
-                    <Hyperlink Style="{StaticResource FooterLink}" Click="OnAboutClick">About &amp; Support</Hyperlink>
+                    <Hyperlink Style="{StaticResource FooterLink}" Click="OnSettingsClick">Settings</Hyperlink><Run Text="     ·     " Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Hyperlink Style="{StaticResource FooterLink}" Click="OnAboutClick">About &amp; Support</Hyperlink>
                 </TextBlock>
             </Grid>
         </Grid>

@@ -1,0 +1,45 @@
+<Window x:Class="NitTray.BrightnessOsdWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="NitTray brightness"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
+        Background="Transparent" ShowInTaskbar="False" ShowActivated="False"
+        Topmost="True" Focusable="False" IsHitTestVisible="False"
+        SizeToContent="WidthAndHeight" Opacity="0">
+
+    <!-- The outer margin is the drop shadow's room; the window itself is transparent. -->
+    <Border Margin="18" CornerRadius="12" Padding="20,16" MinWidth="252"
+            Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="3" Direction="270"
+                              Opacity="0.3" Color="Black"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ui:SymbolIcon Grid.Column="0" Symbol="BrightnessHigh24" FontSize="26"
+                           VerticalAlignment="Center" Margin="0,0,16,0"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <Grid>
+                    <ui:TextBlock x:Name="CaptionText" HorizontalAlignment="Left"
+                                  VerticalAlignment="Center" FontTypography="Caption"
+                                  TextTrimming="CharacterEllipsis" MaxWidth="170"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <ui:TextBlock x:Name="PercentText" HorizontalAlignment="Right"
+                                  VerticalAlignment="Center" FontTypography="BodyStrong"/>
+                </Grid>
+                <ProgressBar x:Name="LevelBar" Minimum="0" Maximum="100" Height="4"
+                             Margin="0,10,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

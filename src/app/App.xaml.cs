@@ -11,14 +11,22 @@ using ExitEventArgs = System.Windows.ExitEventArgs;
 
 namespace NitTray;
 
-public partial class App : Application
+public partial class App : Application, IHotKeyCoordinator
 {
+    // One press of a global brightness shortcut moves every display by this much.
+    private const int BrightnessStepPercent = 1;
+
     private TrayIconHost? _tray;
     private MainWindow? _mainWindow;
     private AboutWindow? _aboutWindow;
+    private SettingsWindow? _settingsWindow;
+    private BrightnessOsdWindow? _osdWindow;
     private MainViewModel? _viewModel;
     private SystemRefreshTrigger? _refreshTrigger;
     private SingleInstance? _singleInstance;
+    private HotKeyService? _hotKeys;
+    private HotKeyApplyResult _hotKeyResult;
+    private AppSettings _settings = new();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -51,6 +59,7 @@ public partial class App : Application
         _viewModel.DriverSetupFailed += OnDriverSetupFailed;
         _viewModel.DriverUninstallRequested += OnDriverUninstallRequested;
         _viewModel.DriverUninstallSucceeded += OnDriverUninstallSucceeded;
+        _viewModel.BrightnessStepped += OnBrightnessStepped;
 
         _mainWindow = new MainWindow { DataContext = _viewModel };
         _mainWindow.Closing += OnMainWindowClosing;
@@ -71,6 +80,7 @@ public partial class App : Application
             }
         };
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
+        _tray.SettingsRequested += (_, _) => ShowSettings();
         _tray.QuitRequested += (_, _) => RequestShutdown();
         _tray.AboutRequested += (_, _) => ShowAbout();
 
@@ -79,6 +89,14 @@ public partial class App : Application
         _refreshTrigger = new SystemRefreshTrigger();
         _refreshTrigger.Refresh = OnAutoRefreshRequestedAsync;
         _refreshTrigger.AttachDeviceNotifications(_mainWindow);
+
+        // Global brightness shortcuts, off unless the user enabled them. They ride on
+        // the same (hidden) main-window message loop as the device-change watch.
+        _settings = SettingsStore.Load();
+        _hotKeys = new HotKeyService(_mainWindow);
+        _hotKeys.BrightnessUpPressed += (_, _) => _viewModel?.StepBrightness(BrightnessStepPercent);
+        _hotKeys.BrightnessDownPressed += (_, _) => _viewModel?.StepBrightness(-BrightnessStepPercent);
+        _ = ApplyHotKeySettings(persist: false);
 
         // Surface the window when a later launch asks us to (callback runs off the
         // UI thread).
@@ -185,6 +203,85 @@ public partial class App : Application
         _aboutWindow.Topmost = true;
         _aboutWindow.Topmost = false;
         _aboutWindow.Focus();
+    }
+
+    // Opens or re-focuses the single Settings window (tray menu and footer link).
+    public void ShowSettings()
+    {
+        if (_settingsWindow is null)
+        {
+            _settingsWindow = new SettingsWindow(new SettingsViewModel(_settings, this));
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+
+            if (_mainWindow is not null && _mainWindow.IsVisible)
+            {
+                _settingsWindow.Owner = _mainWindow;
+            }
+            else
+            {
+                _settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+
+            _settingsWindow.Show();
+        }
+
+        _settingsWindow.Activate();
+        _settingsWindow.Topmost = true;
+        _settingsWindow.Topmost = false;
+        _settingsWindow.Focus();
+    }
+
+    // Registers whatever the current settings ask for. Persisting is opt-in so the
+    // startup pass doesn't rewrite the file it just read.
+    private HotKeyApplyResult ApplyHotKeySettings(bool persist)
+    {
+        if (persist)
+        {
+            SettingsStore.Save(_settings);
+        }
+
+        _hotKeyResult = _hotKeys?.Apply(
+                            _settings.BrightnessHotKeysEnabled,
+                            _settings.BrightnessUp,
+                            _settings.BrightnessDown)
+                        ?? new HotKeyApplyResult(
+                            HotKeyRegistrationStatus.Failed, HotKeyRegistrationStatus.Failed);
+        return _hotKeyResult;
+    }
+
+    HotKeyApplyResult IHotKeyCoordinator.Current => _hotKeyResult;
+
+    HotKeyApplyResult IHotKeyCoordinator.Apply(AppSettings settings)
+    {
+        _settings = settings ?? _settings;
+        return ApplyHotKeySettings(persist: true);
+    }
+
+    void IHotKeyCoordinator.SetShortcutsSuspended(bool suspended)
+    {
+        if (_hotKeys is null)
+        {
+            return;
+        }
+
+        _ = suspended
+            ? _hotKeys.Apply(enabled: false, up: null, down: null)
+            : ApplyHotKeySettings(persist: false);
+    }
+
+    // The window is usually hidden in the tray, so a shortcut needs its own feedback.
+    private void OnBrightnessStepped(object? sender, BrightnessStepEventArgs e)
+    {
+        _osdWindow ??= new BrightnessOsdWindow();
+
+        if (e.Percent is int percent)
+        {
+            _osdWindow.ShowLevel(percent, e.Caption);
+        }
+        else
+        {
+            _osdWindow.ShowMessage(e.Caption);
+        }
     }
 
     private void OnDriverSetupFailed(object? sender, string message)
@@ -296,6 +393,9 @@ public partial class App : Application
             _refreshTrigger.Dispose();
         }
 
+        // Release the global shortcuts before the HWND goes away.
+        _hotKeys?.Dispose();
+        _osdWindow?.Close();
         _tray?.Dispose();
         _singleInstance?.Dispose();
         base.OnExit(e);

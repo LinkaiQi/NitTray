@@ -15,6 +15,11 @@ public partial class MainWindow : FluentWindow
         (System.Windows.Application.Current as App)?.ShowAbout();
     }
 
+    private void OnSettingsClick(object sender, RoutedEventArgs e)
+    {
+        (System.Windows.Application.Current as App)?.ShowSettings();
+    }
+
     // Show the per-display ⋯ overflow ContextMenu below the button on left-click.
     private void OnOverflowMenuButtonClick(object sender, RoutedEventArgs e)
     {

@@ -11,6 +11,7 @@ internal sealed class TrayIconHost : IDisposable
 
     public event EventHandler? ShowRequested;
     public event EventHandler? RefreshRequested;
+    public event EventHandler? SettingsRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? OpenLogRequested;
     public event EventHandler? QuitRequested;
@@ -33,6 +34,8 @@ internal sealed class TrayIconHost : IDisposable
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
         var refreshItem = new WinForms.ToolStripMenuItem("Rescan Display");
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
+        var settingsItem = new WinForms.ToolStripMenuItem("Settings");
+        settingsItem.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
         var aboutItem = new WinForms.ToolStripMenuItem("About NitTray");
         aboutItem.Click += (_, _) => AboutRequested?.Invoke(this, EventArgs.Empty);
         // Diagnostics log for bug reports when a display isn't detected.
@@ -44,6 +47,7 @@ internal sealed class TrayIconHost : IDisposable
         menu.Items.Add(showItem);
         menu.Items.Add(refreshItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
+        menu.Items.Add(settingsItem);
         menu.Items.Add(aboutItem);
         menu.Items.Add(logItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
