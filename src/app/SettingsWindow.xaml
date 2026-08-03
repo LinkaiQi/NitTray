@@ -36,7 +36,7 @@
             <ui:TextBlock Text="Global shortcuts" FontTypography="Subtitle"/>
             <ui:TextBlock Margin="0,6,0,0" TextWrapping="Wrap" FontSize="12.5"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Text="Change the brightness of every connected Apple display by one percent per press, from any app. Hold a key to keep stepping."/>
+                          Text="Change the brightness of every connected Apple display by 10% per press, from any app. Ten presses covers the full range."/>
 
             <ui:Card Margin="0,16,0,0">
                 <StackPanel>

@@ -98,7 +98,7 @@ identify a new display variant.
 ## Global brightness shortcuts
 
 NitTray registers two system-wide shortcuts that step every connected display by
-1%. They are opt-in (**tray → Settings**) and stored in
+10%. They are opt-in (**tray → Settings**) and stored in
 `%LOCALAPPDATA%\NitTray\settings.json` beside the diagnostic log:
 
 ```json
@@ -116,9 +116,11 @@ window that already receives `WM_DEVICECHANGE`, so the shortcuts keep working
 while the window is hidden in the tray. `WM_HOTKEY` is dispatched through an
 `HwndSource` hook, exactly like the device-change watch.
 
-- **`MOD_NOREPEAT` is deliberately not set**, so holding a key ramps brightness.
-  `DisplayViewModel` already coalesces rapid writes to the most recent value, so
-  the device never sees a backlog of feature reports.
+- **`MOD_NOREPEAT` is set**, so one press is one 10% step. Without it a held key
+  auto-repeats around 30 times a second, which at this step size would cross the
+  whole range in about a third of a second. Rapid distinct presses are still safe:
+  `DisplayViewModel` coalesces writes to the most recent value, so the device never
+  sees a backlog of feature reports.
 - **Registration failures are surfaced, not swallowed.** `RegisterHotKey`
   returning `ERROR_HOTKEY_ALREADY_REGISTERED` (1409) becomes an inline warning
   naming the combination; anything else is logged with its Win32 error.

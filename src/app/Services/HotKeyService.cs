@@ -41,7 +41,8 @@ public interface IHotKeyCoordinator
 // Registers the global brightness shortcuts against the main window's HWND and
 // turns WM_HOTKEY into events. The window is normally hidden in the tray, but its
 // handle stays alive and keeps pumping messages, so the shortcuts keep working.
-// MOD_NOREPEAT is intentionally not used: holding a key should ramp brightness.
+// Every registration carries MOD_NOREPEAT: one press is one step, so holding a key
+// down can't race through the whole range.
 internal sealed class HotKeyService : IDisposable
 {
     // Application-defined ids must be 0x0000-0xBFFF.
@@ -132,7 +133,11 @@ internal sealed class HotKeyService : IDisposable
             return HotKeyRegistrationStatus.Invalid;
         }
 
-        if (User32Native.RegisterHotKey(_hwnd, id, binding.NativeModifiers, binding.VirtualKey))
+        if (User32Native.RegisterHotKey(
+                _hwnd,
+                id,
+                binding.NativeModifiers | User32Native.MOD_NOREPEAT,
+                binding.VirtualKey))
         {
             DiagnosticLog.Write($"Hotkeys: registered {binding.DisplayText} for {label}.");
             return HotKeyRegistrationStatus.Registered;

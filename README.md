@@ -37,12 +37,12 @@ NitTray can change brightness from any app with a global shortcut. Shortcuts are
 
 | Action | Default |
 |--------|---------|
-| Increase brightness by 1% | <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>↑</kbd> |
-| Decrease brightness by 1% | <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>↓</kbd> |
+| Increase brightness by 10% | <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>↑</kbd> |
+| Decrease brightness by 10% | <kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>↓</kbd> |
 
-Hold a key to keep stepping, and a small overlay shows the new level. Both
-combinations are configurable — if the one you pick is already taken by another
-app, NitTray says so instead of failing quietly.
+Each press is one step, so ten presses covers the full range, and a small overlay
+shows the new level. Both combinations are configurable — if the one you pick is
+already taken by another app, NitTray says so instead of failing quietly.
 
 ## Download
 

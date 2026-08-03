@@ -14,7 +14,7 @@ namespace NitTray;
 public partial class App : Application, IHotKeyCoordinator
 {
     // One press of a global brightness shortcut moves every display by this much.
-    private const int BrightnessStepPercent = 1;
+    private const int BrightnessStepPercent = 10;
 
     private TrayIconHost? _tray;
     private MainWindow? _mainWindow;
