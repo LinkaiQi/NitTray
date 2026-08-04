@@ -1,0 +1,88 @@
+<Page x:Class="NitTray.Pages.ShortcutsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:NitTray.ViewModels"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      mc:Ignorable="d"
+      Title="Shortcuts"
+      Background="Transparent"
+      d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+        <StackPanel Margin="0,0,14,18">
+
+            <ui:TextBlock Text="Shortcuts" FontTypography="Title"/>
+            <ui:TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12.5"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="Change the brightness of every connected Apple display by 10% per press, from any app. Ten presses covers the full range."/>
+
+            <ui:Card Margin="0,18,0,0">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <ui:TextBlock Text="Brightness shortcuts" FontTypography="BodyStrong"/>
+                            <ui:TextBlock Margin="0,2,0,0" FontTypography="Caption" TextWrapping="Wrap"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          Text="Off by default so nothing is taken over without asking."/>
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0"
+                                         IsChecked="{Binding AreShortcutsEnabled, Mode=TwoWay}"/>
+                    </Grid>
+
+                    <Border Height="1" Margin="0,14"
+                            Background="{DynamicResource DividerStrokeColorDefaultBrush}"/>
+
+                    <Grid IsEnabled="{Binding AreShortcutsEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <ui:TextBlock Grid.Row="0" Grid.Column="0" Text="Increase brightness"
+                                      VerticalAlignment="Center"/>
+                        <ui:Button Grid.Row="0" Grid.Column="1" MinWidth="168" HorizontalContentAlignment="Center"
+                                   Content="{Binding BrightnessUpText}"
+                                   Command="{Binding CaptureBrightnessUpCommand}"
+                                   ToolTip="Click, then press the combination you want"/>
+
+                        <ui:TextBlock Grid.Row="1" Grid.Column="0" Text="Decrease brightness"
+                                      VerticalAlignment="Center" Margin="0,10,0,0"/>
+                        <ui:Button Grid.Row="1" Grid.Column="1" MinWidth="168" HorizontalContentAlignment="Center"
+                                   Margin="0,10,0,0"
+                                   Content="{Binding BrightnessDownText}"
+                                   Command="{Binding CaptureBrightnessDownCommand}"
+                                   ToolTip="Click, then press the combination you want"/>
+                    </Grid>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:InfoBar Margin="0,12,0,0" IsClosable="False"
+                        Severity="{Binding StatusSeverity}"
+                        Message="{Binding StatusMessage}"
+                        IsOpen="{Binding HasStatus}"/>
+
+            <Grid Margin="0,14,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap"
+                              FontTypography="Caption" Margin="0,0,12,0"
+                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                              Text="Windows does not deliver shortcuts to ordinary apps while a window running as administrator has focus."/>
+                <ui:Button Grid.Column="1" Content="Restore defaults" VerticalAlignment="Center"
+                           Command="{Binding RestoreDefaultsCommand}"/>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

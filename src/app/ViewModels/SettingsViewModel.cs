@@ -132,9 +132,17 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
 
         _capturing = HotKeyTarget.None;
         _coordinator.SetShortcutsSuspended(false);
-        StatusMessage = string.Empty;
+
+        // Re-registering may itself have failed (another app can grab the combination
+        // while the shortcuts are suspended), and blanking the message here would also
+        // erase a collision warning the user backed out of. Report what is true now.
+        Report(_coordinator.Current);
         RaiseShortcutTextChanged();
     }
+
+    // The view-model outlives the settings window, so the window asks for a fresh
+    // reading on open rather than trusting whatever the last visit left behind.
+    public void RefreshStatus() => Report(_coordinator.Current);
 
     // Called by the window once a complete combination has been typed. Invalid or
     // duplicate combinations leave capture running so the user can simply try again.

@@ -1,0 +1,151 @@
+<Page x:Class="NitTray.Pages.AboutPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:NitTray.ViewModels"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      mc:Ignorable="d"
+      Title="About"
+      Background="Transparent"
+      d:DataContext="{d:DesignInstance vm:AboutViewModel}">
+
+    <Page.Resources>
+        <!-- Official Buy Me a Coffee brand button: brand yellow with dark content and
+             rounded corners, rendered natively so it stays crisp at any DPI. -->
+        <Style x:Key="BmcButton" TargetType="Button">
+            <Setter Property="Background" Value="#FFDD00"/>
+            <Setter Property="Foreground" Value="#0D0C22"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="13,7"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FFD400"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#F2C900"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small accent-coloured inline text link that underlines on hover. -->
+        <Style x:Key="TextLink" TargetType="Hyperlink">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+            <Setter Property="TextDecorations" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="TextDecorations" Value="Underline"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+        <StackPanel Margin="0,0,14,18">
+
+            <ui:TextBlock Text="About" FontTypography="Title"/>
+
+            <!-- Identity -->
+            <ui:Card Margin="0,18,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0" Source="pack://application:,,,/Assets/AppIcon-256.png"
+                           Width="40" Height="40" VerticalAlignment="Top" Margin="0,0,14,0"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <ui:TextBlock Text="{Binding AppName}" FontTypography="BodyStrong"/>
+                        <ui:TextBlock Text="{Binding VersionText}" FontTypography="Caption"
+                                      Margin="0,2,0,0"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <ui:TextBlock Text="{Binding Tagline}" FontTypography="Caption"
+                                      TextWrapping="Wrap" Margin="0,6,0,0"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </Grid>
+            </ui:Card>
+
+            <!-- Supported displays -->
+            <ui:TextBlock Text="Supported displays" FontTypography="BodyStrong" Margin="0,20,0,0"/>
+            <ui:Card Margin="0,8,0,0">
+                <ItemsControl ItemsSource="{Binding SupportedDisplays}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon Grid.Column="0" Symbol="Desktop24" FontSize="16"
+                                               VerticalAlignment="Center" Margin="0,0,10,0"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                <ui:TextBlock Grid.Column="1" Text="{Binding}" FontSize="12.5"
+                                              VerticalAlignment="Center" TextWrapping="Wrap"
+                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ui:Card>
+
+            <!-- Support -->
+            <ui:TextBlock Text="Support" FontTypography="BodyStrong" Margin="0,20,0,0"/>
+            <ui:Card Margin="0,8,0,0">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <ui:TextBlock Text="Enjoying NitTray?" FontTypography="BodyStrong"/>
+                            <ui:TextBlock Text="{Binding OpenSourceText}" FontTypography="Caption"
+                                          TextWrapping="Wrap" Margin="0,2,0,0"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource BmcButton}"
+                                VerticalAlignment="Center" Margin="12,0,0,0"
+                                Tag="{Binding DonateUrl}" Click="OnLinkClick">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="DrinkCoffee24" FontSize="16" Foreground="#0D0C22"
+                                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="Buy me a coffee" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <Border Height="1" Margin="0,14"
+                            Background="{DynamicResource DividerStrokeColorDefaultBrush}"/>
+
+                    <TextBlock FontSize="13">
+                        <Hyperlink Style="{StaticResource TextLink}" Tag="{Binding RepositoryUrl}" Click="OnLinkClick">GitHub</Hyperlink><Run Text="     ·     " Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Hyperlink Style="{StaticResource TextLink}" Tag="{Binding ReleasesUrl}" Click="OnLinkClick">Check for Updates</Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+            </ui:Card>
+
+            <!-- Legal -->
+            <ui:TextBlock Text="{Binding LegalText}" FontTypography="Caption" TextWrapping="Wrap"
+                          Margin="0,20,0,0"
+                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+            <ui:TextBlock Text="{Binding FooterText}" FontTypography="Caption" Margin="0,10,0,0"
+                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
 using NitTray.ViewModels;
-using Wpf.Ui.Controls;
 
-namespace NitTray;
+namespace NitTray.Pages;
 
-public partial class AboutWindow : FluentWindow
+public partial class AboutPage : Page
 {
-    public AboutWindow()
+    public AboutPage()
     {
         InitializeComponent();
         DataContext = new AboutViewModel();

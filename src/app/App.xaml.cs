@@ -18,15 +18,20 @@ public partial class App : Application, IHotKeyCoordinator
 
     private TrayIconHost? _tray;
     private MainWindow? _mainWindow;
-    private AboutWindow? _aboutWindow;
     private SettingsWindow? _settingsWindow;
     private BrightnessOsdWindow? _osdWindow;
     private MainViewModel? _viewModel;
+    private SettingsViewModel? _settingsViewModel;
     private SystemRefreshTrigger? _refreshTrigger;
     private SingleInstance? _singleInstance;
     private HotKeyService? _hotKeys;
     private HotKeyApplyResult _hotKeyResult;
     private AppSettings _settings = new();
+
+    // Shared with the settings window's key recorder and with ShortcutsPage, which
+    // NavigationView constructs on its own and so cannot be handed the instance.
+    internal SettingsViewModel Settings =>
+        _settingsViewModel ??= new SettingsViewModel(_settings, this);
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -177,40 +182,22 @@ public partial class App : Application, IHotKeyCoordinator
         _mainWindow.Focus();
     }
 
-    // Opens or re-focuses the single About window (from the footer link and the
-    // tray "About NitTray" item).
-    public void ShowAbout()
+    // Opens the settings window on the About page (footer link and the tray
+    // "About NitTray" item). Same window as ShowSettings, different landing page.
+    public void ShowAbout() => ShowSettings(SettingsPage.About);
+
+    // Opens or re-focuses the single settings window (tray menu and footer link).
+    public void ShowSettings() => ShowSettings(SettingsPage.Shortcuts);
+
+    private void ShowSettings(SettingsPage page)
     {
-        if (_aboutWindow is null)
-        {
-            _aboutWindow = new AboutWindow();
-            _aboutWindow.Closed += (_, _) => _aboutWindow = null;
+        // One view-model now outlives the window, so re-surface the live registration
+        // state on every open instead of whatever the previous visit left behind.
+        Settings.RefreshStatus();
 
-            // Center on the main window if visible, else on screen.
-            if (_mainWindow is not null && _mainWindow.IsVisible)
-            {
-                _aboutWindow.Owner = _mainWindow;
-            }
-            else
-            {
-                _aboutWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            }
-
-            _aboutWindow.Show();
-        }
-
-        _aboutWindow.Activate();
-        _aboutWindow.Topmost = true;
-        _aboutWindow.Topmost = false;
-        _aboutWindow.Focus();
-    }
-
-    // Opens or re-focuses the single Settings window (tray menu and footer link).
-    public void ShowSettings()
-    {
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(new SettingsViewModel(_settings, this));
+            _settingsWindow = new SettingsWindow(Settings, page);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
 
             if (_mainWindow is not null && _mainWindow.IsVisible)
@@ -223,6 +210,11 @@ public partial class App : Application, IHotKeyCoordinator
             }
 
             _settingsWindow.Show();
+        }
+        else
+        {
+            // Already open: re-target it so "About" doesn't just re-focus Shortcuts.
+            _settingsWindow.NavigateTo(page);
         }
 
         _settingsWindow.Activate();

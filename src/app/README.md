@@ -133,6 +133,25 @@ while the window is hidden in the tray. `WM_HOTKEY` is dispatched through an
   (`WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT`) reports the new
   level on the primary monitor and fades out.
 
+### The settings window
+
+`SettingsWindow` is the app's only secondary window. It hosts a `NavigationView`
+rail with **Shortcuts** in `MenuItems` and **About** in `FooterMenuItems`,
+mirroring where Windows 11 Settings puts its own About page. Both tray entries
+and both footer links open this one window, just on different pages
+(`SettingsWindow.NavigateTo`).
+
+Pages live in [`Pages/`](Pages) and set their own `DataContext`, because
+`NavigationView` constructs them itself and cannot be handed an instance.
+`ShortcutsPage` therefore pulls the shared `SettingsViewModel` off `App` — it has
+to be the same instance the window's key recorder drives, since that one owns the
+live registrations. Navigation deliberately passes no `dataContext`;
+WPF-UI's activator only overwrites `DataContext` when it is given a non-null one.
+
+The key recorder stays on the window rather than the page so it fires wherever
+focus sits, and capture is cancelled on page change, deactivation, and close so
+it can never strand the suspended registrations.
+
 ### Choosing defaults
 
 `Win + Ctrl + Up` / `Win + Ctrl + Down` are the defaults because Windows leaves
@@ -185,7 +204,7 @@ dotnet publish src/app -c Release -r win-x64 --self-contained true `
   -o publish-standalone
 ```
 
-The version shown in the About window is read from the assembly's
+The version shown on the About page is read from the assembly's
 `InformationalVersion`. Local builds default to `0.0.0-local`; release builds set
 `-p:Version` from the git tag (see
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml)).
