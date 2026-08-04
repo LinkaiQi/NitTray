@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace NitTray.ViewModels;
 
-// Backing data for the About window: version, supported displays, links, and legal text.
+// Backing data for the About page: version, supported displays, links, and legal text.
 public sealed class AboutViewModel
 {
     public string AppName => "NitTray";
