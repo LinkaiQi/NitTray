@@ -47,6 +47,9 @@ public partial class App : Application, IHotKeyCoordinator
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             LogFatal("AppDomain", args.ExceptionObject as Exception);
 
+        // Record who signed this app, so driver setup can check its helper against it.
+        HelperTrust.CaptureAppIdentity();
+
         // One instance per session: if already running, surface it and exit.
         _singleInstance = new SingleInstance();
         if (!_singleInstance.IsFirstInstance)
@@ -128,7 +131,7 @@ public partial class App : Application, IHotKeyCoordinator
         }
     }
 
-    // The tray is built after this first runs; it reads the theme itself on construction.
+    // The tray is built after this first runs. It reads the theme itself on construction.
     private void ApplyTheme()
     {
         var isDark = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()

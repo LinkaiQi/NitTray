@@ -8,7 +8,7 @@ namespace NitTray.Services;
 // in every build for bug reports. Only enumeration and error paths write, so it
 // stays off the brightness hot path. WriteCritical marks fatal events.
 //
-// Each scan starts the file over; MaxLogBytes bounds the writes in between, so a
+// Each scan starts the file over. MaxLogBytes bounds the writes in between, so a
 // session that runs a long time without rescanning can't grow it without limit.
 internal static class DiagnosticLog
 {

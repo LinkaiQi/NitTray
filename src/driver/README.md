@@ -48,6 +48,12 @@ The result is reported **only through the process exit code** (no stdout parsing
 
 Detailed progress is appended to `%LOCALAPPDATA%\NitTray\driver-setup.log`.
 
+The tray app only launches this helper elevated when its Authenticode signature
+matches the key that signed the app. See
+[Pro Display XDR over WinUSB](../app/README.md#pro-display-xdr-over-winusb) for what
+that does and does not protect against. An unsigned local build skips the check, so
+`build.ps1` output works as-is during development.
+
 ## Building (Windows only)
 
 This helper links libwdi statically, so it can **only be built on Windows with

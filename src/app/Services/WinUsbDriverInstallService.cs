@@ -63,45 +63,91 @@ public sealed class WinUsbDriverInstallService : IDriverInstallService
         psi.ArgumentList.Add(vendorId.ToString("X4"));
         psi.ArgumentList.Add(productId.ToString("X4"));
 
-        DiagnosticLog.Write(
-            $"Driver setup: launching '{helperPath}' {verb} " +
-            $"{vendorId:X4} {productId:X4} (elevated).");
-
         return Task.Run(() =>
         {
-            Process? process;
+            // Pinned with write and delete sharing denied until the helper exits. Windows
+            // loads the image only after the user answers the prompt, so verifying and
+            // then starting by path would leave a window to swap the file. FILE_EXECUTE
+            // counts as read access, so the pin still lets Windows start it.
+            FileStream pinnedHelper;
             try
             {
-                process = Process.Start(psi);
-            }
-            catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
-            {
-                DiagnosticLog.Write("Driver setup: user declined the elevation prompt.");
-                return new DriverInstallResult(
-                    DriverInstallStatus.Cancelled,
-                    "The operation was cancelled at the Windows permission prompt.");
+                pinnedHelper = new FileStream(
+                    helperPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             }
             catch (Exception ex)
             {
-                DiagnosticLog.Write($"Driver setup: failed to start helper: {ex.Message}");
+                DiagnosticLog.Write(
+                    $"Driver setup: could not lock '{helperPath}' for verification: {ex.Message}");
                 return new DriverInstallResult(
                     DriverInstallStatus.Failed,
-                    $"Could not start the driver setup helper: {ex.Message}");
+                    $"The driver setup helper ({HelperFileName}) could not be opened for " +
+                    $"verification: {ex.Message}\n\nIf security software is scanning it, " +
+                    "wait a moment and try again.");
             }
 
-            if (process is null)
+            using (pinnedHelper)
             {
-                return new DriverInstallResult(
-                    DriverInstallStatus.Failed,
-                    "Could not start the driver setup helper.");
-            }
+                // Runs elevated out of a user-writable folder, so confirm it is ours.
+                if (!HelperTrust.IsTrustedToElevate(helperPath, out var trustReason))
+                {
+                    DiagnosticLog.Write(
+                        $"Driver setup: refusing to elevate '{helperPath}' because {trustReason}.");
+                    return new DriverInstallResult(
+                        DriverInstallStatus.HelperUntrusted,
+                        $"The driver setup helper ({HelperFileName}) is not signed by the " +
+                        "same publisher as NitTray, so it was not run with administrator " +
+                        "rights.\n\nReinstall NitTray from an official release to repair " +
+                        "the installation.");
+                }
 
-            using (process)
-            {
-                process.WaitForExit();
-                return mapExitCode(process.ExitCode);
+                DiagnosticLog.Write($"Driver setup: proceeding because {trustReason}.");
+                DiagnosticLog.Write(
+                    $"Driver setup: launching '{helperPath}' {verb} " +
+                    $"{vendorId:X4} {productId:X4} (elevated).");
+
+                return LaunchAndWait(psi, mapExitCode);
             }
         }, cancellationToken);
+    }
+
+    // Runs the already-verified helper and maps how it ended.
+    private static DriverInstallResult LaunchAndWait(
+        ProcessStartInfo psi,
+        Func<int, DriverInstallResult> mapExitCode)
+    {
+        Process? process;
+        try
+        {
+            process = Process.Start(psi);
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
+        {
+            DiagnosticLog.Write("Driver setup: user declined the elevation prompt.");
+            return new DriverInstallResult(
+                DriverInstallStatus.Cancelled,
+                "The operation was cancelled at the Windows permission prompt.");
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write($"Driver setup: failed to start helper: {ex.Message}");
+            return new DriverInstallResult(
+                DriverInstallStatus.Failed,
+                $"Could not start the driver setup helper: {ex.Message}");
+        }
+
+        if (process is null)
+        {
+            return new DriverInstallResult(
+                DriverInstallStatus.Failed,
+                "Could not start the driver setup helper.");
+        }
+
+        using (process)
+        {
+            process.WaitForExit();
+            return mapExitCode(process.ExitCode);
+        }
     }
 
     private static DriverInstallResult MapInstallExitCode(int exitCode)
