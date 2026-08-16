@@ -1,3 +1,6 @@
+<!-- Foreground is set here because WPF-UI's Window style only applies to Window
+     itself, not to this subclass. Without it the text falls back to WPF-UI's
+     hard-coded black default and disappears in the dark theme. -->
 <Window x:Class="NitTray.BrightnessOsdWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -5,6 +8,7 @@
         Title="NitTray brightness"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" ShowActivated="False"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
         Topmost="True" Focusable="False" IsHitTestVisible="False"
         SizeToContent="WidthAndHeight" Opacity="0">
 
