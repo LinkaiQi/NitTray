@@ -39,7 +39,7 @@
   <ItemGroup>
     <Resource Include="Assets\AppIcon.ico" />
     <Resource Include="Assets\AppIcon-32.png" />
-    <!-- Full-resolution brand mark shown in the About window header. -->
+    <!-- Full-resolution brand mark shown in the About page header. -->
     <Resource Include="Assets\AppIcon-256.png" />
   </ItemGroup>
 

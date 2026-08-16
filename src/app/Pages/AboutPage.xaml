@@ -1,0 +1,128 @@
+<Page x:Class="NitTray.Pages.AboutPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:NitTray.ViewModels"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      mc:Ignorable="d"
+      Title="Support"
+      Background="Transparent"
+      d:DataContext="{d:DesignInstance vm:AboutViewModel}">
+
+    <Page.Resources>
+        <!-- Official Buy Me a Coffee brand button: brand yellow with dark content and
+             rounded corners, rendered natively so it stays crisp at any DPI. -->
+        <Style x:Key="BmcButton" TargetType="Button">
+            <Setter Property="Background" Value="#FFDD00"/>
+            <Setter Property="Foreground" Value="#0D0C22"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="13,7"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FFD400"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#F2C900"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small accent-coloured inline text link that underlines on hover. -->
+        <Style x:Key="TextLink" TargetType="Hyperlink">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+            <Setter Property="TextDecorations" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="TextDecorations" Value="Underline"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <!-- The old About window's centred layout, capped at its content width. Scrolling
+         is the content presenter's job — see ShortcutsPage. -->
+    <StackPanel HorizontalAlignment="Center" MaxWidth="348" Margin="0,32,0,32">
+
+        <!-- App identity -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Image Source="pack://application:,,,/Assets/AppIcon-256.png"
+                   Width="32" Height="32" VerticalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+            <ui:TextBlock Text="{Binding AppName}" FontTypography="Subtitle"
+                          VerticalAlignment="Center" Margin="11,0,0,0"/>
+        </StackPanel>
+        <ui:TextBlock Text="{Binding VersionText}" FontTypography="Body"
+                      HorizontalAlignment="Center" Margin="0,10,0,0"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        <ui:TextBlock Text="{Binding Tagline}" FontTypography="Body"
+                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                      Margin="0,8,0,0"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+        <Border Height="1" Margin="0,20"
+                Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+
+        <!-- Supported displays -->
+        <ui:TextBlock Text="Supported Displays" FontTypography="BodyStrong"
+                      HorizontalAlignment="Center" Margin="0,0,0,8"/>
+        <ItemsControl ItemsSource="{Binding SupportedDisplays}" Focusable="False"
+                      HorizontalAlignment="Center">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" FontSize="12.5" TextAlignment="Center" Margin="0,2"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Height="1" Margin="0,20"
+                Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+
+        <!-- Donate -->
+        <Button Style="{StaticResource BmcButton}" HorizontalAlignment="Center"
+                Tag="{Binding DonateUrl}" Click="OnLinkClick">
+            <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="DrinkCoffee24" FontSize="16" Foreground="#0D0C22"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="Buy me a coffee" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
+
+        <!-- Links -->
+        <TextBlock HorizontalAlignment="Center" TextAlignment="Center" FontSize="13" Margin="0,14,0,0">
+            <Hyperlink Style="{StaticResource TextLink}" Tag="{Binding RepositoryUrl}" Click="OnLinkClick">GitHub</Hyperlink><Run Text="     ·     " Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Hyperlink Style="{StaticResource TextLink}" Tag="{Binding ReleasesUrl}" Click="OnLinkClick">Check for Updates</Hyperlink>
+        </TextBlock>
+        <ui:TextBlock Text="{Binding OpenSourceText}" FontTypography="Caption"
+                      HorizontalAlignment="Center" Margin="0,8,0,0"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+
+        <!-- Legal -->
+        <!-- One step under Caption's 12px: trademark boilerplate, not something to
+             read. A local FontSize wins over the size the typography style sets. -->
+        <ui:TextBlock Text="{Binding LegalText}" FontTypography="Caption" FontSize="11"
+                      TextWrapping="Wrap"
+                      TextAlignment="Center" MaxWidth="320" HorizontalAlignment="Center" Margin="0,20,0,0"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+
+        <!-- Footer -->
+        <ui:TextBlock Text="{Binding FooterText}" FontTypography="Caption"
+                      HorizontalAlignment="Center" Margin="0,14,0,0"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+    </StackPanel>
+</Page>

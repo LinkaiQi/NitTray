@@ -1,0 +1,112 @@
+<ui:FluentWindow x:Class="NitTray.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:pages="clr-namespace:NitTray.Pages"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="NitTray Settings"
+        Icon="pack://application:,,,/Assets/AppIcon.ico"
+        Width="440" Height="560" MinWidth="440" MinHeight="440"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
+        ShowInTaskbar="True"
+        PreviewKeyDown="OnPreviewKeyDown">
+
+    <ui:FluentWindow.Resources>
+        <!-- Replaces WPF-UI's top item template, which underlines only the icon and
+             paints hover and selected the same colour. Applied through
+             NavigationView.ItemTemplate — see the constructor. -->
+        <ControlTemplate x:Key="TopTabItemTemplate" TargetType="{x:Type ui:NavigationViewItem}">
+            <Grid>
+                <Border x:Name="TabBackground" Background="Transparent"
+                        CornerRadius="4" Padding="12,8" SnapsToDevicePixels="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter Grid.Column="0" Margin="0,0,8,0"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Icon}"
+                                          TextElement.FontSize="16"
+                                          TextElement.Foreground="{DynamicResource NavigationViewItemForeground}"/>
+                        <ContentPresenter Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          RecognizesAccessKey="True"
+                                          TextElement.FontSize="14"
+                                          TextElement.Foreground="{DynamicResource NavigationViewItemForeground}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Stretches under the whole tab instead of just the icon. -->
+                <Rectangle x:Name="SelectionIndicator" Height="3" Margin="12,0,12,0"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+                           Fill="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                           Opacity="0" RadiusX="2" RadiusY="2"/>
+            </Grid>
+
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsActive" Value="True">
+                    <Setter TargetName="SelectionIndicator" Property="Opacity" Value="1"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="TabBackground" Property="Background"
+                            Value="{DynamicResource NavigationViewItemBackgroundPointerOver}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="TabBackground" Property="Background"
+                            Value="{DynamicResource NavigationViewItemBackgroundPressed}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+    </ui:FluentWindow.Resources>
+
+    <!-- Opens at MinWidth: the body is a centred column, so extra width only widens
+         the margins beside it. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Settings" ShowMaximize="False" ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/AppIcon-32.png"/>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <!-- Top mode ignores FrameMargin and insets content with Padding. Both tabs
+             live in MenuItems; FooterMenuItems would strand one at the far right. -->
+        <ui:NavigationView x:Name="RootNavigation" Grid.Row="1"
+                           PaneDisplayMode="Top"
+                           IsBackButtonVisible="Collapsed"
+                           Padding="18,0,18,0"
+                           Navigating="OnNavigating">
+            <ui:NavigationView.MenuItems>
+                <!-- Lines the first tab's icon up with the title bar icon at 16px: the
+                     item template already insets by 12. Shifting the first item moves
+                     the whole strip. -->
+                <ui:NavigationViewItem Content="Shortcuts"
+                                       Margin="4,0,0,0"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:ShortcutsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Keyboard24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="Support"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:AboutPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Info24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+            </ui:NavigationView.MenuItems>
+        </ui:NavigationView>
+    </Grid>
+</ui:FluentWindow>

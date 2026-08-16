@@ -39,6 +39,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
     // Raised after a successful driver uninstall so the App layer can confirm it.
     public event EventHandler<string>? DriverUninstallSucceeded;
 
+    // Raised when a global brightness shortcut changed (or tried to change)
+    // brightness, so the App layer can show the on-screen overlay.
+    public event EventHandler<BrightnessStepEventArgs>? BrightnessStepped;
+
     public bool IsLoading
     {
         get => _isLoading;
@@ -269,6 +273,43 @@ public sealed class MainViewModel : INotifyPropertyChanged
     // Callback handed to each DisplayViewModel so its ⋯ menu can request an uninstall.
     private void RequestDriverUninstall(DisplayViewModel display)
         => DriverUninstallRequested?.Invoke(this, display);
+
+    // Nudges every controllable display by one step. Each clamps independently, so one
+    // already at 0 or 100 stays put while the others keep moving.
+    public void StepBrightness(int deltaPercent)
+    {
+        if (deltaPercent == 0)
+        {
+            return;
+        }
+
+        // A rescan empties Displays until every read finishes, and it fires on unlock,
+        // resume and USB arrival — exactly when the brightness keys get used.
+        if (IsLoading)
+        {
+            return;
+        }
+
+        var targets = Displays.Where(d => d.IsAvailable).ToList();
+        if (targets.Count == 0)
+        {
+            BrightnessStepped?.Invoke(this, BrightnessStepEventArgs.NoDisplay);
+            return;
+        }
+
+        foreach (var display in targets)
+        {
+            display.BrightnessPercent += deltaPercent;
+        }
+
+        // With several displays the levels can differ, so the overlay reports the
+        // first one and says how many were changed.
+        var caption = targets.Count == 1
+            ? targets[0].ProductName
+            : $"{targets.Count} displays";
+        BrightnessStepped?.Invoke(
+            this, new BrightnessStepEventArgs(targets[0].BrightnessPercent, caption));
+    }
 
     public async Task UninstallDriverAsync(DisplayViewModel display)
     {

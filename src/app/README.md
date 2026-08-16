@@ -95,6 +95,118 @@ Apple-vendor interface, and the initial brightness read (raw value, range, and
 resulting percentage). Attaching it to a GitHub issue is usually enough to
 identify a new display variant.
 
+## Global brightness shortcuts
+
+NitTray registers two system-wide shortcuts that step every connected display by
+10%. They are opt-in (**tray → Settings**) and stored in
+`%LOCALAPPDATA%\NitTray\settings.json` beside the diagnostic log:
+
+```json
+{
+  "BrightnessHotKeysEnabled": true,
+  "BrightnessUpHotKey": "Win+Ctrl+Up",
+  "BrightnessDownHotKey": "Win+Ctrl+Down"
+}
+```
+
+### How it works
+
+`RegisterHotKey` binds the combinations to the main window's HWND — the same
+window that already receives `WM_DEVICECHANGE`, so the shortcuts keep working
+while the window is hidden in the tray. `WM_HOTKEY` is dispatched through an
+`HwndSource` hook, exactly like the device-change watch.
+
+- **`MOD_NOREPEAT` is set**, so one press is one 10% step. Without it a held key
+  auto-repeats around 30 times a second, which at this step size would cross the
+  whole range in about a third of a second. Rapid distinct presses are still safe:
+  `DisplayViewModel` coalesces writes to the most recent value, so the device never
+  sees a backlog of feature reports.
+- **Registration failures are surfaced, not swallowed.** `RegisterHotKey`
+  returning `ERROR_HOTKEY_ALREADY_REGISTERED` (1409) becomes an inline warning
+  naming the combination; anything else is logged with its Win32 error.
+- **Recording a shortcut suspends the live ones.** Windows delivers a registered
+  combination as `WM_HOTKEY`, so it would never arrive at the settings window as a
+  key press — the registrations are released while the user types and restored
+  afterwards.
+- **The overlay is required, not decorative.** With the window in the tray there
+  is no other feedback, so a click-through, never-activated window
+  (`WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT`) reports the new
+  level on the primary monitor and fades out.
+
+### The settings window
+
+`SettingsWindow` is the app's only secondary window. It hosts a `NavigationView`
+in `Top` mode — two tabs, **Shortcuts** and **Support**, both in `MenuItems`. A
+left rail would reserve a fixed column of mostly empty space for two entries, and
+`FooterMenuItems` would strand Support at the opposite end of the bar rather than
+beside its sibling. The tray's **Settings** item and the main window's footer
+link both open it on Shortcuts; Support is a tab away, so neither the tray nor the
+window needs its own entry for it.
+
+Two things about `Top` mode are easy to miss, and both come straight from
+[`NavigationViewTop.xaml`](https://github.com/lepoco/wpfui/blob/4.3.0/src/Wpf.Ui/Controls/NavigationView/NavigationViewTop.xaml):
+it insets content with `Padding`, ignoring the `FrameMargin` the `Left` template
+uses, and it does not hide the back button — only `LeftFluent` does that
+automatically, so `IsBackButtonVisible` has to be set explicitly.
+
+It is deliberately **not** an owned window. `Owner` would give free
+centre-on-parent placement, but an owned window sits permanently above its owner
+in the z-order, so settings could never be pushed behind the main window even
+when the main window was the one clicked. `App.PlaceSettingsWindow` centres it by
+hand instead, and it keeps a taskbar button so there is a way back to it once it
+is behind something.
+
+Pages live in [`Pages/`](Pages) and set their own `DataContext`, because
+`NavigationView` constructs them itself and cannot be handed an instance.
+`ShortcutsPage` therefore pulls the shared `SettingsViewModel` off `App` — it has
+to be the same instance the window's key recorder drives, since that one owns the
+live registrations. Navigation deliberately passes no `dataContext`;
+WPF-UI's activator only overwrites `DataContext` when it is given a non-null one.
+
+Both pages use the same layout: a centred column capped at the old About
+window's content width, with rules between sections rather than cards.
+`AboutPage` — the **Support** tab, still named for the window it replaced — kept
+that layout when it stopped being a window, and Shortcuts follows it so the two
+read as one window instead of two. The window is sized around that column,
+not the other way round.
+
+Neither page wraps itself in a `ScrollViewer`.
+[`NavigationViewContentPresenter`](https://github.com/lepoco/wpfui/blob/4.3.0/src/Wpf.Ui/Controls/NavigationView/NavigationViewContentPresenter.cs)
+already hosts every `Page` inside a `DynamicScrollViewer`, and nesting a plain
+`ScrollViewer` inside it breaks the mouse wheel: WPF's `ScrollViewer` marks the
+wheel event handled even when it has nothing to scroll, so the outer one never
+receives it. The scrollbar still drags, which makes it look like a wheel problem
+rather than a layout one. WPF-UI's `PassiveScrollViewer` exists to work around
+exactly this, and the presenter's scroller derives from it.
+
+The key recorder stays on the window rather than the page so it fires wherever
+focus sits, and capture is cancelled on page change, deactivation, and close so
+it can never strand the suspended registrations.
+
+### Choosing defaults
+
+`Win + Ctrl + Up` / `Win + Ctrl + Down` are the defaults because Windows leaves
+them unassigned — `Win + Ctrl + Left/Right` are the virtual-desktop switches, but
+the vertical pair is free. Combinations that were ruled out:
+
+| Combination | Already means |
+|-------------|---------------|
+| `Win + ↑/↓` | Maximize / minimize |
+| `Win + Shift + ↑/↓` | Stretch vertically / restore |
+| `Win + Alt + ↑/↓` | Snap to top / bottom half (Windows 11 22H2+) |
+| `Ctrl + Alt + arrows` | Intel Graphics screen rotation |
+| `Ctrl + Shift + arrows` | Text selection in practically every editor |
+| `Win + Plus/Minus` | Magnifier zoom |
+| `Win + letter`, `Win + Alt + letter` | Reserved by Windows / Xbox Game Bar |
+
+If you rebind, prefer a combination with at least two modifiers. NitTray requires
+`Ctrl`, `Alt` or `Win` to be part of the shortcut — a bare key, or `Shift` plus a
+key, would swallow ordinary typing and text selection system-wide.
+
+Note that WPF's `Keyboard.Modifiers` never reports the Windows key, so the
+recorder probes `Key.LWin`/`Key.RWin` directly; using `ModifierKeys.Windows` would
+silently record `Win + Ctrl + Up` as plain `Ctrl + Up`.
+
 ## Building
 
 ```powershell
@@ -123,7 +235,7 @@ dotnet publish src/app -c Release -r win-x64 --self-contained true `
   -o publish-standalone
 ```
 
-The version shown in the About window is read from the assembly's
+The version shown on the Support tab is read from the assembly's
 `InformationalVersion`. Local builds default to `0.0.0-local`; release builds set
 `-p:Version` from the git tag (see
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml)).
@@ -150,6 +262,12 @@ The version shown in the About window is read from the assembly's
 - **The slider snaps to whole percentages.** This is intentional. The raw range is
   device-specific (for example `400–60000` or `400–50000`) and is rounded to an
   integer percentage.
+- **A brightness shortcut does nothing.** Windows does not deliver global
+  shortcuts to ordinary applications while a window running as administrator (or
+  an exclusive-fullscreen game) has focus; NitTray runs `asInvoker`, so this is
+  expected. If a shortcut never works, open **tray → Settings** — a combination
+  another application already owns is reported there, and the diagnostic log
+  records every registration attempt.
 - **"Windows protected your PC" on first launch.** NitTray is code-signed (Azure
   Trusted Signing), but a new application has not yet established a Microsoft
   SmartScreen reputation, and downloaded files also carry the *Mark of the Web*,
