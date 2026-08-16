@@ -34,6 +34,7 @@
 #include <setupapi.h>
 #include <newdev.h>
 #include <cfgmgr32.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -277,8 +278,14 @@ static int get_device_inf(HDEVINFO set, SP_DEVINFO_DATA* did, char* inf, DWORD i
     char driver_key[256];
     char subkey[512];
     HKEY hk;
-    DWORD type = 0, size = 0, vtype = 0, vsize = inf_cap;
+    DWORD type = 0, size = 0, vtype = 0, vsize;
     LONG rc;
+
+    if (inf == NULL || inf_cap == 0) {
+        return 0;
+    }
+    /* Leave room to terminate whatever the registry hands back. */
+    vsize = inf_cap - 1;
 
     if (!SetupDiGetDeviceRegistryPropertyA(set, did, SPDRP_DRIVER, &type,
             (PBYTE)driver_key, sizeof(driver_key), &size)) {
@@ -291,10 +298,12 @@ static int get_device_inf(HDEVINFO set, SP_DEVINFO_DATA* did, char* inf, DWORD i
     }
     rc = RegQueryValueExA(hk, "InfPath", NULL, &vtype, (PBYTE)inf, &vsize);
     RegCloseKey(hk);
-    if (rc != ERROR_SUCCESS) {
+    if (rc != ERROR_SUCCESS || vtype != REG_SZ || vsize == 0) {
         return 0;
     }
-    inf[inf_cap - 1] = '\0';
+    /* RegQueryValueEx does not promise a terminator. It wrote at most the vsize we
+     * passed in, so terminating there stays inside the buffer. */
+    inf[vsize] = '\0';
     return 1;
 }
 

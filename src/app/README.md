@@ -95,6 +95,11 @@ Apple-vendor interface, and the initial brightness read (raw value, range, and
 resulting percentage). Attaching it to a GitHub issue is usually enough to
 identify a new display variant.
 
+The log is rewritten from scratch at the start of each scan, so it always describes
+the most recent one. Writes between scans (driver setup, hotkey registration,
+brightness failures) are capped at 1 MB — past that the file restarts rather than
+growing without limit.
+
 ## Global brightness shortcuts
 
 NitTray registers two system-wide shortcuts that step every connected display by

@@ -17,31 +17,37 @@ public sealed partial class AppleDisplayService
         IntPtr devInfoSet,
         ref SetupApiNative.SP_DEVINFO_DATA devInfoData)
     {
+        return ReadRegistryString(devInfoSet, ref devInfoData, SetupApiNative.SPDRP_FRIENDLYNAME)
+            ?? ReadRegistryString(devInfoSet, ref devInfoData, SetupApiNative.SPDRP_DEVICEDESC);
+    }
+
+    // Own buffer per property, decoded to the reported length: a shared buffer lets a
+    // longer earlier value leave a tail that reads back as embedded nulls.
+    private static string? ReadRegistryString(
+        IntPtr devInfoSet,
+        ref SetupApiNative.SP_DEVINFO_DATA devInfoData,
+        int property)
+    {
         var buffer = new byte[512];
-        if (SetupApiNative.SetupDiGetDeviceRegistryProperty(
-                devInfoSet, ref devInfoData,
-                SetupApiNative.SPDRP_FRIENDLYNAME,
-                out _, buffer, buffer.Length, out _))
+        if (!SetupApiNative.SetupDiGetDeviceRegistryProperty(
+                devInfoSet, ref devInfoData, property,
+                out _, buffer, buffer.Length, out var byteCount))
         {
-            var s = Encoding.Unicode.GetString(buffer).TrimEnd('\0');
-            if (!string.IsNullOrWhiteSpace(s))
-            {
-                return s;
-            }
+            return null;
         }
 
-        if (SetupApiNative.SetupDiGetDeviceRegistryProperty(
-                devInfoSet, ref devInfoData,
-                SetupApiNative.SPDRP_DEVICEDESC,
-                out _, buffer, buffer.Length, out _))
+        // UTF-16, so an odd count would mean a truncated final character.
+        var length = Math.Clamp(byteCount, 0, buffer.Length);
+        length -= length % 2;
+
+        var value = Encoding.Unicode.GetString(buffer, 0, length);
+        var terminator = value.IndexOf('\0');
+        if (terminator >= 0)
         {
-            var s = Encoding.Unicode.GetString(buffer).TrimEnd('\0');
-            if (!string.IsNullOrWhiteSpace(s))
-            {
-                return s;
-            }
+            value = value[..terminator];
         }
-        return null;
+
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private static string? GetDevicePathWithInfo(
@@ -140,10 +146,23 @@ public sealed partial class AppleDisplayService
                     cap.UsagePage == HidNative.AppleVendorBrightnessUsagePage
                     && cap.Usage == HidNative.AppleVendorBrightnessUsage;
 
+                // A sign-extended 32-bit maximum arrives negative, which would collapse
+                // the range to min..min+1 and turn the slider into an on/off switch.
+                bool rangeUsable = cap.LogicalMax > 0 && cap.LogicalMax > cap.LogicalMin;
+
                 if (chosen < 0 && (isMonitorBrightness || isAppleBrightness))
                 {
-                    chosen = i;
-                    DiagnosticLog.Write($"      ^ canonical brightness usage match");
+                    if (rangeUsable)
+                    {
+                        chosen = i;
+                        DiagnosticLog.Write("      ^ canonical brightness usage match");
+                    }
+                    else
+                    {
+                        DiagnosticLog.Write(
+                            "      ^ canonical brightness usage match, but its range " +
+                            $"({cap.LogicalMin}..{cap.LogicalMax}) is unusable — ignoring");
+                    }
                 }
 
                 // Fallback: any 32-bit single-value feature cap whose range looks like an
@@ -153,7 +172,7 @@ public sealed partial class AppleDisplayService
                     && cap.ReportCount == 1
                     && cap.BitSize == 32
                     && cap.LogicalMax >= 400
-                    && cap.LogicalMin < cap.LogicalMax)
+                    && rangeUsable)
                 {
                     fallback = i;
                 }
