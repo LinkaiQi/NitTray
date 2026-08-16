@@ -71,8 +71,8 @@ public partial class App : Application, IHotKeyCoordinator
 
         // Follow the Windows light/dark setting (also applies the Mica backdrop).
         Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
-        ApplySubtextContrast();
-        Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (_, _) => ApplySubtextContrast();
+        ApplyTheme();
+        Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (_, _) => ApplyTheme();
         Wpf.Ui.Appearance.SystemThemeWatcher.Watch(_mainWindow);
 
         _tray = new TrayIconHost();
@@ -128,14 +128,21 @@ public partial class App : Application, IHotKeyCoordinator
         }
     }
 
-    // Fluent's default subtext tokens are hard to read in the light theme; darken the
-    // secondary/tertiary brushes there (dark theme is unaffected). Re-applied on every
-    // theme change because WPF-UI swaps the theme dictionary underneath us.
-    private void ApplySubtextContrast()
+    // The tray is built after this first runs; it reads the theme itself on construction.
+    private void ApplyTheme()
     {
         var isDark = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
                      == Wpf.Ui.Appearance.ApplicationTheme.Dark;
 
+        ApplySubtextContrast(isDark);
+        _tray?.ApplyTheme(isDark);
+    }
+
+    // Fluent's default subtext tokens are hard to read in the light theme; darken the
+    // secondary/tertiary brushes there (dark theme is unaffected). Re-applied on every
+    // theme change because WPF-UI swaps the theme dictionary underneath us.
+    private void ApplySubtextContrast(bool isDark)
+    {
         var secondary = isDark
             ? System.Windows.Media.Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF)
             : System.Windows.Media.Color.FromArgb(0xC8, 0x00, 0x00, 0x00); // ~78% vs Fluent's ~62%
