@@ -10,11 +10,6 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
     }
 
-    private void OnAboutClick(object sender, RoutedEventArgs e)
-    {
-        (System.Windows.Application.Current as App)?.ShowAbout();
-    }
-
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
         (System.Windows.Application.Current as App)?.ShowSettings();

@@ -10,79 +10,84 @@
       Background="Transparent"
       d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-        <StackPanel Margin="0,0,14,18">
+    <!-- Wider than AboutPage's column: this page has label-and-button rows to fit,
+         where About is centred prose that reads better narrow.
 
-            <ui:TextBlock Text="Shortcuts" FontTypography="Title"/>
-            <ui:TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12.5"
-                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Text="Change the brightness of every connected Apple display by 10% per press, from any app. Ten presses covers the full range."/>
+         No ScrollViewer here on purpose. NavigationViewContentPresenter already
+         wraps every Page in a DynamicScrollViewer, and a plain nested ScrollViewer
+         marks the wheel event handled even when it has nothing to scroll, so the
+         outer one never sees it — the scrollbar drags but the wheel does nothing. -->
+    <StackPanel HorizontalAlignment="Center" MaxWidth="400" Margin="0,32,0,32">
 
-            <ui:Card Margin="0,18,0,0">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <ui:TextBlock Text="Brightness shortcuts" FontTypography="BodyStrong"/>
-                            <ui:TextBlock Margin="0,2,0,0" FontTypography="Caption" TextWrapping="Wrap"
-                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                          Text="Off by default so nothing is taken over without asking."/>
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0"
-                                         IsChecked="{Binding AreShortcutsEnabled, Mode=TwoWay}"/>
-                    </Grid>
+        <!-- Master switch -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <ui:TextBlock Grid.Column="0" Text="Brightness shortcuts" FontTypography="BodyStrong"
+                          VerticalAlignment="Center"/>
+            <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0"
+                             IsChecked="{Binding AreShortcutsEnabled, Mode=TwoWay}"/>
+        </Grid>
 
-                    <Border Height="1" Margin="0,14"
-                            Background="{DynamicResource DividerStrokeColorDefaultBrush}"/>
+        <Border Height="1" Margin="0,20"
+                Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
 
-                    <Grid IsEnabled="{Binding AreShortcutsEnabled}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+        <!-- Bindings -->
+        <ui:TextBlock Text="Shortcut keys" FontTypography="BodyStrong"
+                      HorizontalAlignment="Left" Margin="0,0,0,10"/>
+        <Grid IsEnabled="{Binding AreShortcutsEnabled}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-                        <ui:TextBlock Grid.Row="0" Grid.Column="0" Text="Increase brightness"
-                                      VerticalAlignment="Center"/>
-                        <ui:Button Grid.Row="0" Grid.Column="1" MinWidth="168" HorizontalContentAlignment="Center"
-                                   Content="{Binding BrightnessUpText}"
-                                   Command="{Binding CaptureBrightnessUpCommand}"
-                                   ToolTip="Click, then press the combination you want"/>
+            <ui:TextBlock Grid.Row="0" Grid.Column="0" Text="Increase brightness"
+                          FontSize="12.5" VerticalAlignment="Center"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            <ui:Button Grid.Row="0" Grid.Column="1" MinWidth="156" HorizontalContentAlignment="Center"
+                       Content="{Binding BrightnessUpText}"
+                       Command="{Binding CaptureBrightnessUpCommand}"
+                       ToolTip="Change this shortcut"/>
 
-                        <ui:TextBlock Grid.Row="1" Grid.Column="0" Text="Decrease brightness"
-                                      VerticalAlignment="Center" Margin="0,10,0,0"/>
-                        <ui:Button Grid.Row="1" Grid.Column="1" MinWidth="168" HorizontalContentAlignment="Center"
-                                   Margin="0,10,0,0"
-                                   Content="{Binding BrightnessDownText}"
-                                   Command="{Binding CaptureBrightnessDownCommand}"
-                                   ToolTip="Click, then press the combination you want"/>
-                    </Grid>
-                </StackPanel>
-            </ui:Card>
+            <ui:TextBlock Grid.Row="1" Grid.Column="0" Text="Decrease brightness"
+                          FontSize="12.5" VerticalAlignment="Center" Margin="0,10,0,0"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            <ui:Button Grid.Row="1" Grid.Column="1" MinWidth="156" HorizontalContentAlignment="Center"
+                       Margin="0,10,0,0"
+                       Content="{Binding BrightnessDownText}"
+                       Command="{Binding CaptureBrightnessDownCommand}"
+                       ToolTip="Change this shortcut"/>
 
-            <ui:InfoBar Margin="0,12,0,0" IsClosable="False"
-                        Severity="{Binding StatusSeverity}"
-                        Message="{Binding StatusMessage}"
-                        IsOpen="{Binding HasStatus}"/>
+            <!-- Inside the gated grid so it greys out with the shortcuts it resets.
+                 Safe because the InfoBar is empty whenever they are off, so no message
+                 can point at it while it is unavailable. -->
+            <ui:Button Grid.Row="2" Grid.Column="1" Content="Restore defaults"
+                       HorizontalAlignment="Right" Margin="0,12,0,0"
+                       Command="{Binding RestoreDefaultsCommand}"/>
+        </Grid>
 
-            <Grid Margin="0,14,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <ui:TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap"
-                              FontTypography="Caption" Margin="0,0,12,0"
-                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                              Text="Windows does not deliver shortcuts to ordinary apps while a window running as administrator has focus."/>
-                <ui:Button Grid.Column="1" Content="Restore defaults" VerticalAlignment="Center"
-                           Command="{Binding RestoreDefaultsCommand}"/>
-            </Grid>
-        </StackPanel>
-    </ScrollViewer>
+        <ui:InfoBar Margin="0,16,0,0" IsClosable="False"
+                    Severity="{Binding StatusSeverity}"
+                    Message="{Binding StatusMessage}"
+                    IsOpen="{Binding HasStatus}"/>
+
+        <Border Height="1" Margin="0,20"
+                Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+
+        <ui:TextBlock FontTypography="Caption" TextWrapping="Wrap"
+                      TextAlignment="Center" HorizontalAlignment="Center" MaxWidth="320"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                      Text="Each press changes brightness by 10%."/>
+        <ui:TextBlock FontTypography="Caption" TextWrapping="Wrap" Margin="0,6,0,0"
+                      TextAlignment="Center" HorizontalAlignment="Center" MaxWidth="320"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                      Text="Windows may block shortcuts while an app running as administrator is in front."/>
+    </StackPanel>
 </Page>

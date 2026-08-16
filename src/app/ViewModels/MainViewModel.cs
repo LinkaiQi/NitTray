@@ -275,8 +275,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         => DriverUninstallRequested?.Invoke(this, display);
 
     // Nudges every controllable display by one step. Called from the global
-    // brightness shortcuts, which repeat while held — DisplayViewModel already
-    // coalesces rapid writes, so the device only ever sees the latest value.
+    // brightness shortcuts, which register with MOD_NOREPEAT, so holding the keys
+    // down yields a single step rather than a burst. Each display clamps
+    // independently: one already at 0 or 100 stays put while the others keep moving.
     public void StepBrightness(int deltaPercent)
     {
         if (deltaPercent == 0)

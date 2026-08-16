@@ -136,10 +136,25 @@ while the window is hidden in the tray. `WM_HOTKEY` is dispatched through an
 ### The settings window
 
 `SettingsWindow` is the app's only secondary window. It hosts a `NavigationView`
-rail with **Shortcuts** in `MenuItems` and **About** in `FooterMenuItems`,
-mirroring where Windows 11 Settings puts its own About page. Both tray entries
-and both footer links open this one window, just on different pages
-(`SettingsWindow.NavigateTo`).
+in `Top` mode — two tabs, **Shortcuts** and **About**, both in `MenuItems`. A
+left rail would reserve a fixed column of mostly empty space for two entries, and
+`FooterMenuItems` would strand About at the opposite end of the bar rather than
+beside its sibling. The tray's **Settings** item and the main window's footer
+link both open it on Shortcuts; About is a tab away, so neither the tray nor the
+window needs its own entry for it.
+
+Two things about `Top` mode are easy to miss, and both come straight from
+[`NavigationViewTop.xaml`](https://github.com/lepoco/wpfui/blob/4.3.0/src/Wpf.Ui/Controls/NavigationView/NavigationViewTop.xaml):
+it insets content with `Padding`, ignoring the `FrameMargin` the `Left` template
+uses, and it does not hide the back button — only `LeftFluent` does that
+automatically, so `IsBackButtonVisible` has to be set explicitly.
+
+It is deliberately **not** an owned window. `Owner` would give free
+centre-on-parent placement, but an owned window sits permanently above its owner
+in the z-order, so settings could never be pushed behind the main window even
+when the main window was the one clicked. `App.PlaceSettingsWindow` centres it by
+hand instead, and it keeps a taskbar button so there is a way back to it once it
+is behind something.
 
 Pages live in [`Pages/`](Pages) and set their own `DataContext`, because
 `NavigationView` constructs them itself and cannot be handed an instance.
@@ -147,6 +162,21 @@ Pages live in [`Pages/`](Pages) and set their own `DataContext`, because
 to be the same instance the window's key recorder drives, since that one owns the
 live registrations. Navigation deliberately passes no `dataContext`;
 WPF-UI's activator only overwrites `DataContext` when it is given a non-null one.
+
+Both pages use the same layout: a centred column capped at the old About
+window's content width, with rules between sections rather than cards. About
+kept that layout when it stopped being a window, and Shortcuts follows it so the
+two read as one window instead of two. The window is sized around that column,
+not the other way round.
+
+Neither page wraps itself in a `ScrollViewer`.
+[`NavigationViewContentPresenter`](https://github.com/lepoco/wpfui/blob/4.3.0/src/Wpf.Ui/Controls/NavigationView/NavigationViewContentPresenter.cs)
+already hosts every `Page` inside a `DynamicScrollViewer`, and nesting a plain
+`ScrollViewer` inside it breaks the mouse wheel: WPF's `ScrollViewer` marks the
+wheel event handled even when it has nothing to scroll, so the outer one never
+receives it. The scrollbar still drags, which makes it look like a wheel problem
+rather than a layout one. WPF-UI's `PassiveScrollViewer` exists to work around
+exactly this, and the presenter's scroller derives from it.
 
 The key recorder stays on the window rather than the page so it fires wherever
 focus sits, and capture is cancelled on page change, deactivation, and close so

@@ -8,14 +8,75 @@
         mc:Ignorable="d"
         Title="NitTray Settings"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
-        Width="680" Height="560" MinWidth="600" MinHeight="440"
-        WindowStartupLocation="CenterOwner"
+        Width="440" Height="560" MinWidth="440" MinHeight="440"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
-        ShowInTaskbar="False"
+        ShowInTaskbar="True"
         PreviewKeyDown="OnPreviewKeyDown">
 
+    <ui:FluentWindow.Resources>
+        <!-- Replaces WPF-UI's top item template. Theirs puts a 16px indicator in the
+             icon column, so it underlines the glyph rather than the tab, and its
+             selected and hover backgrounds resolve to the same brush — hovering an
+             inactive tab looks identical to the active one. Here the indicator spans
+             the tab and only hover and pressed paint a background, so "this responds
+             to the mouse" and "this is the open tab" stop looking alike.
+
+             Applied through NavigationView.ItemTemplate rather than per item: the
+             control assigns that onto each item itself, and would overwrite a Template
+             set on the items directly. See SettingsWindow's constructor. -->
+        <ControlTemplate x:Key="TopTabItemTemplate" TargetType="{x:Type ui:NavigationViewItem}">
+            <Grid>
+                <Border x:Name="TabBackground" Background="Transparent"
+                        CornerRadius="4" Padding="12,8" SnapsToDevicePixels="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter Grid.Column="0" Margin="0,0,8,0"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Icon}"
+                                          TextElement.FontSize="16"
+                                          TextElement.Foreground="{DynamicResource NavigationViewItemForeground}"/>
+                        <ContentPresenter Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          RecognizesAccessKey="True"
+                                          TextElement.FontSize="14"
+                                          TextElement.Foreground="{DynamicResource NavigationViewItemForeground}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Stretches under the whole tab instead of just the icon. -->
+                <Rectangle x:Name="SelectionIndicator" Height="3" Margin="20,0,20,0"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+                           Fill="{DynamicResource NavigationViewSelectionIndicatorForeground}"
+                           Opacity="0" RadiusX="2" RadiusY="2"/>
+            </Grid>
+
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsActive" Value="True">
+                    <Setter TargetName="SelectionIndicator" Property="Opacity" Value="1"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="TabBackground" Property="Background"
+                            Value="{DynamicResource NavigationViewItemBackgroundPointerOver}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="TabBackground" Property="Background"
+                            Value="{DynamicResource NavigationViewItemBackgroundPressed}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+    </ui:FluentWindow.Resources>
+
+    <!-- Width opens at MinWidth: the body is a centred column, so anything wider only
+         widens the margins either side of it. At 440 the Shortcuts page's column gets
+         a little under its 400px maximum once the frame's 18px inset each side and the
+         scrollbar are taken out, and grows to it if the window is resized. -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -28,25 +89,29 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <!-- Shortcuts is the reason to open this window, so it leads; About sits in the
-             footer the way Windows 11 Settings puts it at the bottom of the rail. -->
+        <!-- Two pages don't justify a left rail: it reserved 164px of mostly empty
+             column beside a centred body. Top mode puts them side by side as tabs.
+             Both live in MenuItems so they read as one strip — FooterMenuItems would
+             strand About at the far right of the bar (see NavigationViewTop.xaml).
+             Top mode also ignores FrameMargin and insets content with Padding. -->
         <ui:NavigationView x:Name="RootNavigation" Grid.Row="1"
-                           PaneDisplayMode="Left"
-                           OpenPaneLength="164"
-                           IsPaneToggleVisible="False"
+                           PaneDisplayMode="Top"
                            IsBackButtonVisible="Collapsed"
-                           FrameMargin="18,4,18,0"
+                           Padding="18,0,18,0"
                            Navigating="OnNavigating">
             <ui:NavigationView.MenuItems>
+                <!-- The item template insets its content by 8, while TitleBar's default
+                     16,4,16,4 padding puts the app icon at 16. The 8 makes up the
+                     difference so the first tab's icon lines up under it; the strip is
+                     a horizontal StackPanel, so shifting the first item moves them all. -->
                 <ui:NavigationViewItem Content="Shortcuts"
+                                       Margin="8,0,0,0"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:ShortcutsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Keyboard24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-            </ui:NavigationView.MenuItems>
-            <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="About"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:AboutPage}">
@@ -54,7 +119,7 @@
                         <ui:SymbolIcon Symbol="Info24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-            </ui:NavigationView.FooterMenuItems>
+            </ui:NavigationView.MenuItems>
         </ui:NavigationView>
     </Grid>
 </ui:FluentWindow>

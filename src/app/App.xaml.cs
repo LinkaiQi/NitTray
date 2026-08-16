@@ -87,7 +87,6 @@ public partial class App : Application, IHotKeyCoordinator
         _tray.OpenLogRequested += (_, _) => OpenDiagnosticsLog();
         _tray.SettingsRequested += (_, _) => ShowSettings();
         _tray.QuitRequested += (_, _) => RequestShutdown();
-        _tray.AboutRequested += (_, _) => ShowAbout();
 
         // Auto-refresh when Windows signals the display set may have changed; the
         // device-change watch is hooked to the main window's message loop.
@@ -182,14 +181,10 @@ public partial class App : Application, IHotKeyCoordinator
         _mainWindow.Focus();
     }
 
-    // Opens the settings window on the About page (footer link and the tray
-    // "About NitTray" item). Same window as ShowSettings, different landing page.
-    public void ShowAbout() => ShowSettings(SettingsPage.About);
-
     // Opens or re-focuses the single settings window (tray menu and footer link).
-    public void ShowSettings() => ShowSettings(SettingsPage.Shortcuts);
-
-    private void ShowSettings(SettingsPage page)
+    // It always opens on Shortcuts; About is one tab away, so an already-open window
+    // keeps whichever tab the user left showing.
+    public void ShowSettings()
     {
         // One view-model now outlives the window, so re-surface the live registration
         // state on every open instead of whatever the previous visit left behind.
@@ -197,30 +192,38 @@ public partial class App : Application, IHotKeyCoordinator
 
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(Settings, page);
+            _settingsWindow = new SettingsWindow(Settings);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
-
-            if (_mainWindow is not null && _mainWindow.IsVisible)
-            {
-                _settingsWindow.Owner = _mainWindow;
-            }
-            else
-            {
-                _settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            }
-
+            PlaceSettingsWindow(_settingsWindow);
             _settingsWindow.Show();
-        }
-        else
-        {
-            // Already open: re-target it so "About" doesn't just re-focus Shortcuts.
-            _settingsWindow.NavigateTo(page);
         }
 
         _settingsWindow.Activate();
         _settingsWindow.Topmost = true;
         _settingsWindow.Topmost = false;
         _settingsWindow.Focus();
+    }
+
+    // Centres the settings window on the main window without making it an owned
+    // window. Setting Owner would be the obvious way to get this placement, but an
+    // owned window is permanently above its owner in the z-order, so the settings
+    // window could never be pushed behind the main window even when the main window
+    // was the one clicked. Centring by hand keeps the two as peers.
+    private void PlaceSettingsWindow(Window window)
+    {
+        // Left/Top report the restore position while maximized, which would place the
+        // window somewhere unrelated to what is on screen.
+        if (_mainWindow is null
+            || !_mainWindow.IsVisible
+            || _mainWindow.WindowState != WindowState.Normal)
+        {
+            window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            return;
+        }
+
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.Left = _mainWindow.Left + ((_mainWindow.ActualWidth - window.Width) / 2);
+        window.Top = _mainWindow.Top + ((_mainWindow.ActualHeight - window.Height) / 2);
     }
 
     // Registers whatever the current settings ask for. Persisting is opt-in so the

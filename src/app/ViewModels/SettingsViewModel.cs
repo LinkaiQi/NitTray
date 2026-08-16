@@ -118,7 +118,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
 
         _capturing = target;
         _coordinator.SetShortcutsSuspended(true);
-        StatusMessage = "Press the new shortcut. Esc cancels.";
+        StatusMessage = "Press the keys you want to use, or press Esc to cancel.";
         StatusSeverity = Wpf.Ui.Controls.InfoBarSeverity.Informational;
         RaiseShortcutTextChanged();
     }
@@ -158,8 +158,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         if (!binding.IsValid)
         {
             SetStatus(
-                "Use Ctrl, Alt or the Windows key in the shortcut — Shift on its own, " +
-                "or no modifier at all, would capture that key everywhere.",
+                "Add Ctrl, Alt, or the Windows key — otherwise this key would trigger " +
+                "the shortcut in every app.",
                 Wpf.Ui.Controls.InfoBarSeverity.Warning);
             return;
         }
@@ -168,7 +168,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         if (binding == other)
         {
             SetStatus(
-                "Brightness up and down need different combinations.",
+                "Increase and decrease need different shortcuts.",
                 Wpf.Ui.Controls.InfoBarSeverity.Warning);
             return;
         }
@@ -222,13 +222,13 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         HotKeyRegistrationStatus status, HotKeyBinding binding) => status switch
         {
             HotKeyRegistrationStatus.AlreadyInUse => (
-                $"{binding.DisplayText} is already used by another app. Choose a different combination.",
+                $"{binding.DisplayText} is already used by another app. Try a different one.",
                 Wpf.Ui.Controls.InfoBarSeverity.Warning),
             HotKeyRegistrationStatus.Failed => (
-                $"Windows would not register {binding.DisplayText}. See the diagnostics log for details.",
+                $"Windows wouldn't accept {binding.DisplayText}. Try a different one — the diagnostics log has the details.",
                 Wpf.Ui.Controls.InfoBarSeverity.Error),
             HotKeyRegistrationStatus.Invalid => (
-                "That shortcut is not valid. Restore the defaults and try again.",
+                "That shortcut didn't work. Select Restore defaults to set it up again.",
                 Wpf.Ui.Controls.InfoBarSeverity.Error),
             _ => null,
         };

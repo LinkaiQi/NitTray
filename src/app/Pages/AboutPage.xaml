@@ -55,97 +55,77 @@
         </Style>
     </Page.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-        <StackPanel Margin="0,0,14,18">
+    <!-- Deliberately the old About window's centred layout, kept intact when that
+         window became a page: 348px is its old 400px width minus its margins, so the
+         column keeps the same measure instead of stretching across the wider frame.
+         Scrolling is the content presenter's job — see ShortcutsPage for why a page
+         must not wrap itself in a ScrollViewer. -->
+    <StackPanel HorizontalAlignment="Center" MaxWidth="348" Margin="0,32,0,32">
 
-            <ui:TextBlock Text="About" FontTypography="Title"/>
-
-            <!-- Identity -->
-            <ui:Card Margin="0,18,0,0">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Image Grid.Column="0" Source="pack://application:,,,/Assets/AppIcon-256.png"
-                           Width="40" Height="40" VerticalAlignment="Top" Margin="0,0,14,0"
-                           RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <ui:TextBlock Text="{Binding AppName}" FontTypography="BodyStrong"/>
-                        <ui:TextBlock Text="{Binding VersionText}" FontTypography="Caption"
-                                      Margin="0,2,0,0"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                        <ui:TextBlock Text="{Binding Tagline}" FontTypography="Caption"
-                                      TextWrapping="Wrap" Margin="0,6,0,0"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    </StackPanel>
-                </Grid>
-            </ui:Card>
-
-            <!-- Supported displays -->
-            <ui:TextBlock Text="Supported displays" FontTypography="BodyStrong" Margin="0,20,0,0"/>
-            <ui:Card Margin="0,8,0,0">
-                <ItemsControl ItemsSource="{Binding SupportedDisplays}" Focusable="False">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,3">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <ui:SymbolIcon Grid.Column="0" Symbol="Desktop24" FontSize="16"
-                                               VerticalAlignment="Center" Margin="0,0,10,0"
-                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                                <ui:TextBlock Grid.Column="1" Text="{Binding}" FontSize="12.5"
-                                              VerticalAlignment="Center" TextWrapping="Wrap"
-                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ui:Card>
-
-            <!-- Support -->
-            <ui:TextBlock Text="Support" FontTypography="BodyStrong" Margin="0,20,0,0"/>
-            <ui:Card Margin="0,8,0,0">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <ui:TextBlock Text="Enjoying NitTray?" FontTypography="BodyStrong"/>
-                            <ui:TextBlock Text="{Binding OpenSourceText}" FontTypography="Caption"
-                                          TextWrapping="Wrap" Margin="0,2,0,0"
-                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                        </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource BmcButton}"
-                                VerticalAlignment="Center" Margin="12,0,0,0"
-                                Tag="{Binding DonateUrl}" Click="OnLinkClick">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="DrinkCoffee24" FontSize="16" Foreground="#0D0C22"
-                                               VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Buy me a coffee" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-
-                    <Border Height="1" Margin="0,14"
-                            Background="{DynamicResource DividerStrokeColorDefaultBrush}"/>
-
-                    <TextBlock FontSize="13">
-                        <Hyperlink Style="{StaticResource TextLink}" Tag="{Binding RepositoryUrl}" Click="OnLinkClick">GitHub</Hyperlink><Run Text="     ·     " Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Hyperlink Style="{StaticResource TextLink}" Tag="{Binding ReleasesUrl}" Click="OnLinkClick">Check for Updates</Hyperlink>
-                    </TextBlock>
-                </StackPanel>
-            </ui:Card>
-
-            <!-- Legal -->
-            <ui:TextBlock Text="{Binding LegalText}" FontTypography="Caption" TextWrapping="Wrap"
-                          Margin="0,20,0,0"
-                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-            <ui:TextBlock Text="{Binding FooterText}" FontTypography="Caption" Margin="0,10,0,0"
-                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+        <!-- App identity -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Image Source="pack://application:,,,/Assets/AppIcon-256.png"
+                   Width="32" Height="32" VerticalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+            <ui:TextBlock Text="{Binding AppName}" FontTypography="Subtitle"
+                          VerticalAlignment="Center" Margin="11,0,0,0"/>
         </StackPanel>
-    </ScrollViewer>
+        <ui:TextBlock Text="{Binding VersionText}" FontTypography="Body"
+                      HorizontalAlignment="Center" Margin="0,10,0,0"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        <ui:TextBlock Text="{Binding Tagline}" FontTypography="Body"
+                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                      Margin="0,8,0,0"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+        <Border Height="1" Margin="0,20"
+                Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+
+        <!-- Supported displays -->
+        <ui:TextBlock Text="Supported Displays" FontTypography="BodyStrong"
+                      HorizontalAlignment="Center" Margin="0,0,0,8"/>
+        <ItemsControl ItemsSource="{Binding SupportedDisplays}" Focusable="False"
+                      HorizontalAlignment="Center">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" FontSize="12.5" TextAlignment="Center" Margin="0,2"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Height="1" Margin="0,20"
+                Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+
+        <!-- Donate -->
+        <Button Style="{StaticResource BmcButton}" HorizontalAlignment="Center"
+                Tag="{Binding DonateUrl}" Click="OnLinkClick">
+            <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="DrinkCoffee24" FontSize="16" Foreground="#0D0C22"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="Buy me a coffee" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
+
+        <!-- Links -->
+        <TextBlock HorizontalAlignment="Center" TextAlignment="Center" FontSize="13" Margin="0,14,0,0">
+            <Hyperlink Style="{StaticResource TextLink}" Tag="{Binding RepositoryUrl}" Click="OnLinkClick">GitHub</Hyperlink><Run Text="     ·     " Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Hyperlink Style="{StaticResource TextLink}" Tag="{Binding ReleasesUrl}" Click="OnLinkClick">Check for Updates</Hyperlink>
+        </TextBlock>
+        <ui:TextBlock Text="{Binding OpenSourceText}" FontTypography="Caption"
+                      HorizontalAlignment="Center" Margin="0,8,0,0"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+
+        <!-- Legal -->
+        <!-- One step under Caption's 12px: trademark boilerplate, not something to
+             read. A local FontSize wins over the size the typography style sets. -->
+        <ui:TextBlock Text="{Binding LegalText}" FontTypography="Caption" FontSize="11"
+                      TextWrapping="Wrap"
+                      TextAlignment="Center" MaxWidth="320" HorizontalAlignment="Center" Margin="0,20,0,0"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+
+        <!-- Footer -->
+        <ui:TextBlock Text="{Binding FooterText}" FontTypography="Caption"
+                      HorizontalAlignment="Center" Margin="0,14,0,0"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+    </StackPanel>
 </Page>

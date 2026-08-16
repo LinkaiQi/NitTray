@@ -6,47 +6,35 @@ using Wpf.Ui.Controls;
 
 namespace NitTray;
 
-public enum SettingsPage
-{
-    Shortcuts,
-    About,
-}
-
-// Single home for everything that isn't the display list. The navigation rail keeps
-// the interactive settings and the static About text apart without a second window.
+// Single home for everything that isn't the display list. Two tabs keep the
+// interactive settings and the static About text apart without a second window.
 public partial class SettingsWindow : FluentWindow
 {
     private readonly SettingsViewModel _viewModel;
-    private SettingsPage _pending;
 
-    public SettingsWindow(SettingsViewModel viewModel, SettingsPage initialPage)
+    public SettingsWindow(SettingsViewModel viewModel)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
-        _pending = initialPage;
 
         InitializeComponent();
 
-        // NavigationView can only navigate once its template is applied.
-        Loaded += (_, _) => NavigateTo(_pending);
+        // Assigned here rather than in XAML because NavigationView copies its
+        // ItemTemplate onto each item, and only does so when the property changes — so
+        // it has to be set once the XAML items exist, and it beats the style trigger
+        // that would otherwise install WPF-UI's own top item template.
+        if (TryFindResource("TopTabItemTemplate") is System.Windows.Controls.ControlTemplate tabTemplate)
+        {
+            RootNavigation.ItemTemplate = tabTemplate;
+        }
+
+        // NavigationView can only navigate once its template is applied. Shortcuts is
+        // the reason to open the window, so it always leads; About is a tab away.
+        Loaded += (_, _) => RootNavigation.Navigate(typeof(ShortcutsPage), null);
 
         // Leaving the window mid-capture would strand the "Press keys…" state and keep
         // the live shortcuts suspended.
         Deactivated += (_, _) => _viewModel.CancelCapture();
         Closed += (_, _) => _viewModel.CancelCapture();
-    }
-
-    // Also used to re-target an already-open window, so a later "About NitTray" click
-    // lands on the right page instead of just re-focusing whatever was showing.
-    public void NavigateTo(SettingsPage page)
-    {
-        _pending = page;
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        _ = RootNavigation.Navigate(
-            page == SettingsPage.About ? typeof(AboutPage) : typeof(ShortcutsPage), null);
     }
 
     // Switching pages mid-capture would strand it just like closing the window does.
