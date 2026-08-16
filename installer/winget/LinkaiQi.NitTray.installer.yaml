@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
 PackageIdentifier: LinkaiQi.NitTray
-PackageVersion: 0.1.4
+PackageVersion: 0.1.5
 InstallerLocale: en-US
 InstallerType: inno
 Scope: user
@@ -17,10 +17,10 @@ AppsAndFeaturesEntries:
     InstallerType: inno
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.4/NitTray-installer-x64.exe
-    InstallerSha256: 17002E4D6073CBEFC083D6EA82DBF102FD6DD1C50234C4EABBF728D3F63A682D
+    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.5/NitTray-installer-x64.exe
+    InstallerSha256: D3CF89362DABB0B0DC3A48D418F6AE3D4DDCC6988B7D65274F96A66AC3793B35
   - Architecture: arm64
-    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.4/NitTray-installer-arm64.exe
-    InstallerSha256: 113F9E7714D70016E695C7C813F860F2690157CEE512A5CF00F0DC6BF211ECA6
+    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.5/NitTray-installer-arm64.exe
+    InstallerSha256: 01593B845AAF0BE0B49784E102F4157AEB5D53F24E7C925B6CA7FA61A5F8809A
 ManifestType: installer
 ManifestVersion: 1.12.0
