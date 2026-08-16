@@ -128,7 +128,7 @@ public partial class App : Application, IHotKeyCoordinator
         }
     }
 
-    // The tray is built after this first runs; it reads the theme itself on construction.
+    // The tray is built after this first runs. It reads the theme itself on construction.
     private void ApplyTheme()
     {
         var isDark = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
