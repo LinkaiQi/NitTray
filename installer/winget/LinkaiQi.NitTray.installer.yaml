@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
 PackageIdentifier: LinkaiQi.NitTray
-PackageVersion: 0.1.3
+PackageVersion: 0.1.4
 InstallerLocale: en-US
 InstallerType: inno
 Scope: user
@@ -9,7 +9,7 @@ InstallModes:
   - silent
   - silentWithProgress
 UpgradeBehavior: install
-ReleaseDate: 2026-07-11
+ReleaseDate: 2026-08-16
 # ProductCode = Inno Setup AppId + "_is1" (this .iss sets AppId without braces).
 # Lets winget correlate the installed version for upgrade/uninstall.
 AppsAndFeaturesEntries:
@@ -17,10 +17,10 @@ AppsAndFeaturesEntries:
     InstallerType: inno
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.3/NitTray-installer-x64.exe
-    InstallerSha256: 5EC898B1A9A9A512D8EB9768700F68A4F249FF888344CE4821EA44C257937F52
+    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.4/NitTray-installer-x64.exe
+    InstallerSha256: 17002E4D6073CBEFC083D6EA82DBF102FD6DD1C50234C4EABBF728D3F63A682D
   - Architecture: arm64
-    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.3/NitTray-installer-arm64.exe
-    InstallerSha256: 98B2D5DD96BE4E5850699571E41E6076DB2C9C1EC6B2056E0DEC6DADA2A8E158
+    InstallerUrl: https://github.com/LinkaiQi/NitTray/releases/download/v0.1.4/NitTray-installer-arm64.exe
+    InstallerSha256: 113F9E7714D70016E695C7C813F860F2690157CEE512A5CF00F0DC6BF211ECA6
 ManifestType: installer
 ManifestVersion: 1.12.0
