@@ -87,7 +87,21 @@ internal sealed class HotKeyService : IDisposable
         var upStatus = Register(IdBrightnessUp, up, "brightness up");
         _upRegistered = upStatus == HotKeyRegistrationStatus.Registered;
 
-        var downStatus = Register(IdBrightnessDown, down, "brightness down");
+        // The UI blocks a duplicate, but settings.json is hand-editable. Registering the
+        // same chord twice would collide with our own first registration and be reported
+        // as another application owning it.
+        HotKeyRegistrationStatus downStatus;
+        if (_upRegistered && down is not null && down == up)
+        {
+            DiagnosticLog.Write(
+                $"Hotkeys: {down.DisplayText} is set for both directions; brightness down not registered.");
+            downStatus = HotKeyRegistrationStatus.Invalid;
+        }
+        else
+        {
+            downStatus = Register(IdBrightnessDown, down, "brightness down");
+        }
+
         _downRegistered = downStatus == HotKeyRegistrationStatus.Registered;
 
         return new HotKeyApplyResult(upStatus, downStatus);
