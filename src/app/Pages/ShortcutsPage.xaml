@@ -1,3 +1,6 @@
+<!-- Foreground is set here because NavigationView hosts pages inside a Frame, which
+     blocks property inheritance from the window. Without it the text falls back to
+     WPF-UI's hard-coded black default and disappears in the dark theme. -->
 <Page x:Class="NitTray.Pages.ShortcutsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,6 +11,7 @@
       mc:Ignorable="d"
       Title="Shortcuts"
       Background="Transparent"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
 
     <!-- No ScrollViewer here: NavigationViewContentPresenter already wraps every Page

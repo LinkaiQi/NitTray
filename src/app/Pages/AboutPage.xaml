@@ -1,3 +1,5 @@
+<!-- Foreground is set here because Frame-hosted pages do not inherit it from the
+     window. See ShortcutsPage. -->
 <Page x:Class="NitTray.Pages.AboutPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,6 +10,7 @@
       mc:Ignorable="d"
       Title="Support"
       Background="Transparent"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       d:DataContext="{d:DesignInstance vm:AboutViewModel}">
 
     <Page.Resources>
