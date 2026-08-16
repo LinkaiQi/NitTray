@@ -11,6 +11,10 @@ public enum DriverInstallStatus
     // NitTray.DriverSetup.exe was not found next to the running app.
     HelperMissing,
 
+    // The helper next to the app is not signed by the publisher that signed NitTray,
+    // so it was not launched with administrator rights.
+    HelperUntrusted,
+
     // The target display was not present on the USB bus when setup ran.
     DeviceNotFound,
 

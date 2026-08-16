@@ -86,6 +86,18 @@ required. The one-time installation runs an elevated helper
 (`NitTray.DriverSetup.exe`) behind a single UAC prompt; see
 [`src/driver/README.md`](../driver/README.md).
 
+Because NitTray installs per-user, that helper sits in a folder the signed-in user
+can write to without elevating. Before launching it, NitTray opens the helper with
+write and delete sharing denied so it cannot be swapped while the UAC prompt is up,
+then checks it carries a valid Authenticode signature whose public key matches the
+one that signed NitTray. The key is read at startup, and the key rather than the
+certificate name is compared because a name can be forged. Builds from source are
+unsigned and have no key to match, so setup continues with a warning in the log.
+
+This raises the bar against a replaced helper rather than sealing the folder.
+Rewriting `NitTray.exe` itself, or planting a DLL the helper imports, stays possible
+until the app no longer installs an auto-elevating binary somewhere user-writable.
+
 ### Diagnostics
 
 When no display is detected, right-click the tray icon and select **Open
