@@ -125,6 +125,15 @@ public sealed partial class AppleDisplayService : IDisplayService
                 "falling back to zero-filled template.");
             buffer = new byte[display.FeatureReportByteLength];
         }
+
+        // Mirrors the read path's guard, so a bad catalog offset says what is wrong.
+        if (display.BrightnessByteOffset + 4 > buffer.Length)
+        {
+            throw new InvalidOperationException(
+                $"The feature report is {buffer.Length} bytes but brightness needs " +
+                $"offset {display.BrightnessByteOffset} + 4.");
+        }
+
         buffer[0] = display.BrightnessReportId;
         BinaryPrimitives.WriteUInt32LittleEndian(
             buffer.AsSpan(display.BrightnessByteOffset, 4), raw);

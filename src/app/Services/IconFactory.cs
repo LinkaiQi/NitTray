@@ -20,6 +20,7 @@ internal static class IconFactory
         }
 
         // Fallback (should never happen — the icon is embedded in the assembly).
-        return SystemIcons.Application;
+        // Cloned because SystemIcons hands out a process-wide cached instance.
+        return (Icon)SystemIcons.Application.Clone();
     }
 }

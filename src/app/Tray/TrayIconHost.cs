@@ -7,6 +7,7 @@ namespace NitTray.Tray;
 internal sealed class TrayIconHost : IDisposable
 {
     private readonly WinForms.NotifyIcon _notifyIcon;
+    private readonly WinForms.ContextMenuStrip _menu;
     private readonly Icon _icon;
 
     public event EventHandler? ShowRequested;
@@ -67,14 +68,20 @@ internal sealed class TrayIconHost : IDisposable
             Visible = true,
             ContextMenuStrip = menu,
         };
+        _menu = menu;
 
         _notifyIcon.DoubleClick += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
     }
+
+    // The renderer bakes in its palette, so following the system theme means swapping it.
+    public void ApplyTheme(bool isDark)
+        => _menu.Renderer = new ModernMenuRenderer(isDark);
 
     public void Dispose()
     {
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
+        _menu.Dispose();
         _icon.Dispose();
     }
 }
