@@ -87,14 +87,12 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; Closing NitTray's window only hides it to the tray, so Restart Manager cannot
-; shut it down and its files stay locked — the uninstall would leave the install
-; folder behind and ask for a reboot. Stop it outright instead. [UninstallRun] is
-; the first step of uninstallation, so this happens before any file is removed.
+; Closing NitTray only hides it to the tray, so Restart Manager cannot shut it down
+; and its files stay locked. [UninstallRun] is the first step of uninstallation, so
+; this runs before any file is removed.
 Filename: "{sys}\taskkill.exe"; Parameters: "/f /im {#MyAppExeName}"; Flags: runhidden; RunOnceId: "StopNitTray"
 
 [UninstallDelete]
-; settings.json and diagnostic.log, which the app writes itself and the installer
-; therefore doesn't track. Installing a new version doesn't run the uninstaller,
-; so preferences still survive upgrades — they only leave with the app.
+; settings.json and diagnostic.log, which the app writes and the installer doesn't
+; track. Upgrades don't run the uninstaller, so preferences survive them.
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}"

@@ -10,13 +10,8 @@
       Background="Transparent"
       d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
 
-    <!-- Wider than AboutPage's column: this page has label-and-button rows to fit,
-         where About is centred prose that reads better narrow.
-
-         No ScrollViewer here on purpose. NavigationViewContentPresenter already
-         wraps every Page in a DynamicScrollViewer, and a plain nested ScrollViewer
-         marks the wheel event handled even when it has nothing to scroll, so the
-         outer one never sees it — the scrollbar drags but the wheel does nothing. -->
+    <!-- No ScrollViewer here: NavigationViewContentPresenter already wraps every Page
+         in one, and a nested plain ScrollViewer swallows the mouse wheel. -->
     <StackPanel HorizontalAlignment="Center" MaxWidth="400" Margin="0,32,0,32">
 
         <!-- Master switch -->
@@ -65,9 +60,8 @@
                        Command="{Binding CaptureBrightnessDownCommand}"
                        ToolTip="Change this shortcut"/>
 
-            <!-- Inside the gated grid so it greys out with the shortcuts it resets.
-                 Safe because the InfoBar is empty whenever they are off, so no message
-                 can point at it while it is unavailable. -->
+            <!-- Outside the gated grid would leave it enabled with nothing to reset;
+                 safe here because the InfoBar is empty while shortcuts are off. -->
             <ui:Button Grid.Row="2" Grid.Column="1" Content="Restore defaults"
                        HorizontalAlignment="Right" Margin="0,12,0,0"
                        Command="{Binding RestoreDefaultsCommand}"/>
@@ -82,11 +76,9 @@
                 Background="{DynamicResource ControlStrokeColorDefaultBrush}"/>
 
         <ui:TextBlock FontTypography="Caption" TextWrapping="Wrap"
-                      TextAlignment="Center" HorizontalAlignment="Center" MaxWidth="320"
                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                       Text="Each press changes brightness by 10%."/>
         <ui:TextBlock FontTypography="Caption" TextWrapping="Wrap" Margin="0,6,0,0"
-                      TextAlignment="Center" HorizontalAlignment="Center" MaxWidth="320"
                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                       Text="Windows may block shortcuts while an app running as administrator is in front."/>
     </StackPanel>

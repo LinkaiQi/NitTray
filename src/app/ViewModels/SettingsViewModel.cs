@@ -12,10 +12,8 @@ public enum HotKeyTarget
     BrightnessDown,
 }
 
-// Backs the Settings window. Changes apply immediately: each edit is written to
-// settings.json and re-registered with Windows, and the result comes straight back
-// as an inline message so a combination another app already owns is never silently
-// dropped.
+// Backs the Settings window. Changes apply immediately: each edit is saved and
+// re-registered, and the result comes back as an inline message.
 public sealed class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly AppSettings _settings;
@@ -133,19 +131,16 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         _capturing = HotKeyTarget.None;
         _coordinator.SetShortcutsSuspended(false);
 
-        // Re-registering may itself have failed (another app can grab the combination
-        // while the shortcuts are suspended), and blanking the message here would also
-        // erase a collision warning the user backed out of. Report what is true now.
+        // Re-registering can fail on its own, and blanking here would also erase a
+        // warning the user backed out of. Report what is true now.
         Report(_coordinator.Current);
         RaiseShortcutTextChanged();
     }
 
-    // The view-model outlives the settings window, so the window asks for a fresh
-    // reading on open rather than trusting whatever the last visit left behind.
+    // The view-model outlives the window, so each open asks for a fresh reading.
     public void RefreshStatus() => Report(_coordinator.Current);
 
-    // Called by the window once a complete combination has been typed. Invalid or
-    // duplicate combinations leave capture running so the user can simply try again.
+    // Invalid or duplicate combinations leave capture running so the user can retry.
     public void CompleteCapture(HotKeyBinding binding)
     {
         ArgumentNullException.ThrowIfNull(binding);

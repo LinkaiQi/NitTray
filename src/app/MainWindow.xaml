@@ -39,7 +39,7 @@
             </Setter>
         </Style>
 
-        <!-- Footer "Shortcuts & About" link: accent text, underline on hover only. -->
+        <!-- Footer "Shortcuts & Support" link: accent text, underline on hover only. -->
         <Style x:Key="FooterLink" TargetType="Hyperlink">
             <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
             <Setter Property="TextDecorations" Value="{x:Null}"/>
@@ -300,7 +300,7 @@
                               FontTypography="Caption"
                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                 <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12">
-                    <Hyperlink Style="{StaticResource FooterLink}" Click="OnSettingsClick">Shortcuts &amp; About</Hyperlink>
+                    <Hyperlink Style="{StaticResource FooterLink}" Click="OnSettingsClick">Shortcuts &amp; Support</Hyperlink>
                 </TextBlock>
             </Grid>
         </Grid>

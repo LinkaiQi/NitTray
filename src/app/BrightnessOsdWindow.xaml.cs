@@ -6,10 +6,8 @@ using NitTray.Services.Native;
 
 namespace NitTray;
 
-// Transient brightness overlay shown when a global shortcut changes brightness —
-// the main window normally sits in the tray, so without this the keys would have no
-// visible effect. The window never takes focus and is click-through, and it is
-// reused (hidden, not closed) for every step.
+// Transient brightness overlay for global shortcuts, since the main window normally
+// sits in the tray. Never takes focus, click-through, and reused for every step.
 public partial class BrightnessOsdWindow : Window
 {
     private static readonly TimeSpan VisibleFor = TimeSpan.FromMilliseconds(1400);
@@ -32,8 +30,7 @@ public partial class BrightnessOsdWindow : Window
     {
         base.OnSourceInitialized(e);
 
-        // Keep the overlay out of Alt+Tab, off the activation path, and transparent
-        // to the mouse so it can never interrupt what the user is doing.
+        // Keep the overlay out of Alt+Tab, off the activation path, and click-through.
         try
         {
             var hwnd = new WindowInteropHelper(this).Handle;
@@ -88,9 +85,8 @@ public partial class BrightnessOsdWindow : Window
             Show();
         }
 
-        // Positioned on the primary monitor's work area (like Windows' own overlay);
-        // SystemParameters.WorkArea and ActualWidth share one DIP space, so this stays
-        // correct under per-monitor DPI without any manual conversion.
+        // Positioned on the primary monitor's work area. WorkArea and ActualWidth share
+        // one DIP space, so this stays correct under per-monitor DPI.
         UpdateLayout();
         var area = SystemParameters.WorkArea;
         Left = area.Left + ((area.Width - ActualWidth) / 2);

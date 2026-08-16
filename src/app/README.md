@@ -136,11 +136,11 @@ while the window is hidden in the tray. `WM_HOTKEY` is dispatched through an
 ### The settings window
 
 `SettingsWindow` is the app's only secondary window. It hosts a `NavigationView`
-in `Top` mode — two tabs, **Shortcuts** and **About**, both in `MenuItems`. A
+in `Top` mode — two tabs, **Shortcuts** and **Support**, both in `MenuItems`. A
 left rail would reserve a fixed column of mostly empty space for two entries, and
-`FooterMenuItems` would strand About at the opposite end of the bar rather than
+`FooterMenuItems` would strand Support at the opposite end of the bar rather than
 beside its sibling. The tray's **Settings** item and the main window's footer
-link both open it on Shortcuts; About is a tab away, so neither the tray nor the
+link both open it on Shortcuts; Support is a tab away, so neither the tray nor the
 window needs its own entry for it.
 
 Two things about `Top` mode are easy to miss, and both come straight from
@@ -164,9 +164,10 @@ live registrations. Navigation deliberately passes no `dataContext`;
 WPF-UI's activator only overwrites `DataContext` when it is given a non-null one.
 
 Both pages use the same layout: a centred column capped at the old About
-window's content width, with rules between sections rather than cards. About
-kept that layout when it stopped being a window, and Shortcuts follows it so the
-two read as one window instead of two. The window is sized around that column,
+window's content width, with rules between sections rather than cards.
+`AboutPage` — the **Support** tab, still named for the window it replaced — kept
+that layout when it stopped being a window, and Shortcuts follows it so the two
+read as one window instead of two. The window is sized around that column,
 not the other way round.
 
 Neither page wraps itself in a `ScrollViewer`.
@@ -234,7 +235,7 @@ dotnet publish src/app -c Release -r win-x64 --self-contained true `
   -o publish-standalone
 ```
 
-The version shown on the About page is read from the assembly's
+The version shown on the Support tab is read from the assembly's
 `InformationalVersion`. Local builds default to `0.0.0-local`; release builds set
 `-p:Version` from the git tag (see
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml)).

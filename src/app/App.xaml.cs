@@ -28,8 +28,8 @@ public partial class App : Application, IHotKeyCoordinator
     private HotKeyApplyResult _hotKeyResult;
     private AppSettings _settings = new();
 
-    // Shared with the settings window's key recorder and with ShortcutsPage, which
-    // NavigationView constructs on its own and so cannot be handed the instance.
+    // Shared with the settings window's key recorder and ShortcutsPage, which
+    // NavigationView constructs itself and so cannot be handed the instance.
     internal SettingsViewModel Settings =>
         _settingsViewModel ??= new SettingsViewModel(_settings, this);
 
@@ -94,8 +94,8 @@ public partial class App : Application, IHotKeyCoordinator
         _refreshTrigger.Refresh = OnAutoRefreshRequestedAsync;
         _refreshTrigger.AttachDeviceNotifications(_mainWindow);
 
-        // Global brightness shortcuts, off unless the user enabled them. They ride on
-        // the same (hidden) main-window message loop as the device-change watch.
+        // Off unless the user enabled them. They ride on the same (hidden) main-window
+        // message loop as the device-change watch.
         _settings = SettingsStore.Load();
         _hotKeys = new HotKeyService(_mainWindow);
         _hotKeys.BrightnessUpPressed += (_, _) => _viewModel?.StepBrightness(BrightnessStepPercent);
@@ -181,13 +181,11 @@ public partial class App : Application, IHotKeyCoordinator
         _mainWindow.Focus();
     }
 
-    // Opens or re-focuses the single settings window (tray menu and footer link).
-    // It always opens on Shortcuts; About is one tab away, so an already-open window
-    // keeps whichever tab the user left showing.
+    // Opens or re-focuses the single settings window. Always lands on Shortcuts when
+    // newly opened; an already-open window keeps whichever tab is showing.
     public void ShowSettings()
     {
-        // One view-model now outlives the window, so re-surface the live registration
-        // state on every open instead of whatever the previous visit left behind.
+        // The view-model outlives the window, so re-surface the live registration state.
         Settings.RefreshStatus();
 
         if (_settingsWindow is null)
@@ -204,15 +202,11 @@ public partial class App : Application, IHotKeyCoordinator
         _settingsWindow.Focus();
     }
 
-    // Centres the settings window on the main window without making it an owned
-    // window. Setting Owner would be the obvious way to get this placement, but an
-    // owned window is permanently above its owner in the z-order, so the settings
-    // window could never be pushed behind the main window even when the main window
-    // was the one clicked. Centring by hand keeps the two as peers.
+    // Centres on the main window without setting Owner: an owned window is permanently
+    // above its owner in the z-order, so it could never be pushed behind.
     private void PlaceSettingsWindow(Window window)
     {
-        // Left/Top report the restore position while maximized, which would place the
-        // window somewhere unrelated to what is on screen.
+        // Left/Top report the restore position while maximized.
         if (_mainWindow is null
             || !_mainWindow.IsVisible
             || _mainWindow.WindowState != WindowState.Normal)

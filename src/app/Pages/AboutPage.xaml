@@ -6,7 +6,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d"
-      Title="About"
+      Title="Support"
       Background="Transparent"
       d:DataContext="{d:DesignInstance vm:AboutViewModel}">
 
@@ -55,11 +55,8 @@
         </Style>
     </Page.Resources>
 
-    <!-- Deliberately the old About window's centred layout, kept intact when that
-         window became a page: 348px is its old 400px width minus its margins, so the
-         column keeps the same measure instead of stretching across the wider frame.
-         Scrolling is the content presenter's job — see ShortcutsPage for why a page
-         must not wrap itself in a ScrollViewer. -->
+    <!-- The old About window's centred layout, capped at its content width. Scrolling
+         is the content presenter's job — see ShortcutsPage. -->
     <StackPanel HorizontalAlignment="Center" MaxWidth="348" Margin="0,32,0,32">
 
         <!-- App identity -->

@@ -32,17 +32,14 @@ public interface IHotKeyCoordinator
     // accepted.
     HotKeyApplyResult Apply(AppSettings settings);
 
-    // Releases the registrations while the user types a new combination — Windows
-    // delivers a registered shortcut as WM_HOTKEY, so it would otherwise never reach
-    // the settings window as a key press.
+    // Releases the registrations while the user types a new combination, which would
+    // otherwise arrive as WM_HOTKEY instead of a key press.
     void SetShortcutsSuspended(bool suspended);
 }
 
-// Registers the global brightness shortcuts against the main window's HWND and
-// turns WM_HOTKEY into events. The window is normally hidden in the tray, but its
-// handle stays alive and keeps pumping messages, so the shortcuts keep working.
-// Every registration carries MOD_NOREPEAT: one press is one step, so holding a key
-// down can't race through the whole range.
+// Registers the global brightness shortcuts against the main window's HWND and turns
+// WM_HOTKEY into events. The window is normally hidden in the tray, but its handle
+// keeps pumping messages. MOD_NOREPEAT keeps one press to one step.
 internal sealed class HotKeyService : IDisposable
 {
     // Application-defined ids must be 0x0000-0xBFFF.
@@ -63,8 +60,7 @@ internal sealed class HotKeyService : IDisposable
     public HotKeyService(Window window)
         => _window = window ?? throw new ArgumentNullException(nameof(window));
 
-    // Re-registers both shortcuts from scratch. Safe to call repeatedly (every time
-    // settings change); previous registrations are always released first.
+    // Re-registers both shortcuts from scratch; previous ones are always released first.
     public HotKeyApplyResult Apply(bool enabled, HotKeyBinding? up, HotKeyBinding? down)
     {
         if (_disposed)
@@ -163,7 +159,9 @@ internal sealed class HotKeyService : IDisposable
             return IntPtr.Zero;
         }
 
-        switch (wParam.ToInt32())
+        // ToInt32 is checked, and any process can post WM_HOTKEY with an out-of-range
+        // wParam, which would throw out of the window procedure.
+        switch (wParam.ToInt64())
         {
             case IdBrightnessUp:
                 handled = true;

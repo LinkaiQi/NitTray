@@ -6,8 +6,7 @@ using Wpf.Ui.Controls;
 
 namespace NitTray;
 
-// Single home for everything that isn't the display list. Two tabs keep the
-// interactive settings and the static About text apart without a second window.
+// Single home for everything that isn't the display list.
 public partial class SettingsWindow : FluentWindow
 {
     private readonly SettingsViewModel _viewModel;
@@ -18,34 +17,28 @@ public partial class SettingsWindow : FluentWindow
 
         InitializeComponent();
 
-        // Assigned here rather than in XAML because NavigationView copies its
-        // ItemTemplate onto each item, and only does so when the property changes — so
-        // it has to be set once the XAML items exist, and it beats the style trigger
-        // that would otherwise install WPF-UI's own top item template.
+        // NavigationView copies ItemTemplate onto its items when the property changes,
+        // so this has to run after the XAML items exist.
         if (TryFindResource("TopTabItemTemplate") is System.Windows.Controls.ControlTemplate tabTemplate)
         {
             RootNavigation.ItemTemplate = tabTemplate;
         }
 
-        // NavigationView can only navigate once its template is applied. Shortcuts is
-        // the reason to open the window, so it always leads; About is a tab away.
+        // Navigation needs the template applied, so it waits for Loaded.
         Loaded += (_, _) => RootNavigation.Navigate(typeof(ShortcutsPage), null);
 
-        // Leaving the window mid-capture would strand the "Press keys…" state and keep
-        // the live shortcuts suspended.
+        // Leaving mid-capture would strand it and keep the shortcuts suspended.
         Deactivated += (_, _) => _viewModel.CancelCapture();
         Closed += (_, _) => _viewModel.CancelCapture();
     }
 
-    // Switching pages mid-capture would strand it just like closing the window does.
     private void OnNavigating(NavigationView sender, NavigatingCancelEventArgs args)
     {
         _viewModel.CancelCapture();
     }
 
-    // Records the next complete combination while a shortcut button is armed. Handled
-    // unconditionally during capture so Tab, Space, and Alt don't drive the UI instead.
-    // This lives on the window rather than the page so it fires wherever focus sits.
+    // Records the next complete combination while a shortcut button is armed. Lives on
+    // the window rather than the page so it fires wherever focus sits.
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (!_viewModel.IsCapturing)
@@ -53,10 +46,17 @@ public partial class SettingsWindow : FluentWindow
             return;
         }
 
-        e.Handled = true;
-
         // Alt combinations arrive as Key.System with the real key in SystemKey.
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
+
+        // Alt+F4 and Alt+Space reach the app as ordinary keys, so handling them here
+        // would swallow the close and register Alt+F4 globally. Leave them to Windows.
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) && key is Key.F4 or Key.Space)
+        {
+            return;
+        }
+
+        e.Handled = true;
 
         if (key == Key.Escape)
         {
@@ -64,7 +64,6 @@ public partial class SettingsWindow : FluentWindow
             return;
         }
 
-        // Wait for a real key: modifiers alone are not a shortcut.
         if (HotKeyBinding.IsModifierKey(key))
         {
             return;
@@ -78,9 +77,7 @@ public partial class SettingsWindow : FluentWindow
         var modifiers = HotKeyModifiers.None;
         var pressed = Keyboard.Modifiers;
 
-        // Keyboard.Modifiers only reports Alt/Ctrl/Shift — WPF never sets
-        // ModifierKeys.Windows — so the Win key has to be probed directly. Without
-        // this, Win+Ctrl+Up would be silently recorded as plain Ctrl+Up.
+        // WPF never sets ModifierKeys.Windows, so the Win key has to be probed directly.
         if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
         {
             modifiers |= HotKeyModifiers.Win;

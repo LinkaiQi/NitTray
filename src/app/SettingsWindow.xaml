@@ -16,16 +16,9 @@
         PreviewKeyDown="OnPreviewKeyDown">
 
     <ui:FluentWindow.Resources>
-        <!-- Replaces WPF-UI's top item template. Theirs puts a 16px indicator in the
-             icon column, so it underlines the glyph rather than the tab, and its
-             selected and hover backgrounds resolve to the same brush — hovering an
-             inactive tab looks identical to the active one. Here the indicator spans
-             the tab and only hover and pressed paint a background, so "this responds
-             to the mouse" and "this is the open tab" stop looking alike.
-
-             Applied through NavigationView.ItemTemplate rather than per item: the
-             control assigns that onto each item itself, and would overwrite a Template
-             set on the items directly. See SettingsWindow's constructor. -->
+        <!-- Replaces WPF-UI's top item template, which underlines only the icon and
+             paints hover and selected the same colour. Applied through
+             NavigationView.ItemTemplate — see the constructor. -->
         <ControlTemplate x:Key="TopTabItemTemplate" TargetType="{x:Type ui:NavigationViewItem}">
             <Grid>
                 <Border x:Name="TabBackground" Background="Transparent"
@@ -51,7 +44,7 @@
                 </Border>
 
                 <!-- Stretches under the whole tab instead of just the icon. -->
-                <Rectangle x:Name="SelectionIndicator" Height="3" Margin="20,0,20,0"
+                <Rectangle x:Name="SelectionIndicator" Height="3" Margin="12,0,12,0"
                            HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
                            Fill="{DynamicResource NavigationViewSelectionIndicatorForeground}"
                            Opacity="0" RadiusX="2" RadiusY="2"/>
@@ -73,10 +66,8 @@
         </ControlTemplate>
     </ui:FluentWindow.Resources>
 
-    <!-- Width opens at MinWidth: the body is a centred column, so anything wider only
-         widens the margins either side of it. At 440 the Shortcuts page's column gets
-         a little under its 400px maximum once the frame's 18px inset each side and the
-         scrollbar are taken out, and grows to it if the window is resized. -->
+    <!-- Opens at MinWidth: the body is a centred column, so extra width only widens
+         the margins beside it. -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -89,30 +80,26 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <!-- Two pages don't justify a left rail: it reserved 164px of mostly empty
-             column beside a centred body. Top mode puts them side by side as tabs.
-             Both live in MenuItems so they read as one strip — FooterMenuItems would
-             strand About at the far right of the bar (see NavigationViewTop.xaml).
-             Top mode also ignores FrameMargin and insets content with Padding. -->
+        <!-- Top mode ignores FrameMargin and insets content with Padding. Both tabs
+             live in MenuItems; FooterMenuItems would strand one at the far right. -->
         <ui:NavigationView x:Name="RootNavigation" Grid.Row="1"
                            PaneDisplayMode="Top"
                            IsBackButtonVisible="Collapsed"
                            Padding="18,0,18,0"
                            Navigating="OnNavigating">
             <ui:NavigationView.MenuItems>
-                <!-- The item template insets its content by 8, while TitleBar's default
-                     16,4,16,4 padding puts the app icon at 16. The 8 makes up the
-                     difference so the first tab's icon lines up under it; the strip is
-                     a horizontal StackPanel, so shifting the first item moves them all. -->
+                <!-- Lines the first tab's icon up with the title bar icon at 16px: the
+                     item template already insets by 12. Shifting the first item moves
+                     the whole strip. -->
                 <ui:NavigationViewItem Content="Shortcuts"
-                                       Margin="8,0,0,0"
+                                       Margin="4,0,0,0"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:ShortcutsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Keyboard24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="About"
+                <ui:NavigationViewItem Content="Support"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:AboutPage}">
                     <ui:NavigationViewItem.Icon>
