@@ -208,3 +208,31 @@ jobs:
             installer/output/NitTray-installer-arm64.exe
             NitTray-portable-x64.zip
             NitTray-portable-arm64.zip
+
+  # Submit the new version to the WinGet Community Repository (microsoft/winget-pkgs).
+  # Runs only after the release and its assets exist, because the action downloads the
+  # installers to hash them. Without this step a release can ship while winget keeps
+  # serving the previous version — which is what happened to v0.1.4.
+  #
+  # Requires a fork of microsoft/winget-pkgs under this repo's owner (it defaults to
+  # github.repository_owner), plus a WINGET_TOKEN repo secret: a classic PAT with the
+  # public_repo scope, authorized for the microsoft organisation's SAML SSO. The built-in
+  # GITHUB_TOKEN cannot open a pull request on another repository, so it will not work.
+  #
+  # The action rewrites the version, installer URLs and hashes on top of the manifest
+  # already published in winget-pkgs. installer/winget/*.yaml in this repo therefore stays
+  # the place to edit package metadata (description, tags, ProductCode) by hand.
+  publish-winget:
+    name: Publish to WinGet
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Submit version to winget-pkgs
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: LinkaiQi.NitTray
+          # Only the two Inno Setup installers; the portable zips are not winget artifacts.
+          installers-regex: 'NitTray-installer-(x64|arm64)\.exe$'
+          release-tag: ${{ github.ref_name }}
+          token: ${{ secrets.WINGET_TOKEN }}
